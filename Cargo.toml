@@ -1,0 +1,35 @@
+[package]
+name = "kson"
+version = "0.1.0"
+authors = ["theseriousadult <jack@gallabytes.com>"]
+edition = "2018"
+
+[dependencies]
+byte_string = "1.0"
+maplit = "1.0"
+mdo = "0.3"
+mdo-future = "0.2"
+num-traits = "0.2"
+num-bigint = "0.2"
+hashbrown = "0.2"
+rug="1.3"
+
+[dev-dependencies]
+proptest = "0.9"
+tempfile = "3.0"
+quickcheck = "0.8"
+quickcheck_macros = "0.8"
+criterion = "0.2"
+common_utils = {path = "../common_utils"}
+
+[[bench]]
+name="encoder"
+harness=false
+
+[[bench]]
+name="encoder_profile"
+harness=false
+
+[[bench]]
+name="decoder_profile"
+harness=false
