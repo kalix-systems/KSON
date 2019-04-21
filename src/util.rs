@@ -71,3 +71,46 @@ macro_rules! womp {
         }
     };
 }
+
+#[macro_export]
+macro_rules! compose_from {
+    ($to: tt, $mid: tt, $from: ty) => {
+        impl From<$from> for $to {
+            fn from(f: $from) -> $to {
+                $to::from($mid::from(f))
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! from_fn {
+    ($to: ty, $from: ty, $fn: expr) => {
+        impl From<$from> for $to {
+            fn from(f: $from) -> $to {
+                $fn(f)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! from_as {
+    ($to: tt, $from: ty, $as: ty) => {
+        impl From<$from> for $to {
+            fn from(f: $from) -> $to {
+                $to::from(f as $as)
+            }
+        }
+    };
+}
+
+#[macro_export]
+macro_rules! to_option {
+    ($err: expr) => {
+        match $err {
+            Ok(x) => Some(x),
+            _ => None,
+        }
+    };
+}
