@@ -9,179 +9,230 @@ use std::vec::Vec;
 use crate::util::*;
 use crate::*;
 
+use Atom::*;
+use Container::*;
+use Inum::*;
 use Kson::*;
 // TODO: replace len vecs w/heapless vec of size at most 8
 
-// #[derive(Clone, Debug)]
-// pub enum KTag {
-//     KC(u8),
-//     KInt(bool, bool, u8),
-//     KStr(bool, u8),
-//     KArr(bool, u8),
-//     KMap(bool, u8),
-// }
+pub const MASK_TYPE: u8 = 0b1110_0000;
+pub const MASK_META: u8 = 0b0001_1111;
+pub const TYPE_CON: u8 = 0b0000_0000;
+pub const TYPE_INT: u8 = 0b0010_0000;
+pub const TYPE_STR: u8 = 0b0100_0000;
+pub const TYPE_ARR: u8 = 0b0110_0000;
+pub const TYPE_MAP: u8 = 0b1000_0000;
+pub const BIG_BIT: u8 = 0b0001_0000;
+pub const INT_POSITIVE: u8 = 0b0000_1000;
 
-// use KTag::*;
+pub const CON_NULL: u8 = 0b0000_0000;
+pub const CON_TRUE: u8 = 0b0000_0001;
+pub const CON_FALSE: u8 = 0b0000_0010;
 
-// pub const MASK_TYPE: u8 = 0b1110_0000;
-// pub const MASK_META: u8 = 0b0001_1111;
-// pub const TYPE_CON: u8 = 0b0000_0000;
-// pub const TYPE_INT: u8 = 0b0010_0000;
-// pub const TYPE_STR: u8 = 0b0100_0000;
-// pub const TYPE_ARR: u8 = 0b0110_0000;
-// pub const TYPE_MAP: u8 = 0b1000_0000;
-// pub const BIG_BIT: u8 = 0b0001_0000;
-// pub const INT_POSITIVE: u8 = 0b0000_1000;
+pub const MASK_LEN_BITS: u8 = 0b0000_1111;
+pub const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
 
-// pub const CON_NULL: u8 = 0b0000_0000;
-// pub const CON_TRUE: u8 = 0b0000_0001;
-// pub const CON_FALSE: u8 = 0b0000_0010;
+#[derive(Clone, Debug)]
+pub enum LenOrDigs {
+    Len(u8),
+    Digs(Vec<u8>),
+}
 
-// pub const MASK_LEN_BITS: u8 = 0b0000_1111;
-// pub const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
+use LenOrDigs::*;
 
-// pub fn encode_i64(mut val: i64, out: &mut ByteString) {
-//     let (mag, sign);
-//     if val >= 0 {
-//         mag = val as u64;
-//         sign = INT_POSITIVE;
-//     } else {
-//         val *= -1;
-//         val -= 1;
-//         mag = val as u64;
-//         sign = 0;
-//     }
-//     let mut digs = u64_to_digits(mag);
-//     assert!(0 < digs.len() && digs.len() <= 8);
-//     let len = (digs.len() - 1) as u8;
-//     let tag = TYPE_INT | sign | len;
-//     out.push(tag);
-//     out.append(&mut digs);
-// }
+#[derive(Clone, Debug)]
+pub enum KMeta {
+    KMC(u8),
+    KMInt(bool, LenOrDigs, Vec<u8>),
+    KMStr(LenOrDigs, ByteString),
+    KMArr(LenOrDigs, Vec<Kson>),
+    KMMap(LenOrDigs, BTreeMap<ByteString, Kson>),
+}
 
-// pub fn encode_int(mut val: Integer, out: &mut ByteString) {
-//     let sign;
-//     if val >= 0 {
-//         sign = INT_POSITIVE;
-//     } else {
-//         val *= -1;
-//         val -= 1;
-//         sign = 0;
-//     }
-//     let mut digs: Vec<u8> = val.to_digits(Order::Lsf);
-//     let mut len_digs = u64_to_digits((digs.len() - 1) as u64);
-//     let len_len = len_digs.len() as u8;
-//     assert!(0 < len_len && len_len <= 8);
-//     let mut tag = TYPE_INT;
-//     tag |= BIG_BIT;
-//     tag |= sign;
-//     tag |= len_len - 1;
-//     out.push(tag);
-//     out.append(&mut len_digs);
-//     out.append(&mut digs);
-// }
+use KMeta::*;
 
-// fn encode_inum(val: Inum, out: &mut ByteString) {
-//     match val {
-//         Inum::I64(i) => encode_i64(i, out),
-//         Inum::Int(i) => encode_int(unwrap_or_clone(i), out),
-//     }
-// }
+fn inum_to_meta(i: Inum) -> KMeta {
+    match i {
+        I64(mut i) => {
+            let pos = i >= 0;
+            if !pos {
+                i *= -1;
+                i -= 1;
+            }
+            let digs = u64_to_digits(i as u64);
+            assert!(digs.len() <= 8);
+            KMInt(i >= 0, Len(digs.len() as u8), digs)
+        }
+        Int(mut i) => {
+            let pos = i >= 0;
+            if !pos {
+                i *= -1;
+                i -= 1;
+            }
+            let digs = Integer::to_digits(&i, Order::Lsf);
+            assert!(digs.len() > 8);
+            let len_digs_digs = u64_to_digits(digs.len() as u64);
+            KMInt(pos, Digs(len_digs_digs), digs)
+        }
+    }
+}
 
-// fn encode_str(bs: ByteString, out: &mut ByteString) {
-//     let tag;
-//     let mut len;
-//     if bs.len() <= MASK_LEN_BITS as usize {
-//         // small case
-//         let len_small = bs.len() as u8;
-//         len = vec![];
-//         tag = TYPE_STR | len_small;
-//     } else {
-//         // big case
-//         len = u64_to_digits(bs.len() as u64);
-//         assert!(len.len() <= 8);
-//         let len_len = len.len() as u8;
-//         tag = TYPE_STR | BIG_BIT | len_len;
-//     }
-//     out.push(tag);
-//     out.append(&mut len);
-//     out.append(&mut bs.to_vec());
-// }
+macro_rules! len_or_digs {
+    ($id: ident) => {
+        if $id.len() <= MASK_LEN_BITS as usize {
+            Len($id.len() as u8)
+        } else {
+            Digs(u64_to_digits($id.len() as u64))
+        }
+    };
+}
 
-// fn encode_array(v: Vec<Kson>, out: &mut ByteString) {
-//     let tag;
-//     let mut len;
-//     if v.len() <= MASK_LEN_BITS as usize {
-//         // small case
-//         let len_small = v.len() as u8;
-//         len = vec![];
-//         tag = TYPE_ARR | len_small;
-//     } else {
-//         // big case
-//         len = u64_to_digits(v.len() as u64);
-//         assert!(len.len() <= 8);
-//         let len_len = len.len() as u8;
-//         tag = TYPE_ARR | BIG_BIT | len_len;
-//     }
-//     out.push(tag);
-//     out.append(&mut len);
-//     for k in v {
-//         encode(k, out);
-//     }
-// }
+fn atom_to_meta(a: Atom) -> KMeta {
+    match a {
+        Null => KMC(0),
+        Bool(t) => KMC(if t { 1 } else { 2 }),
+        ANum(i) => inum_to_meta(i),
+        Str(bs) => KMStr(len_or_digs!(bs), bs),
+    }
+}
 
-// fn encode_map(m: BTreeMap<ByteString, Kson>, out: &mut ByteString) {
-//     let tag;
-//     let mut len;
-//     if m.len() <= MASK_LEN_BITS as usize {
-//         // small case
-//         let len_small = m.len() as u8;
-//         len = vec![];
-//         tag = TYPE_MAP | len_small;
-//     } else {
-//         // big case
-//         len = u64_to_digits(m.len() as u64);
-//         assert!(len.len() <= 8);
-//         let len_len = len.len() as u8;
-//         tag = TYPE_MAP | BIG_BIT | len_len;
-//     }
-//     out.push(tag);
-//     out.append(&mut len);
-//     for (k, v) in m {
-//         encode_str(k, out);
-//         encode(v, out);
-//     }
-// }
+fn container_to_meta(c: Container<Kson>) -> KMeta {
+    match c {
+        Array(a) => KMArr(len_or_digs!(a), a),
+        Map(m) => KMMap(len_or_digs!(m), m),
+    }
+}
 
-// pub fn encode(obj: Kson, out: &mut ByteString) {
-//     match obj {
-//         Kson::KSNull => out.push(CON_NULL),
-//         Kson::KSBool(b) => out.push(if b { CON_TRUE } else { CON_FALSE }),
-//         Kson::KSInt(i) => encode_inum(i, out),
-//         Kson::KSString(s) => encode_str(unwrap_or_clone(s), out),
-//         Kson::KSArray(v) => encode_array(unwrap_or_clone(v), out),
-//         Kson::KSMap(m) => encode_map(unwrap_or_clone(m), out),
-//     }
-// }
+fn kson_to_meta(ks: Kson) -> KMeta {
+    match ks {
+        Atomic(a) => atom_to_meta(a),
+        Contain(c) => container_to_meta(c),
+    }
+}
 
-// fn read_byte(dat: &ByteString, ix: &mut usize) -> Option<u8> {
-//     if *ix >= dat.len() {
-//         return None;
-//     }
-//     let v = dat[*ix];
-//     *ix += 1;
-//     Some(v)
-// }
+macro_rules! len_or_tag {
+    ($tag: ident, $len_digs: ident, $id: ident, $f: expr) => {
+        match $id {
+            Len(l) => {
+                $tag |= $f(l);
+                $len_digs = vec![];
+            }
+            Digs(l_d) => {
+                let len_len = l_d.len() as u8;
+                $tag |= BIG_BIT;
+                $tag |= len_len - 1;
+                $len_digs = l_d;
+            }
+        }
+    };
+    ($tag: ident, $len_digs: ident, $id: ident) => {
+        len_or_tag!($tag, $len_digs, $id, |x| x)
+    };
+}
 
-// fn read_bytes<'a, 'b>(
-//     dat: &'a ByteString,
-//     ix: &'b mut usize,
-//     num_bytes: usize,
-// ) -> Option<&'a [u8]> {
-//     let out = dat.get(*ix..*ix + num_bytes)?;
-//     *ix += num_bytes;
-//     Some(out)
-// }
+macro_rules! tag_and_len {
+    ($type: expr, $len_or_digs: ident, $out: ident) => {
+        let mut tag = $type;
+        let mut len_digs;
+        len_or_tag!(tag, len_digs, $len_or_digs);
+        $out.push(tag);
+        $out.append(&mut len_digs);
+    };
+}
+
+fn encode_meta(km: KMeta, out: &mut ByteString) {
+    match km {
+        KMC(con) => out.push(TYPE_CON | con),
+        KMInt(pos, len_or_digs, mut digs) => {
+            let mut tag = TYPE_INT;
+            let mut len_digs;
+            len_or_tag!(tag, len_digs, len_or_digs, |x| x - 1);
+            if pos {
+                tag |= INT_POSITIVE;
+            }
+            out.push(tag);
+            out.append(&mut len_digs);
+            out.append(&mut digs)
+        }
+        KMStr(len_or_digs, mut st) => {
+            tag_and_len!(TYPE_STR, len_or_digs, out);
+            out.append(st.as_mut());
+        }
+        KMArr(len_or_digs, vs) => {
+            tag_and_len!(TYPE_ARR, len_or_digs, out);
+            for v in vs {
+                encode(v, out);
+            }
+        }
+        KMMap(len_or_digs, m) => {
+            tag_and_len!(TYPE_MAP, len_or_digs, out);
+            for (k, v) in m {
+                encode(Atomic(Str(k)), out);
+                encode(v, out);
+            }
+        }
+    }
+}
+
+fn encode(ks: Kson, out: &mut ByteString) {
+    encode_meta(kson_to_meta(ks), out)
+}
+
+fn read_byte(dat: &ByteString, ix: &mut usize) -> Option<u8> {
+    if *ix >= dat.len() {
+        return None;
+    }
+    let v = dat[*ix];
+    *ix += 1;
+    Some(v)
+}
+
+fn read_bytes<'a, 'b>(
+    dat: &'a ByteString,
+    ix: &'b mut usize,
+    num_bytes: usize,
+) -> Option<&'a [u8]> {
+    let out = dat.get(*ix..*ix + num_bytes)?;
+    *ix += num_bytes;
+    Some(out)
+}
+
+#[derive(Clone, Debug)]
+pub enum KTag {
+    KC(u8),
+    KInt(bool, bool, u8),
+    KStr(bool, u8),
+    KArr(bool, u8),
+    KMap(bool, u8),
+}
+
+use KTag::*;
+
+pub fn read_tag(input: &ByteString, ix: &mut usize) -> Option<KTag> {
+    let byte = read_byte(input, ix)?;
+    match byte & MASK_TYPE {
+        TYPE_CON => Some(KC(byte & MASK_META)),
+        TYPE_INT => {
+            let big = byte & BIG_BIT == BIG_BIT;
+            let pos = byte & INT_POSITIVE == INT_POSITIVE;
+            let len = byte & MASK_INT_LEN_BITS;
+            Some(KInt(big, pos, len + 1))
+        }
+        TYPE_STR => {
+            let big = byte & BIG_BIT == BIG_BIT;
+            Some(KStr(big, byte & MASK_LEN_BITS))
+        }
+        TYPE_ARR => {
+            let big = byte & BIG_BIT == BIG_BIT;
+            Some(KArr(big, byte & MASK_LEN_BITS))
+        }
+        TYPE_MAP => {
+            let big = byte & BIG_BIT == BIG_BIT;
+            Some(KMap(big, byte & MASK_LEN_BITS))
+        }
+        _ => None,
+    }
+}
 
 // fn read_u64(dat: &ByteString, ix: &mut usize, len: u8) -> Option<u64> {
 //     assert!(len <= 8);
@@ -230,32 +281,6 @@ use Kson::*;
 //                 Some(Inum::Int(Arc::new(-1 * Integer::from(mag) - 1)))
 //             }
 //         }
-//     }
-// }
-
-// pub fn read_tag(input: &ByteString, ix: &mut usize) -> Option<KTag> {
-//     let byte = read_byte(input, ix)?;
-//     match byte & MASK_TYPE {
-//         TYPE_CON => Some(KC(byte & MASK_META)),
-//         TYPE_INT => {
-//             let big = byte & BIG_BIT == BIG_BIT;
-//             let pos = byte & INT_POSITIVE == INT_POSITIVE;
-//             let len = byte & MASK_INT_LEN_BITS;
-//             Some(KInt(big, pos, len + 1))
-//         }
-//         TYPE_STR => {
-//             let big = byte & BIG_BIT == BIG_BIT;
-//             Some(KStr(big, byte & MASK_LEN_BITS))
-//         }
-//         TYPE_ARR => {
-//             let big = byte & BIG_BIT == BIG_BIT;
-//             Some(KArr(big, byte & MASK_LEN_BITS))
-//         }
-//         TYPE_MAP => {
-//             let big = byte & BIG_BIT == BIG_BIT;
-//             Some(KMap(big, byte & MASK_LEN_BITS))
-//         }
-//         _ => None,
 //     }
 // }
 
