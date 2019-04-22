@@ -3,7 +3,6 @@ use rug::integer::Order;
 use rug::Integer;
 use std::collections::BTreeMap;
 use std::ops::AddAssign;
-use std::sync::Arc;
 use std::vec::Vec;
 
 use crate::util::*;
@@ -51,26 +50,21 @@ pub enum KMeta {
 
 use KMeta::*;
 
-fn inum_to_meta(i: Inum) -> KMeta {
+fn inum_to_meta(mut i: Inum) -> KMeta {
+    let pos = i >= 0;
+    if !pos {
+        i *= -1;
+        i += -1;
+    }
     match i {
-        I64(mut i) => {
-            let pos = i >= 0;
-            if !pos {
-                i *= -1;
-                i -= 1;
-            }
+        I64(i) => {
             let digs = u64_to_digits(i as u64);
             assert!(digs.len() <= 8);
-            KMInt(i >= 0, Len(digs.len() as u8), digs)
+            KMInt(pos, Len(digs.len() as u8), digs)
         }
-        Int(mut i) => {
-            let pos = i >= 0;
-            if !pos {
-                i *= -1;
-                i -= 1;
-            }
+        Int(i) => {
             let digs = Integer::to_digits(&i, Order::Lsf);
-            assert!(digs.len() > 8);
+            assert!(digs.len() >= 8);
             let len_digs_digs = u64_to_digits(digs.len() as u64);
             KMInt(pos, Digs(len_digs_digs), digs)
         }
@@ -208,6 +202,17 @@ pub enum KTag {
 
 use KTag::*;
 
+macro_rules! big_and_len {
+    ($ctor: expr, $mask: expr, $len_fn: expr, $byte: ident) => {{
+        let big = $byte & BIG_BIT == BIG_BIT;
+        let len = $byte & $mask;
+        Some($ctor(big, $len_fn(len)))
+    }};
+    ($ctor: expr, $byte: ident) => {
+        big_and_len!($ctor, MASK_LEN_BITS, |x| x, $byte)
+    };
+}
+
 pub fn read_tag(input: &ByteString, ix: &mut usize) -> Option<KTag> {
     let byte = read_byte(input, ix)?;
     match byte & MASK_TYPE {
@@ -218,141 +223,89 @@ pub fn read_tag(input: &ByteString, ix: &mut usize) -> Option<KTag> {
             let len = byte & MASK_INT_LEN_BITS;
             Some(KInt(big, pos, len + 1))
         }
-        TYPE_STR => {
-            let big = byte & BIG_BIT == BIG_BIT;
-            Some(KStr(big, byte & MASK_LEN_BITS))
-        }
-        TYPE_ARR => {
-            let big = byte & BIG_BIT == BIG_BIT;
-            Some(KArr(big, byte & MASK_LEN_BITS))
-        }
-        TYPE_MAP => {
-            let big = byte & BIG_BIT == BIG_BIT;
-            Some(KMap(big, byte & MASK_LEN_BITS))
-        }
+        TYPE_STR => big_and_len!(KStr, byte),
+        TYPE_ARR => big_and_len!(KArr, byte),
+        TYPE_MAP => big_and_len!(KMap, byte),
         _ => None,
     }
 }
 
-// fn read_u64(dat: &ByteString, ix: &mut usize, len: u8) -> Option<u64> {
-//     assert!(len <= 8);
-//     let bytes = read_bytes(dat, ix, len as usize)?;
-//     let mask = u64::max_value() >> (64 - 8 * bytes.len());
-//     let p = bytes.as_ptr() as *const u64;
-//     Some(u64::from_le(unsafe { *p }) & mask)
-// }
+fn read_u64(dat: &ByteString, ix: &mut usize, len: u8) -> Option<u64> {
+    assert!(len <= 8);
+    let bytes = read_bytes(dat, ix, len as usize)?;
+    let mask = u64::max_value() >> (64 - 8 * bytes.len());
+    let p = bytes.as_ptr() as *const u64;
+    Some(u64::from_le(unsafe { *p }) & mask)
+}
 
-// fn read_bigint(dat: &ByteString, ix: &mut usize, positive: bool, len: usize) -> Option<Integer> {
-//     let digs = read_bytes(dat, ix, len)?;
-//     let mut i = Integer::from_digits(digs, Order::Lsf);
-//     if !positive {
-//         i *= -1;
-//         i -= 1;
-//     }
-//     Some(i)
-// }
+fn read_int(dat: &ByteString, ix: &mut usize, big: bool, pos: bool, len: u8) -> Option<Inum> {
+    assert!(len - 1 <= MASK_INT_LEN_BITS);
+    let u = read_u64(dat, ix, len)?;
+    let mut i;
+    if big {
+        let digs = read_bytes(dat, ix, u as usize)?;
+        i = Int(Integer::from_digits(digs, Order::Lsf));
+    } else {
+        assert!(u < i64::max_value() as u64);
+        i = I64(u as i64);
+    }
+    if !pos {
+        i *= -1;
+        i += -1;
+    }
+    Some(i)
+}
 
-// pub fn read_int(
-//     dat: &ByteString,
-//     ix: &mut usize,
-//     big: bool,
-//     positive: bool,
-//     len: u8,
-// ) -> Option<Inum> {
-//     assert!(0 < len && len <= 8);
-//     if big {
-//         let newlen = 1 + read_u64(dat, ix, len)? as usize;
-//         assert!(8 <= newlen);
-//         let mag = read_bigint(dat, ix, positive, newlen)?;
-//         Some(Inum::from(mag))
-//     } else {
-//         let mag = read_u64(dat, ix, len)?;
-//         let i = mag as i64;
-//         if positive {
-//             if i >= 0 {
-//                 Some(Inum::I64(i))
-//             } else {
-//                 Some(Inum::Int(Arc::new(Integer::from(mag))))
-//             }
-//         } else {
-//             if i >= 0 {
-//                 Some(Inum::I64(-1 * i - 1))
-//             } else {
-//                 Some(Inum::Int(Arc::new(-1 * Integer::from(mag) - 1)))
-//             }
-//         }
-//     }
-// }
+fn read_len(dat: &ByteString, ix: &mut usize, big: bool, len: u8) -> Option<usize> {
+    if big {
+        Some(read_u64(dat, ix, len + 1)? as usize)
+    } else {
+        Some(len as usize)
+    }
+}
 
-// fn read_array(dat: &ByteString, ix: &mut usize, len: usize) -> Option<Vec<Kson>> {
-//     let mut out = Vec::with_capacity(len);
-//     for _ in 0..len {
-//         out.push(decode(dat, ix)?);
-//     }
-//     Some(out)
-// }
+fn decode(dat: &ByteString, ix: &mut usize) -> Option<Kson> {
+    let tag = read_tag(dat, ix)?;
+    match tag {
+        KC(u) => match u {
+            0 => Some(Atomic(Null)),
+            1 => Some(Atomic(Bool(true))),
+            2 => Some(Atomic(Bool(false))),
+            _ => None,
+        },
+        KInt(big, pos, len) => read_int(dat, ix, big, pos, len).map(|i| Atomic(ANum(i))),
+        KStr(big, len) => {
+            let len = read_len(dat, ix, big, len)?;
+            let bytes = read_bytes(dat, ix, len)?.to_vec();
+            Some(Atomic(Str(ByteString(bytes))))
+        }
+        KArr(big, len) => {
+            let len = read_len(dat, ix, big, len)?;
+            let mut out = Vec::with_capacity(len);
+            for _ in 0..len {
+                out.push(decode(dat, ix)?)
+            }
+            Some(Contain(Array(out)))
+        }
+        KMap(big, len) => {
+            let len = read_len(dat, ix, big, len)?;
+            let mut out = BTreeMap::new();
+            for _ in 0..len {
+                let key: ByteString = decode(dat, ix)?.try_into().ok()?;
+                let val = decode(dat, ix)?;
+                out.insert(key, val);
+            }
+            Some(Contain(Map(out)))
+        }
+    }
+}
 
-// fn read_map(dat: &ByteString, ix: &mut usize, len: usize) -> Option<BTreeMap<ByteString, Kson>> {
-//     let mut out = BTreeMap::new();
-//     for _ in 0..len {
-//         if let Some(KSString(bs)) = decode(dat, ix) {
-//             out.insert(unwrap_or_clone(bs), decode(dat, ix)?);
-//         } else {
-//             return None;
-//         }
-//     }
-//     Some(out)
-// }
+pub fn encode_full(ks: Kson) -> ByteString {
+    let mut out = ByteString(vec![]);
+    encode(ks, &mut out);
+    out
+}
 
-// pub fn decode(dat: &ByteString, ix: &mut usize) -> Option<Kson> {
-//     let tag = read_tag(dat, ix)?;
-//     match tag {
-//         KC(con) => match con {
-//             0 => Some(KSNull),
-//             1 => Some(KSBool(true)),
-//             2 => Some(KSBool(false)),
-//             _ => None,
-//         },
-//         KInt(big, pos, len) => read_int(dat, ix, big, pos, len).map(KSInt),
-//         KStr(big, len) => {
-//             let bytes;
-//             if big {
-//                 let longlen = read_u64(dat, ix, len)?;
-//                 bytes = read_bytes(dat, ix, longlen as usize)?;
-//             } else {
-//                 bytes = read_bytes(dat, ix, len as usize)?;
-//             }
-//             Some(KSString(Arc::new(ByteString(bytes.to_vec()))))
-//         }
-//         KArr(big, len) => {
-//             let elems;
-//             if big {
-//                 let longlen = read_u64(dat, ix, len)?;
-//                 elems = read_array(dat, ix, longlen as usize)?;
-//             } else {
-//                 elems = read_array(dat, ix, len as usize)?;
-//             }
-//             Some(KSArray(Arc::new(elems)))
-//         }
-//         KMap(big, len) => {
-//             let map;
-//             if big {
-//                 let longlen = read_u64(dat, ix, len)?;
-//                 map = read_map(dat, ix, longlen as usize)?;
-//             } else {
-//                 map = read_map(dat, ix, len as usize)?;
-//             }
-//             Some(KSMap(Arc::new(map)))
-//         }
-//     }
-// }
-
-// pub fn encode_full(ks: Kson) -> ByteString {
-//     let mut bs = ByteString(vec![]);
-//     encode(ks, &mut bs);
-//     bs
-// }
-
-// pub fn decode_full(bs: &ByteString) -> Option<Kson> {
-//     decode(bs, &mut 0)
-// }
+pub fn decode_full(bs: &ByteString) -> Option<Kson> {
+    decode(bs, &mut 0)
+}

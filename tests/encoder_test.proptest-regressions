@@ -4,5 +4,4 @@
 #
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
-cc c478904a194747e3bebbf21bd5ce48f41534b8518c8707bf2310e36112e89555 # shrinks to k = KSArray([KSInt(0)])
-cc 65c280a81bea9d37cf0f80702f9de18276c9b830ad7750445b9c8ddb8a0653d4 # shrinks to k = KSMap({b"": KSInt(I64(100000))})
+cc e19982455660dfeb26355ed3d942d888eaac1546521f6ba0cd8b9b0fdcc77193 # shrinks to k = Contain(Map({b"\xf0\x90\x80\x80\xf0\x90\x80\x80A0\x00Aa 0a": Atomic(Null)}))

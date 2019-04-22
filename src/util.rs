@@ -1,7 +1,7 @@
 use byte_string::ByteString;
 use std::boxed::Box;
 use std::convert::AsRef;
-use std::sync::Arc;
+// use std::sync::Arc;
 
 /// converts a `u64` to an 8-byte `ByteString` in little endian order
 pub fn u64_to_bytes_le(x: u64) -> ByteString {
@@ -56,10 +56,10 @@ pub fn str_to_bs(s: &str) -> ByteString {
     ByteString::from(Vec::from(s.as_bytes()))
 }
 
-/// Tries to unwrap a value. If this fails, return a clone.
-pub fn unwrap_or_clone<T: Sized + Clone>(ptr: Arc<T>) -> T {
-    Arc::try_unwrap(ptr).unwrap_or_else(|a| a.as_ref().clone())
-}
+// /// Tries to unwrap a value. If this fails, return a clone.
+// pub fn unwrap_or_clone<T: Sized + Clone>(ptr: Arc<T>) -> T {
+//     Arc::try_unwrap(ptr).unwrap_or_else(|a| a.as_ref().clone())
+// }
 
 /// A macro for saner error handling.
 #[macro_export]

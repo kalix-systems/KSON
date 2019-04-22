@@ -5,7 +5,7 @@
 pub mod encoding;
 pub mod inum;
 pub mod rep;
-pub mod util;
+mod util;
 
 use byte_string::*;
 use rug::Integer;

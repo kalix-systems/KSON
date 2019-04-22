@@ -5,3 +5,6 @@
 # It is recommended to check this file in to source control so that
 # everyone who runs the test benefits from these saved cases.
 cc c51a3e2f16afe49fe54b506b9a5e822fe8fdeaa72d82829d39f73e5fdc093d82 # shrinks to i = 100000000000000000
+cc ac3f059c7d9d72c8f9fbfef04b23c368dcb57bc93f6482b3803b087a83f7d381 # shrinks to i = -1
+cc bce93a78231344a05131e32d2576f5f9ef73c4b882a52595b3deccf97b6208bf # shrinks to i = -1
+cc 23643bed0052f6b44b817f635aab30548a5376dbc7b35feafabf52a05fb7c89e # shrinks to i = 9230000000000000000
