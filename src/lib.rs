@@ -15,6 +15,9 @@ use std::sync::Arc;
 use std::vec::Vec;
 
 use inum::*;
+use rep::KsonRep;
+
+pub const NULL: Kson = Atomic(Null);
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub enum Kson {
@@ -59,12 +62,23 @@ impl Kson {
         }
     }
 
-    fn into_vec(self) -> Option<Vec<Kson>> {
+    pub fn to_vec(&self) -> Option<&Vec<Kson>> {
+        match self {
+            Contain(Array(a)) => Some(a),
+            _ => None,
+        }
+    }
+
+    pub fn into_vec(self) -> Option<Vec<Kson>> {
         Container::try_from(self).ok()?.into_vec()
     }
 
-    fn into_map(self) -> Option<BTreeMap<ByteString, Kson>> {
+    pub fn into_map(self) -> Option<BTreeMap<ByteString, Kson>> {
         Container::try_from(self).ok()?.into_map()
+    }
+
+    pub fn into_rep<T: KsonRep>(self) -> Option<T> {
+        T::from_kson(self)
     }
 }
 

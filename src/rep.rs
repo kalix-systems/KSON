@@ -4,6 +4,7 @@ use num_traits::*;
 use rug::Integer;
 use std::collections::BTreeMap;
 use std::net::{Ipv4Addr, SocketAddrV4};
+use std::slice::Iter;
 use std::sync::Arc;
 use std::vec::{IntoIter, Vec};
 use void::{unreachable, Void};
@@ -265,10 +266,10 @@ impl KsonRep for SocketAddrV4 {
     }
 }
 
-pub fn struct_to_kson(entries: &[(&str, Kson)]) -> Kson {
+pub fn struct_to_kson(entries: Vec<(&str, Kson)>) -> Kson {
     let mut m = BTreeMap::new();
     for (k, v) in entries {
-        m.insert(str_to_bs(k), v.clone());
+        m.insert(str_to_bs(k), v);
     }
     Kson::from(m)
 }
@@ -291,19 +292,18 @@ pub fn enum_to_kson(name: &str, mut fields: Vec<Kson>) -> Kson {
     Kson::from(fields)
 }
 
-pub fn enum_from_kson<T, F: FnOnce(IntoIter<Kson>) -> Option<T>>(
+pub fn enum_from_kson<T>(
     ks: Kson,
-    name: &str,
-    f: F,
+    fns: Vec<(&str, Box<FnMut(IntoIter<Kson>) -> Option<T>>)>,
 ) -> Option<T> {
-    let vec = ks.into_vec()?;
-    let mut fields = vec.into_iter();
-    let next: ByteString = fields.next()?.try_into().ok()?;
-    if next == str_to_bs(name) {
-        f(fields)
-    } else {
-        None
+    let mut fields = ks.into_vec()?.into_iter();
+    let ctor: ByteString = fields.next()?.try_into().ok()?;
+    for (name, mut f) in fns {
+        if ctor == str_to_bs(name) {
+            return f(fields);
+        }
     }
+    None
 }
 
 pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Option<T> {
