@@ -5,7 +5,7 @@
 pub mod encoding;
 pub mod inum;
 pub mod rep;
-mod util;
+pub mod util;
 
 use byte_string::*;
 use rug::Integer;
@@ -15,7 +15,6 @@ use std::sync::Arc;
 use std::vec::Vec;
 
 use inum::*;
-// use rep::KsonRep;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub enum Kson {

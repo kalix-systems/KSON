@@ -1,15 +1,14 @@
 extern crate criterion;
-extern crate kalix;
+extern crate kson;
 
 use byte_string::ByteString;
 use criterion::black_box;
 use rug::Integer;
 use std::collections::BTreeMap;
-use std::sync::Arc;
 
-use kalix::kson::encoding::{decode_full, encode_full};
-use kalix::kson::*;
-use kalix::util::*;
+use kson::encoding::{decode_full, encode_full};
+use kson::*;
+use util::*;
 
 const N_ARR: usize = 100;
 const N_MAP: usize = 100;
@@ -17,18 +16,13 @@ const N_MAP: usize = 100;
 fn big_k() -> Kson {
     let v0: Vec<Kson> = (0..N_ARR).map(|i| Kson::from(i as u64)).collect();
     let m: BTreeMap<ByteString, Kson> = (0..N_MAP)
-        .map(|i| {
-            (
-                u64_to_bytes_le(i as u64),
-                Kson::KSArray(Arc::new(v0.clone())),
-            )
-        })
+        .map(|i| (u64_to_bytes_le(i as u64), Kson::from(v0.clone())))
         .collect();
     let v: Vec<Kson> = std::iter::repeat(m)
-        .map(|m| Kson::KSMap(Arc::new(m)))
+        .map(|m| Kson::from(m))
         .take(N_ARR)
         .collect();
-    Kson::KSArray(Arc::new(v))
+    Kson::from(v)
 }
 
 const N_REPS: u8 = 100;

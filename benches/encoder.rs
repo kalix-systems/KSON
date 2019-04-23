@@ -2,64 +2,60 @@
 extern crate criterion;
 
 extern crate common_utils;
-extern crate kalix;
+extern crate kson;
 
 use byte_string::ByteString;
 use criterion::black_box;
 use criterion::Criterion;
 // use num_bigint::BigInt;
-use rug::Integer;
 use std::collections::BTreeMap;
-use std::sync::Arc;
 
-use kalix::kson::encoding::{decode_full, encode_full};
-use kalix::kson::*;
-use kalix::util::*;
+use kson::encoding::{decode_full, encode_full};
+use kson::*;
+use util::*;
 
 const N_BIG_ARR: usize = 2000;
 
 fn big_arr() -> Kson {
-    Kson::KSArray(Arc::new(
-        (0..N_BIG_ARR).map(|i| Kson::from(i as u64)).collect(),
-    ))
+    let v: Vec<Kson> = (0..N_BIG_ARR).map(|i| Kson::from(i as u64)).collect();
+    Kson::from(v)
 }
 
 const N_ARR: usize = 10;
 const N_MAP: usize = 10;
 
 fn big_k() -> Kson {
-    let v0: Vec<Kson> = (0..N_ARR).map(|i| Kson::from(i as u64)).collect();
+    let v0: Vec<Kson> = (0..N_ARR).map(|i| Kson::from(i as i64)).collect();
     let m: BTreeMap<ByteString, Kson> = (0..N_MAP)
-        .map(|i| {
-            (
-                u64_to_bytes_le(i as u64),
-                Kson::KSArray(Arc::new(v0.clone())),
-            )
-        })
+        .map(|i| (u64_to_bytes_le(i as u64), Kson::from(v0.clone())))
         .collect();
     let v: Vec<Kson> = std::iter::repeat(m)
-        .map(|m| Kson::KSMap(Arc::new(m)))
+        .map(|m| Kson::from(m))
         .take(N_ARR)
         .collect();
-    Kson::KSArray(Arc::new(v))
+    Kson::from(v)
 }
 
 fn bench_construction(c: &mut Criterion) {
     c.bench_function(
-        &format!("Creating a Kson object of size {}", big_k().size()),
+        &format!(
+            "Creating a Kson object of size {}",
+            encode_full(big_k()).len()
+        ),
         |b| b.iter(|| black_box(big_k())),
     );
 }
-fn bench_size(c: &mut Criterion) {
-    let big_k = big_k();
-    c.bench_function(
-        &format!(
-            "Calculating size for a Kson object of size {}",
-            big_k.size()
-        ),
-        move |b| b.iter(|| black_box(big_k.clone()).size()),
-    );
-}
+
+// fn bench_size(c: &mut Criterion) {
+//     let big_k = big_k();
+//     c.bench_function(
+//         &format!(
+//             "Calculating size for a Kson object of size {}",
+//             big_k.size()
+//         ),
+//         move |b| b.iter(|| black_box(big_k.clone()).size()),
+//     );
+// }
 
 fn bench_enc(c: &mut Criterion) {
     let big_k = big_k();
@@ -99,7 +95,6 @@ fn bench_dec_flat(c: &mut Criterion) {
 criterion_group!(
     benches,
     bench_construction,
-    bench_size,
     bench_enc,
     bench_dec,
     bench_enc_flat,
