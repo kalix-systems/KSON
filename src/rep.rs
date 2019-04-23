@@ -3,6 +3,7 @@ use hashbrown::HashMap;
 use num_traits::*;
 use rug::Integer;
 use std::collections::BTreeMap;
+use std::fmt::Debug;
 use std::net::{Ipv4Addr, SocketAddrV4};
 use std::slice::Iter;
 use std::sync::Arc;
@@ -179,10 +180,10 @@ impl<A: KsonRep, B: KsonRep> KsonRep for (A, B) {
 
     fn from_kson(ks: Kson) -> Option<Self> {
         let arr = ks.into_vec()?;
-        if arr.len() == 3 {
+        if arr.len() == 2 {
             let mut iter = arr.into_iter();
-            let k1 = iter.next().unwrap();
-            let k2 = iter.next().unwrap();
+            let k1 = iter.next()?;
+            let k2 = iter.next()?;
             Some((A::from_kson(k1)?, B::from_kson(k2)?))
         } else {
             None
@@ -314,18 +315,21 @@ pub fn struct_from_kson(ks: Kson, names: &[&str]) -> Option<Vec<Kson>> {
 
 pub fn enum_to_kson(name: &str, mut fields: Vec<Kson>) -> Kson {
     fields.insert(0, Kson::from(str_to_bs(name)));
-    Kson::from(fields)
+    Contain(Array(fields))
+    // Kson::from(fields)
 }
 
-pub fn enum_from_kson<T>(
+pub fn enum_from_kson<T: Debug>(
     ks: Kson,
     fns: Vec<(&str, Box<FnMut(IntoIter<Kson>) -> Option<T>>)>,
 ) -> Option<T> {
-    let mut fields = ks.into_vec()?.into_iter();
+    let vec = ks.into_vec()?;
+    let mut fields = vec.into_iter();
     let ctor: ByteString = fields.next()?.try_into().ok()?;
     for (name, mut f) in fns {
         if ctor == str_to_bs(name) {
-            return f(fields);
+            let out = f(fields);
+            return out;
         }
     }
     None
