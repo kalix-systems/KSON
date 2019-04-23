@@ -115,6 +115,13 @@ impl<T: KsonRep> KsonRep for BTreeMap<ByteString, T> {
         Contain(Map(self).fmap(|t| t.into_kson()))
     }
 
+    fn to_kson(&self) -> Kson {
+        Contain(Map(self
+            .iter()
+            .map(|(k, v)| (k.clone(), v.to_kson()))
+            .collect()))
+    }
+
     fn from_kson(ks: Kson) -> Option<Self> {
         Container::try_from(ks)
             .ok()?
@@ -130,6 +137,13 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep
         Contain(Map(self
             .into_iter()
             .map(|(k, v)| (k, v.into_kson()))
+            .collect()))
+    }
+
+    fn to_kson(&self) -> Kson {
+        Contain(Map(self
+            .iter()
+            .map(|(k, v)| (k.clone(), v.to_kson()))
             .collect()))
     }
 
