@@ -12,8 +12,15 @@ use void::{unreachable, Void};
 use crate::util::*;
 use crate::*;
 
-pub trait KsonRep: Sized {
-    fn into_kson(self) -> Kson;
+pub trait KsonRep: Clone + Sized {
+    fn to_kson(&self) -> Kson {
+        self.clone().into_kson()
+    }
+
+    fn into_kson(self) -> Kson {
+        self.to_kson()
+    }
+
     fn from_kson(ks: Kson) -> Option<Self>;
 }
 
@@ -61,7 +68,7 @@ try_from_kson!(i8, Atom, Inum, i64);
 try_from_kson!(i16, Atom, Inum, i64);
 try_from_kson!(i32, Atom, Inum, i64);
 
-impl<T: Into<Kson> + TryFrom<Kson>> KsonRep for T {
+impl<T: Clone + Into<Kson> + TryFrom<Kson>> KsonRep for T {
     fn into_kson(self) -> Kson {
         self.into()
     }
@@ -89,6 +96,10 @@ impl<T: Into<Kson>> From<BTreeMap<ByteString, T>> for Kson {
 impl<T: KsonRep> KsonRep for Vec<T> {
     fn into_kson(self) -> Kson {
         Contain(Array(self).fmap(|t| t.into_kson()))
+    }
+
+    fn to_kson(&self) -> Kson {
+        Contain(Array(self.iter().map(|t| t.to_kson()).collect()))
     }
 
     fn from_kson(ks: Kson) -> Option<Self> {

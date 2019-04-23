@@ -144,7 +144,20 @@ impl<T> Container<T> {
                 }
                 Array(out)
             }
-            Map(m) => Map(m.into_iter().map(|(k, v)| (k, f(v))).collect()),
+            Map(m) => Map(m.into_iter().map(|(k, v)| (k.clone(), f(v))).collect()),
+        }
+    }
+
+    fn fmap_borrow<O, F: FnMut(&T) -> O>(&self, mut f: F) -> Container<O> {
+        match self {
+            Array(a) => {
+                let mut out = Vec::with_capacity(a.len());
+                for t in a {
+                    out.push(f(t));
+                }
+                Array(out)
+            }
+            Map(m) => Map(m.iter().map(|(k, v)| (k.clone(), f(v))).collect()),
         }
     }
 
