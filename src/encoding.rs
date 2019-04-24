@@ -168,7 +168,7 @@ fn encode_meta(km: KMeta, out: &mut ByteString) {
     }
 }
 
-fn encode(ks: Kson, out: &mut ByteString) {
+pub fn encode(ks: Kson, out: &mut ByteString) {
     encode_meta(kson_to_meta(ks), out)
 }
 
