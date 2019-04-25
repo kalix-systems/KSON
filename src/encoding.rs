@@ -1,10 +1,10 @@
-use byte_string::*;
 use rug::integer::Order;
 use rug::Integer;
 use std::collections::BTreeMap;
 use std::ops::AddAssign;
 use std::vec::Vec;
 
+use crate::bytes::*;
 use crate::util::*;
 use crate::*;
 
@@ -43,9 +43,9 @@ use LenOrDigs::*;
 pub enum KMeta {
     KMC(u8),
     KMInt(bool, LenOrDigs, Vec<u8>),
-    KMStr(LenOrDigs, ByteString),
+    KMStr(LenOrDigs, Bytes),
     KMArr(LenOrDigs, Vec<Kson>),
-    KMMap(LenOrDigs, BTreeMap<ByteString, Kson>),
+    KMMap(LenOrDigs, BTreeMap<Bytes, Kson>),
 }
 
 use KMeta::*;
@@ -134,7 +134,7 @@ macro_rules! tag_and_len {
     };
 }
 
-fn encode_meta(km: KMeta, out: &mut ByteString) {
+fn encode_meta(km: KMeta, out: &mut Bytes) {
     match km {
         KMC(con) => out.push(TYPE_CON | con),
         KMInt(pos, len_or_digs, mut digs) => {
@@ -168,11 +168,11 @@ fn encode_meta(km: KMeta, out: &mut ByteString) {
     }
 }
 
-pub fn encode(ks: Kson, out: &mut ByteString) {
+pub fn encode(ks: Kson, out: &mut Bytes) {
     encode_meta(kson_to_meta(ks), out)
 }
 
-fn read_byte(dat: &ByteString, ix: &mut usize) -> Option<u8> {
+fn read_byte(dat: &Bytes, ix: &mut usize) -> Option<u8> {
     if *ix >= dat.len() {
         return None;
     }
@@ -181,11 +181,7 @@ fn read_byte(dat: &ByteString, ix: &mut usize) -> Option<u8> {
     Some(v)
 }
 
-fn read_bytes<'a, 'b>(
-    dat: &'a ByteString,
-    ix: &'b mut usize,
-    num_bytes: usize,
-) -> Option<&'a [u8]> {
+fn read_bytes<'a, 'b>(dat: &'a Bytes, ix: &'b mut usize, num_bytes: usize) -> Option<&'a [u8]> {
     let out = dat.get(*ix..*ix + num_bytes)?;
     *ix += num_bytes;
     Some(out)
@@ -213,7 +209,7 @@ macro_rules! big_and_len {
     };
 }
 
-pub fn read_tag(input: &ByteString, ix: &mut usize) -> Option<KTag> {
+pub fn read_tag(input: &Bytes, ix: &mut usize) -> Option<KTag> {
     let byte = read_byte(input, ix)?;
     match byte & MASK_TYPE {
         TYPE_CON => Some(KC(byte & MASK_META)),
@@ -230,7 +226,7 @@ pub fn read_tag(input: &ByteString, ix: &mut usize) -> Option<KTag> {
     }
 }
 
-fn read_u64(dat: &ByteString, ix: &mut usize, len: u8) -> Option<u64> {
+fn read_u64(dat: &Bytes, ix: &mut usize, len: u8) -> Option<u64> {
     assert!(len <= 8);
     let bytes = read_bytes(dat, ix, len as usize)?;
     let mask = u64::max_value() >> (64 - 8 * bytes.len());
@@ -238,7 +234,7 @@ fn read_u64(dat: &ByteString, ix: &mut usize, len: u8) -> Option<u64> {
     Some(u64::from_le(unsafe { *p }) & mask)
 }
 
-fn read_int(dat: &ByteString, ix: &mut usize, big: bool, pos: bool, len: u8) -> Option<Inum> {
+fn read_int(dat: &Bytes, ix: &mut usize, big: bool, pos: bool, len: u8) -> Option<Inum> {
     assert!(len - 1 <= MASK_INT_LEN_BITS);
     let u = read_u64(dat, ix, len)?;
     let mut i;
@@ -256,7 +252,7 @@ fn read_int(dat: &ByteString, ix: &mut usize, big: bool, pos: bool, len: u8) -> 
     Some(i)
 }
 
-fn read_len(dat: &ByteString, ix: &mut usize, big: bool, len: u8) -> Option<usize> {
+fn read_len(dat: &Bytes, ix: &mut usize, big: bool, len: u8) -> Option<usize> {
     if big {
         Some(read_u64(dat, ix, len + 1)? as usize)
     } else {
@@ -264,7 +260,7 @@ fn read_len(dat: &ByteString, ix: &mut usize, big: bool, len: u8) -> Option<usiz
     }
 }
 
-fn decode(dat: &ByteString, ix: &mut usize) -> Option<Kson> {
+fn decode(dat: &Bytes, ix: &mut usize) -> Option<Kson> {
     let tag = read_tag(dat, ix)?;
     match tag {
         KC(u) => match u {
@@ -277,7 +273,7 @@ fn decode(dat: &ByteString, ix: &mut usize) -> Option<Kson> {
         KStr(big, len) => {
             let len = read_len(dat, ix, big, len)?;
             let bytes = read_bytes(dat, ix, len)?.to_vec();
-            Some(Atomic(Str(ByteString(bytes))))
+            Some(Atomic(Str(Bytes(bytes))))
         }
         KArr(big, len) => {
             let len = read_len(dat, ix, big, len)?;
@@ -291,7 +287,7 @@ fn decode(dat: &ByteString, ix: &mut usize) -> Option<Kson> {
             let len = read_len(dat, ix, big, len)?;
             let mut out = BTreeMap::new();
             for _ in 0..len {
-                let key: ByteString = decode(dat, ix)?.try_into().ok()?;
+                let key: Bytes = decode(dat, ix)?.try_into().ok()?;
                 let val = decode(dat, ix)?;
                 out.insert(key, val);
             }
@@ -300,12 +296,12 @@ fn decode(dat: &ByteString, ix: &mut usize) -> Option<Kson> {
     }
 }
 
-pub fn encode_full(ks: Kson) -> ByteString {
-    let mut out = ByteString(vec![]);
+pub fn encode_full(ks: Kson) -> Bytes {
+    let mut out = Bytes(vec![]);
     encode(ks, &mut out);
     out
 }
 
-pub fn decode_full(bs: &ByteString) -> Option<Kson> {
+pub fn decode_full(bs: &Bytes) -> Option<Kson> {
     decode(bs, &mut 0)
 }

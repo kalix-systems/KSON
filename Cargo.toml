@@ -5,7 +5,6 @@ authors = ["theseriousadult <jack@gallabytes.com>"]
 edition = "2018"
 
 [dependencies]
-byte_string = "1.0"
 maplit = "1.0"
 mdo = "0.3"
 pyo3 = "0.6.0"

@@ -2,21 +2,21 @@
 #![allow(unused_variables)]
 #![allow(unused_imports)]
 
+pub mod bytes;
 pub mod encoding;
 pub mod inum;
 pub mod rep;
 pub mod util;
 
-use byte_string::*;
 use pyo3::prelude::*;
 use rug::Integer;
-use pyo3::types::IntoPyDict;
 use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
-use std::sync::Arc;
 use std::slice::Iter;
+use std::sync::Arc;
 use std::vec::Vec;
 
+use bytes::*;
 use inum::*;
 use rep::KsonRep;
 
@@ -29,6 +29,24 @@ pub enum Kson {
 }
 
 use Kson::*;
+
+impl ToPyObject for Kson {
+    fn to_object(&self, py: Python) -> PyObject {
+        match &self {
+            Atomic(a) => a.to_object(py),
+            Contain(c) => c.to_object(py),
+        }
+    }
+}
+
+impl IntoPyObject for Kson {
+    fn into_object(self, py: Python) -> PyObject {
+        match self {
+            Atomic(a) => a.into_object(py),
+            Contain(c) => c.into_object(py),
+        }
+    }
+}
 
 impl TryFrom<Kson> for Atom {
     type Error = Container<Kson>;
@@ -76,7 +94,7 @@ impl Kson {
         Container::try_from(self).ok()?.into_vec()
     }
 
-    pub fn into_map(self) -> Option<BTreeMap<ByteString, Kson>> {
+    pub fn into_map(self) -> Option<BTreeMap<Bytes, Kson>> {
         Container::try_from(self).ok()?.into_map()
     }
 
@@ -92,36 +110,28 @@ from_fn!(Kson, Container<Kson>, |c| Contain(c));
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub enum Container<T> {
     Array(Vec<T>),
-    Map(BTreeMap<ByteString, T>),
+    Map(BTreeMap<Bytes, T>),
 }
 
 use Container::*;
+
+impl<T: IntoPyObject> IntoPyObject for Container<T> {
+    fn into_object(self, py: Python) -> PyObject {
+        match self {
+            Array(vector) => vector.into_object(py),
+            Map(btmap) => btmap.into_object(py),
+        }
+    }
+}
 
 impl<T: ToPyObject> ToPyObject for Container<T> {
     fn to_object(&self, py: Python) -> PyObject {
         match &self {
             Array(vector) => vector.to_object(py),
-            Map(btmap) =>  btmap.to_object(py)
+            Map(btmap) => btmap.to_object(py),
         }
     }
 }
-
-impl ToPyObject for ByteString {
-    fn to_object(&self, py: Python) -> PyObject {
-        self.to_vec().to_object(py) 
-    }
-}
-
-//impl<T> ToPyObject for Container<T> {
-//   fn to_object(&self, py: Python) -> PyObject {
-//        match &self {
-//            Array(vector) => match vector {
-//                
-//            }
-//            Map(btmap) => btmap.iter().collect().into_pydict(py),
-//        }
-//   } 
-//}
 
 impl<T> From<Vec<T>> for Container<T> {
     fn from(v: Vec<T>) -> Container<T> {
@@ -129,8 +139,8 @@ impl<T> From<Vec<T>> for Container<T> {
     }
 }
 
-impl<T> From<BTreeMap<ByteString, T>> for Container<T> {
-    fn from(v: BTreeMap<ByteString, T>) -> Container<T> {
+impl<T> From<BTreeMap<Bytes, T>> for Container<T> {
+    fn from(v: BTreeMap<Bytes, T>) -> Container<T> {
         Map(v)
     }
 }
@@ -150,14 +160,14 @@ impl<T> Container<T> {
         }
     }
 
-    fn into_map(self) -> Option<BTreeMap<ByteString, T>> {
+    fn into_map(self) -> Option<BTreeMap<Bytes, T>> {
         match self {
             Map(m) => Some(m),
             _ => None,
         }
     }
 
-    fn to_map(&self) -> Option<&BTreeMap<ByteString, T>> {
+    fn to_map(&self) -> Option<&BTreeMap<Bytes, T>> {
         match self {
             Map(m) => Some(m),
             _ => None,
@@ -238,10 +248,24 @@ pub enum Atom {
     Null,
     Bool(bool),
     ANum(Inum),
-    Str(ByteString),
+    Str(Bytes),
 }
 
 use Atom::*;
+
+impl IntoPyObject for Atom {
+    fn into_object(self, py: Python) -> PyObject {
+        match self {
+            Null => {
+                let val: Option<Self> = None;
+                val.into_object(py)
+            }
+            Bool(b) => b.into_object(py),
+            Str(s) => s.into_object(py),
+            ANum(val) => val.to_object(py),
+        }
+    }
+}
 
 impl ToPyObject for Atom {
     fn to_object(&self, py: Python) -> PyObject {
@@ -277,7 +301,7 @@ impl TryFrom<Atom> for Inum {
     }
 }
 
-impl TryFrom<Atom> for ByteString {
+impl TryFrom<Atom> for Bytes {
     type Error = Atom;
     fn try_from(a: Atom) -> Result<Self, Atom> {
         match a {
@@ -309,7 +333,7 @@ impl Atom {
         }
     }
 
-    fn to_str(&self) -> Option<&ByteString> {
+    fn to_str(&self) -> Option<&Bytes> {
         match self {
             Str(s) => Some(s),
             _ => None,
@@ -319,10 +343,10 @@ impl Atom {
 
 from_fn!(Atom, bool, Bool);
 from_fn!(Atom, Inum, ANum);
-from_fn!(Atom, ByteString, Str);
+from_fn!(Atom, Bytes, Str);
 
 compose_from!(Kson, Atom, Inum);
-compose_from!(Kson, Atom, ByteString);
+compose_from!(Kson, Atom, Bytes);
 compose_from!(Kson, Atom, bool);
 
 compose_from!(Atom, Inum, Integer);

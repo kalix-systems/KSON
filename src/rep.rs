@@ -1,4 +1,3 @@
-use byte_string::*;
 use hashbrown::HashMap;
 use num_traits::*;
 use rug::Integer;
@@ -58,7 +57,7 @@ macro_rules! try_from_kson {
 }
 
 try_from_kson!(bool);
-try_from_kson!(ByteString);
+try_from_kson!(Bytes);
 try_from_kson!(i64, Atom, Inum);
 try_from_kson!(u64, Atom, Inum);
 
@@ -88,8 +87,8 @@ impl<T: Into<Kson>> From<Vec<T>> for Kson {
     }
 }
 
-impl<T: Into<Kson>> From<BTreeMap<ByteString, T>> for Kson {
-    fn from(m: BTreeMap<ByteString, T>) -> Kson {
+impl<T: Into<Kson>> From<BTreeMap<Bytes, T>> for Kson {
+    fn from(m: BTreeMap<Bytes, T>) -> Kson {
         Contain(Map(m.into_iter().map(|(k, v)| (k, v.into())).collect()))
     }
 }
@@ -111,7 +110,7 @@ impl<T: KsonRep> KsonRep for Vec<T> {
     }
 }
 
-impl<T: KsonRep> KsonRep for BTreeMap<ByteString, T> {
+impl<T: KsonRep> KsonRep for BTreeMap<Bytes, T> {
     fn into_kson(self) -> Kson {
         Contain(Map(self).fmap(|t| t.into_kson()))
     }
@@ -131,9 +130,7 @@ impl<T: KsonRep> KsonRep for BTreeMap<ByteString, T> {
     }
 }
 
-impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep
-    for HashMap<ByteString, T, S>
-{
+impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for HashMap<Bytes, T, S> {
     fn into_kson(self) -> Kson {
         Contain(Map(self
             .into_iter()
@@ -149,7 +146,7 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep
     }
 
     fn from_kson(ks: Kson) -> Option<Self> {
-        let m: BTreeMap<ByteString, Kson> = ks.into_map()?;
+        let m: BTreeMap<Bytes, Kson> = ks.into_map()?;
         let mut h = HashMap::with_hasher(S::default());
         h.reserve(m.len());
         for (k, v) in m.into_iter() {
@@ -270,10 +267,10 @@ impl<T: KsonRep> KsonRep for Option<T> {
 impl KsonRep for Ipv4Addr {
     fn into_kson(self) -> Kson {
         let octs = self.octets();
-        ByteString::new(vec![octs[0], octs[1], octs[2], octs[3]]).into_kson()
+        Bytes(vec![octs[0], octs[1], octs[2], octs[3]]).into_kson()
     }
     fn from_kson(ks: Kson) -> Option<Self> {
-        let bs: ByteString = KsonRep::from_kson(ks)?;
+        let bs: Bytes = KsonRep::from_kson(ks)?;
         if bs.len() != 4 {
             None
         } else {
@@ -325,7 +322,7 @@ pub fn enum_from_kson<T: Debug>(
 ) -> Option<T> {
     let vec = ks.into_vec()?;
     let mut fields = vec.into_iter();
-    let ctor: ByteString = fields.next()?.try_into().ok()?;
+    let ctor: Bytes = fields.next()?.try_into().ok()?;
     for (name, mut f) in fns {
         if ctor == str_to_bs(name) {
             let out = f(fields);
@@ -349,11 +346,11 @@ impl KsonNotNull for i8 {}
 impl KsonNotNull for i16 {}
 impl KsonNotNull for i32 {}
 impl KsonNotNull for i64 {}
-impl KsonNotNull for ByteString {}
+impl KsonNotNull for Bytes {}
 impl<T: KsonRep> KsonNotNull for Vec<T> {}
 
 impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonNotNull
-    for HashMap<ByteString, T, S>
+    for HashMap<Bytes, T, S>
 {
 }
 impl KsonNotNull for () {}

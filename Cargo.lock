@@ -560,7 +560,6 @@ name = "kalix"
 version = "0.1.0"
 dependencies = [
  "actix 0.7.9 (registry+https://github.com/rust-lang/crates.io-index)",
- "byte_string 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "futures 0.1.26 (registry+https://github.com/rust-lang/crates.io-index)",
  "git2 0.8.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "hashbrown 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
@@ -607,7 +606,6 @@ dependencies = [
 name = "kson"
 version = "0.1.0"
 dependencies = [
- "byte_string 1.0.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "common_utils 0.1.0",
  "criterion 0.2.11 (registry+https://github.com/rust-lang/crates.io-index)",
  "hashbrown 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
