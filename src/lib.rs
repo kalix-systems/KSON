@@ -1,6 +1,9 @@
 #![allow(dead_code)]
 #![allow(unused_variables)]
 #![allow(unused_imports)]
+#![allow(clippy::cast_ptr_alignment)]
+#![allow(clippy::cast_lossless)]
+#![allow(clippy::clone_on_copy)]
 
 pub mod bytes;
 pub mod encoding;
