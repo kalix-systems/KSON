@@ -1,4 +1,5 @@
 use pyo3::prelude::*;
+use pyo3::types::{PyAny, PyLong};
 use rug::Integer;
 use std::convert::TryFrom;
 use std::ops::{AddAssign, MulAssign};
@@ -25,6 +26,12 @@ impl ToPyObject for Inum {
                 val.to_object(py)
             }
         }
+    }
+}
+
+impl<'source> FromPyObject<'source> for Inum {
+    fn extract(ob: &'source PyAny) -> PyResult<Self> {
+        ob.extract()
     }
 }
 

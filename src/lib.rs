@@ -11,7 +11,7 @@ pub mod inum;
 pub mod rep;
 pub mod util;
 
-use pyo3::prelude::*;
+use pyo3::{prelude::*, types::PyAny};
 use rug::Integer;
 use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
@@ -48,6 +48,12 @@ impl IntoPyObject for Kson {
             Atomic(a) => a.into_object(py),
             Contain(c) => c.into_object(py),
         }
+    }
+}
+
+impl<'source> FromPyObject<'source> for Kson {
+    fn extract(ob: &'source PyAny) -> PyResult<Self> {
+        ob.extract()
     }
 }
 
@@ -281,6 +287,12 @@ impl ToPyObject for Atom {
             Str(s) => s.to_object(py),
             ANum(val) => val.to_object(py),
         }
+    }
+}
+
+impl<'source> FromPyObject<'source> for Atom {
+    fn extract(ob: &'source PyAny) -> PyResult<Self> {
+        ob.extract()
     }
 }
 
