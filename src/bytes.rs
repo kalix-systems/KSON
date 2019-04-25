@@ -48,25 +48,6 @@ impl AsRef<[u8]> for Bytes {
     }
 }
 
-impl ToPyObject for Bytes {
-    fn to_object(&self, py: Python) -> PyObject {
-        PyBytes::new(py, self.as_slice()).into_object(py)
-    }
-}
-
-impl IntoPyObject for Bytes {
-    fn into_object(self, py: Python) -> PyObject {
-        PyBytes::new(py, self.as_slice()).into_object(py)
-    }
-}
-
-impl<'a> FromPyObject<'a> for Bytes {
-    fn extract(obj: &'a PyAny) -> PyResult<Bytes> {
-        let bytes: &'a PyBytes = obj.try_into_exact()?;
-        Ok(Bytes(bytes.as_bytes().to_vec()))
-    }
-}
-
 impl From<Vec<u8>> for Bytes {
     fn from(v: Vec<u8>) -> Bytes {
         Bytes(v)

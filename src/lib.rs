@@ -8,6 +8,7 @@
 pub mod bytes;
 pub mod encoding;
 pub mod inum;
+pub mod python;
 pub mod rep;
 pub mod util;
 
@@ -32,30 +33,6 @@ pub enum Kson {
 }
 
 use Kson::*;
-
-impl ToPyObject for Kson {
-    fn to_object(&self, py: Python) -> PyObject {
-        match &self {
-            Atomic(a) => a.to_object(py),
-            Contain(c) => c.to_object(py),
-        }
-    }
-}
-
-impl IntoPyObject for Kson {
-    fn into_object(self, py: Python) -> PyObject {
-        match self {
-            Atomic(a) => a.into_object(py),
-            Contain(c) => c.into_object(py),
-        }
-    }
-}
-
-impl<'source> FromPyObject<'source> for Kson {
-    fn extract(ob: &'source PyAny) -> PyResult<Self> {
-        ob.extract()
-    }
-}
 
 impl TryFrom<Kson> for Atom {
     type Error = Container<Kson>;
@@ -123,24 +100,6 @@ pub enum Container<T> {
 }
 
 use Container::*;
-
-impl<T: IntoPyObject> IntoPyObject for Container<T> {
-    fn into_object(self, py: Python) -> PyObject {
-        match self {
-            Array(vector) => vector.into_object(py),
-            Map(btmap) => btmap.into_object(py),
-        }
-    }
-}
-
-impl<T: ToPyObject> ToPyObject for Container<T> {
-    fn to_object(&self, py: Python) -> PyObject {
-        match &self {
-            Array(vector) => vector.to_object(py),
-            Map(btmap) => btmap.to_object(py),
-        }
-    }
-}
 
 impl<T> From<Vec<T>> for Container<T> {
     fn from(v: Vec<T>) -> Container<T> {
@@ -261,40 +220,6 @@ pub enum Atom {
 }
 
 use Atom::*;
-
-impl IntoPyObject for Atom {
-    fn into_object(self, py: Python) -> PyObject {
-        match self {
-            Null => {
-                let val: Option<Self> = None;
-                val.into_object(py)
-            }
-            Bool(b) => b.into_object(py),
-            Str(s) => s.into_object(py),
-            ANum(val) => val.to_object(py),
-        }
-    }
-}
-
-impl ToPyObject for Atom {
-    fn to_object(&self, py: Python) -> PyObject {
-        match &self {
-            Null => {
-                let val: Option<Self> = None;
-                val.to_object(py)
-            }
-            Bool(b) => b.to_object(py),
-            Str(s) => s.to_object(py),
-            ANum(val) => val.to_object(py),
-        }
-    }
-}
-
-impl<'source> FromPyObject<'source> for Atom {
-    fn extract(ob: &'source PyAny) -> PyResult<Self> {
-        ob.extract()
-    }
-}
 
 impl TryFrom<Atom> for bool {
     type Error = Atom;
