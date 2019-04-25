@@ -8,10 +8,13 @@ pub mod rep;
 pub mod util;
 
 use byte_string::*;
+use pyo3::prelude::*;
 use rug::Integer;
+use pyo3::types::IntoPyDict;
 use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 use std::sync::Arc;
+use std::slice::Iter;
 use std::vec::Vec;
 
 use inum::*;
@@ -93,6 +96,32 @@ pub enum Container<T> {
 }
 
 use Container::*;
+
+impl<T: ToPyObject> ToPyObject for Container<T> {
+    fn to_object(&self, py: Python) -> PyObject {
+        match &self {
+            Array(vector) => vector.to_object(py),
+            Map(btmap) =>  btmap.to_object(py)
+        }
+    }
+}
+
+impl ToPyObject for ByteString {
+    fn to_object(&self, py: Python) -> PyObject {
+        self.to_vec().to_object(py) 
+    }
+}
+
+//impl<T> ToPyObject for Container<T> {
+//   fn to_object(&self, py: Python) -> PyObject {
+//        match &self {
+//            Array(vector) => match vector {
+//                
+//            }
+//            Map(btmap) => btmap.iter().collect().into_pydict(py),
+//        }
+//   } 
+//}
 
 impl<T> From<Vec<T>> for Container<T> {
     fn from(v: Vec<T>) -> Container<T> {
@@ -214,6 +243,20 @@ pub enum Atom {
 
 use Atom::*;
 
+impl ToPyObject for Atom {
+    fn to_object(&self, py: Python) -> PyObject {
+        match &self {
+            Null => {
+                let val: Option<Self> = None;
+                val.to_object(py)
+            }
+            Bool(b) => b.to_object(py),
+            Str(s) => s.to_object(py),
+            ANum(val) => val.to_object(py),
+        }
+    }
+}
+
 impl TryFrom<Atom> for bool {
     type Error = Atom;
     fn try_from(a: Atom) -> Result<Self, Atom> {
@@ -292,30 +335,3 @@ compose_from!(Kson, Inum, u64);
 
 from_prims!(Atom);
 from_prims!(Kson);
-
-//     /// `k.size()` returns an upper bound on number of bytes `encode_full(k)` would require
-//     pub fn size(&self) -> usize {
-//         fn leb_size(i: &Integer) -> usize {
-//             i.significant_digits::<u8>() * 8 / 7 + 1
-//         }
-//         fn str_size(bs: &ByteString) -> usize {
-//             let len_str = bs.len();
-//             len_str + leb_size(&Integer::from(len_str))
-//         }
-//         match self {
-//             Kson::KSString(b) => 1 + str_size(b),
-//             Kson::KSInt(i) => 1 + leb_size(&i.to_int()),
-//             Kson::KSArray(v) => v
-//                 .iter()
-//                 .fold(1 + leb_size(&Integer::from(v.len())), |acc, v| {
-//                     acc + v.size()
-//                 }),
-//             Kson::KSMap(m) => m
-//                 .iter()
-//                 .fold(1 + leb_size(&Integer::from(m.len())), |acc, (k, v)| {
-//                     acc + str_size(k) + v.size()
-//                 }),
-//             _ => 1,
-//         }
-//     }
-// }

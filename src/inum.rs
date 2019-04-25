@@ -1,3 +1,4 @@
+use pyo3::prelude::*;
 use rug::Integer;
 use std::convert::TryFrom;
 use std::ops::{AddAssign, MulAssign};
@@ -13,6 +14,19 @@ pub enum Inum {
 }
 
 use Inum::*;
+
+impl ToPyObject for Inum {
+    fn to_object(&self, py: Python) -> PyObject {
+        match &self {
+            I64(num) => num.to_object(py),
+            Int(num) => {
+                // Returns None until we switch back to BigInt
+                let val: Option<Self> = None;
+                val.to_object(py)
+            }
+        }
+    }
+}
 
 from_fn!(Inum, i64, I64);
 from_fn!(Inum, u64, |u| {
