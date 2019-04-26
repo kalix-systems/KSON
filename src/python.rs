@@ -7,8 +7,9 @@ use crate::{Atom, Atomic, Contain, Container, Inum, Kson};
 use pyo3::{
     prelude::*,
     types::{PyAny, PyBool, PyBytes, PyDict, PyList, PyLong, PyTuple},
-    PyDowncastError, PyErr,
+    PyErr,
 };
+use rug::{integer::Order::Msf, Integer};
 use std::collections::BTreeMap;
 use std::iter::FromIterator;
 
@@ -32,7 +33,18 @@ impl IntoPyObject for Kson {
 
 impl<'source> FromPyObject<'source> for Kson {
     fn extract(ob: &'source PyAny) -> PyResult<Self> {
-        ob.extract()
+        let py_list: Result<&'source PyList, _> = ob.try_into_exact();
+
+        match py_list {
+            Ok(py_list) => Ok(Contain(py_list.extract()?)),
+            Err(_e) => {
+                let py_dict: Result<&'source PyDict, _> = ob.try_into_exact();
+                match py_dict {
+                    Ok(py_dict) => Ok(Contain(py_dict.extract()?)),
+                    Err(_e) => Ok(Atomic(ob.extract()?)),
+                }
+            }
+        }
     }
 }
 
@@ -67,18 +79,18 @@ impl<'source> FromPyObject<'source> for Atom {
             return Ok(Null);
         }
 
-        let py_bool: Result<&'source PyBool, PyDowncastError> = ob.try_into_exact();
+        let py_bool: Result<&'source PyBool, _> = ob.try_into_exact();
         match py_bool {
             Ok(b) => Ok(Bool(b.is_true())),
             Err(_e) => {
-                let py_bytes: Result<&'source PyBytes, PyDowncastError> = ob.try_into_exact();
+                let py_bytes: Result<&'source PyBytes, _> = ob.try_into_exact();
                 match py_bytes {
                     Ok(py_bytes) => Ok(Str(Bytes(py_bytes.as_bytes().to_vec()))),
                     Err(_e) => {
                         let n: PyResult<Inum> = ob.extract();
                         match n {
                             Ok(n) => Ok(ANum(n)),
-                            // todo, better error handling
+                            // TODO, better error handling
                             Err(_) => Ok(Null),
                         }
                     }
@@ -111,7 +123,7 @@ where
     T: FromPyObject<'source>,
 {
     fn extract(ob: &'source PyAny) -> PyResult<Self> {
-        let py_dict: Result<&'source PyDict, PyDowncastError> = ob.try_into_exact();
+        let py_dict: Result<&'source PyDict, _> = ob.try_into_exact();
 
         match py_dict {
             Ok(py_dict) => {
@@ -123,7 +135,7 @@ where
                 Ok(Map(btmap))
             }
             Err(_e) => {
-                let py_list: Result<&'source PyList, PyDowncastError> = ob.try_into_exact();
+                let py_list: Result<&'source PyList, _> = ob.try_into_exact();
 
                 match py_list {
                     Ok(py_list) => {
@@ -139,14 +151,25 @@ where
     }
 }
 
+#[pyclass]
+struct PyInt {
+    sign: bool,
+    digits: Vec<u64>,
+}
+
 impl ToPyObject for Inum {
     fn to_object(&self, py: Python) -> PyObject {
         match &self {
             I64(num) => num.to_object(py),
-            Int(num) => {
-                // Returns None until we switch back to BigInt
-                py.None()
-            }
+            Int(num) => PyRef::new(
+                py,
+                PyInt {
+                    sign: (num >= &0),
+                    digits: num.to_digits(Msf),
+                },
+            )
+            .unwrap()
+            .to_object(py),
         }
     }
 }
@@ -155,18 +178,33 @@ impl IntoPyObject for Inum {
     fn into_object(self, py: Python) -> PyObject {
         match self {
             I64(num) => num.into_object(py),
-            Int(num) => {
-                // Returns None until we switch back to BigInt
-                py.None()
-            }
+            Int(num) => PyRef::new(
+                py,
+                PyInt {
+                    sign: (num >= 0),
+                    digits: num.to_digits(Msf),
+                },
+            )
+            .unwrap()
+            .into_object(py),
         }
     }
 }
 
 impl<'source> FromPyObject<'source> for Inum {
     fn extract(ob: &'source PyAny) -> PyResult<Inum> {
-        let num: &'source PyLong = ob.try_into_exact()?;
-        Ok(I64(num.extract()?))
+        let num: Result<&'source PyLong, _> = ob.try_into_exact();
+        match num {
+            Ok(num) => Ok(I64(num.extract()?)),
+            Err(_e) => {
+                let num: &'source PyInt = ob.try_into_exact()?;
+                let mut int_num = Integer::from_digits(num.digits.as_slice(), Msf);
+                if !num.sign {
+                    int_num = -int_num;
+                }
+                Ok(Int(int_num))
+            }
+        }
     }
 }
 
@@ -319,7 +357,7 @@ mod tests {
         assert_eq!(unpy_val.unwrap(), val);
     }
 
-    //#[test]
+    #[test]
     fn kson() {
         let gil = Python::acquire_gil();
         let py = gil.python();
