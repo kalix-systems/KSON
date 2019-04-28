@@ -1,17 +1,19 @@
 #![allow(non_snake_case)]
-use crate::bytes::Bytes;
-use crate::Atom::*;
-use crate::Container::*;
-use crate::Inum::*;
-use crate::{Atom, Atomic, Contain, Container, Inum, Kson};
+use crate::{
+    bytes::Bytes,
+    Atom::{self, *},
+    Atomic, Contain,
+    Container::{self, *},
+    Inum::{self, *},
+    Kson,
+};
 use pyo3::{
     prelude::*,
     types::{PyAny, PyBool, PyBytes, PyDict, PyList, PyLong, PyTuple},
     PyErr,
 };
 use rug::{integer::Order::Msf, Integer};
-use std::collections::BTreeMap;
-use std::iter::FromIterator;
+use std::{collections::BTreeMap, iter::FromIterator};
 
 impl ToPyObject for Kson {
     fn to_object(&self, py: Python) -> PyObject {

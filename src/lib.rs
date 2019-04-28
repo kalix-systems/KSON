@@ -14,11 +14,13 @@ pub mod util;
 
 use pyo3::{prelude::*, types::PyAny};
 use rug::Integer;
-use std::collections::BTreeMap;
-use std::convert::{TryFrom, TryInto};
-use std::slice::Iter;
-use std::sync::Arc;
-use std::vec::Vec;
+use std::{
+    collections::BTreeMap,
+    convert::{TryFrom, TryInto},
+    slice::Iter,
+    sync::Arc,
+    vec::Vec,
+};
 
 use bytes::*;
 use inum::*;

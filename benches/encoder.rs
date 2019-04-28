@@ -4,14 +4,15 @@ extern crate criterion;
 extern crate common_utils;
 extern crate kson;
 
-use criterion::black_box;
-use criterion::Criterion;
+use criterion::{black_box, Criterion};
 use kson::bytes::Bytes;
 // use num_bigint::BigInt;
 use std::collections::BTreeMap;
 
-use kson::encoding::{decode_full, encode_full};
-use kson::*;
+use kson::{
+    encoding::{decode_full, encode_full},
+    *,
+};
 use util::*;
 
 const N_BIG_ARR: usize = 2000;

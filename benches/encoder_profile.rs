@@ -5,9 +5,7 @@ use criterion::black_box;
 use kson::bytes::Bytes;
 use std::collections::BTreeMap;
 
-use kson::encoding::encode_full;
-use kson::util::*;
-use kson::*;
+use kson::{encoding::encode_full, util::*, *};
 
 const N_ARR: usize = 100;
 const N_MAP: usize = 100;
