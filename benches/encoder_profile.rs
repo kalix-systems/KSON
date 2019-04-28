@@ -1,8 +1,8 @@
 extern crate criterion;
 extern crate kson;
 
-use kson::bytes::Bytes;
 use criterion::black_box;
+use kson::bytes::Bytes;
 use std::collections::BTreeMap;
 
 use kson::encoding::encode_full;

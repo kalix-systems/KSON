@@ -4,9 +4,9 @@ extern crate criterion;
 extern crate common_utils;
 extern crate kson;
 
-use kson::bytes::Bytes;
 use criterion::black_box;
 use criterion::Criterion;
+use kson::bytes::Bytes;
 // use num_bigint::BigInt;
 use std::collections::BTreeMap;
 
