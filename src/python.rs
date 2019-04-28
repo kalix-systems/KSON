@@ -154,7 +154,7 @@ impl ToPyObject for Inum {
             Int(num) => PyRef::new(
                 py,
                 PyInt {
-                    sign: (num >= &0),
+                    sign: (*num >= 0),
                     digits: num.to_digits(Msf),
                 },
             )
