@@ -134,19 +134,7 @@ where
 
                 Ok(Map(btmap))
             }
-            Err(_e) => {
-                let py_list: Result<&'source PyList, _> = ob.try_into_exact();
-
-                match py_list {
-                    Ok(py_list) => {
-                        let vector =
-                            Vec::from_iter(py_list.iter().map(|v| -> T { v.extract().unwrap() }));
-
-                        Ok(Array(vector))
-                    }
-                    Err(_e) => ob.extract(),
-                }
-            }
+            Err(_e) => Ok(Array(ob.extract()?)),
         }
     }
 }
