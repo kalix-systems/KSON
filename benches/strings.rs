@@ -4,12 +4,13 @@ extern crate criterion;
 extern crate common_utils;
 extern crate kson;
 
-use criterion::black_box;
-use criterion::Criterion;
+use criterion::{black_box, Criterion};
 use kson::bytes::Bytes;
 
-use kson::encoding::{decode_full, encode_full};
-use kson::*;
+use kson::{
+    encoding::{decode_full, encode_full},
+    *,
+};
 
 const N_BIG_ARR: usize = 100;
 const N_CHARS: usize = 100_000;
