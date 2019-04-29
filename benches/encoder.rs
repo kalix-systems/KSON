@@ -4,13 +4,14 @@ extern crate criterion;
 extern crate common_utils;
 extern crate kson;
 
-use kson::bytes::Bytes;
 use criterion::black_box;
 use criterion::Criterion;
+use kson::bytes::Bytes;
 // use num_bigint::BigInt;
 use std::collections::BTreeMap;
 
 use kson::encoding::{decode_full, encode_full};
+use kson::vecmap::*;
 use kson::*;
 use util::*;
 
@@ -26,7 +27,7 @@ const N_MAP: usize = 10;
 
 fn big_k() -> Kson {
     let v0: Vec<Kson> = (0..N_ARR).map(|i| Kson::from(i as i64)).collect();
-    let m: BTreeMap<Bytes, Kson> = (0..N_MAP)
+    let m: VecMap<Bytes, Kson> = (0..N_MAP)
         .map(|i| (u64_to_bytes_le(i as u64), Kson::from(v0.clone())))
         .collect();
     let v: Vec<Kson> = std::iter::repeat(m)

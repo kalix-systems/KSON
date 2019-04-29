@@ -1,5 +1,5 @@
 use hashbrown::HashMap;
-use num_traits::*;
+// use num_traits::*;
 use rug::Integer;
 use std::collections::BTreeMap;
 use std::fmt::Debug;
@@ -7,9 +7,9 @@ use std::net::{Ipv4Addr, SocketAddrV4};
 use std::slice::Iter;
 use std::sync::Arc;
 use std::vec::{IntoIter, Vec};
-use void::{unreachable, Void};
 
 use crate::util::*;
+use crate::vecmap::*;
 use crate::*;
 
 pub trait KsonRep: Clone + Sized {
@@ -77,22 +77,6 @@ impl<T: Clone + Into<Kson> + TryFrom<Kson>> KsonRep for T {
     }
 }
 
-impl<T: Into<Kson>> From<Vec<T>> for Kson {
-    fn from(v: Vec<T>) -> Kson {
-        let mut out = Vec::with_capacity(v.len());
-        for t in v {
-            out.push(t.into());
-        }
-        Contain(Array(out))
-    }
-}
-
-impl<T: Into<Kson>> From<BTreeMap<Bytes, T>> for Kson {
-    fn from(m: BTreeMap<Bytes, T>) -> Kson {
-        Contain(Map(m.into_iter().map(|(k, v)| (k, v.into())).collect()))
-    }
-}
-
 impl<T: KsonRep> KsonRep for Vec<T> {
     fn into_kson(self) -> Kson {
         Contain(Array(self).fmap(|t| t.into_kson()))
@@ -110,7 +94,7 @@ impl<T: KsonRep> KsonRep for Vec<T> {
     }
 }
 
-impl<T: KsonRep> KsonRep for BTreeMap<Bytes, T> {
+impl<T: KsonRep> KsonRep for VecMap<Bytes, T> {
     fn into_kson(self) -> Kson {
         Contain(Map(self).fmap(|t| t.into_kson()))
     }
@@ -126,7 +110,7 @@ impl<T: KsonRep> KsonRep for BTreeMap<Bytes, T> {
         Container::try_from(ks)
             .ok()?
             .traverse_option(T::from_kson)?
-            .into_map()
+            .into_vecmap()
     }
 }
 
@@ -146,14 +130,10 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for Hash
     }
 
     fn from_kson(ks: Kson) -> Option<Self> {
-        let m: BTreeMap<Bytes, Kson> = ks.into_map()?;
-        let mut h = HashMap::with_hasher(S::default());
-        h.reserve(m.len());
-        for (k, v) in m.into_iter() {
-            let t = T::from_kson(v)?;
-            h.insert(k, t);
-        }
-        Some(h)
+        ks.into_vecmap()?
+            .into_iter()
+            .map(|(k, v)| Some((k, T::from_kson(v)?)))
+            .collect()
     }
 }
 
@@ -290,11 +270,11 @@ impl KsonRep for SocketAddrV4 {
 }
 
 pub fn struct_to_kson(entries: Vec<(&str, Kson)>) -> Kson {
-    let mut m = BTreeMap::new();
-    for (k, v) in entries {
-        m.insert(str_to_bs(k), v);
-    }
-    Kson::from(m)
+    let vm: VecMap<Bytes, Kson> = entries
+        .into_iter()
+        .map(|(k, v)| (str_to_bs(k), v))
+        .collect();
+    Kson::from(vm)
 }
 
 pub fn struct_from_kson(ks: Kson, names: &[&str]) -> Option<Vec<Kson>> {

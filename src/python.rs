@@ -1,12 +1,13 @@
 #![allow(non_snake_case)]
 use crate::bytes::Bytes;
+use crate::vecmap::*;
 use crate::Atom::*;
 use crate::Container::*;
 use crate::Inum::*;
 use crate::{Atom, Atomic, Contain, Container, Inum, Kson};
 use pyo3::{
     prelude::*,
-    types::{PyAny, PyBool, PyBytes, PyDict, PyList, PyLong, PyTuple},
+    types::{IntoPyDict, PyAny, PyBool, PyBytes, PyDict, PyList, PyLong, PyTuple},
     PyErr,
 };
 use rug::{integer::Order::Msf, Integer};
@@ -100,11 +101,11 @@ impl<'source> FromPyObject<'source> for Atom {
     }
 }
 
-impl<T: IntoPyObject> IntoPyObject for Container<T> {
+impl<T: IntoPyObject + ToPyObject> IntoPyObject for Container<T> {
     fn into_object(self, py: Python) -> PyObject {
         match self {
             Array(vector) => vector.into_object(py),
-            Map(btmap) => btmap.into_object(py),
+            Map(vmap) => vmap.into_object(py),
         }
     }
 }
@@ -113,7 +114,7 @@ impl<T: ToPyObject> ToPyObject for Container<T> {
     fn to_object(&self, py: Python) -> PyObject {
         match &self {
             Array(vector) => vector.to_object(py),
-            Map(btmap) => btmap.to_object(py),
+            Map(vmap) => vmap.to_object(py),
         }
     }
 }
@@ -127,12 +128,11 @@ where
 
         match py_dict {
             Ok(py_dict) => {
-                let btmap =
-                    BTreeMap::from_iter(py_dict.iter().map(|(k, v)| -> (Bytes, T) {
-                        (k.extract().unwrap(), v.extract().unwrap())
-                    }));
-
-                Ok(Map(btmap))
+                let vmap: VecMap<Bytes, T> = py_dict
+                    .iter()
+                    .map(|(k, v)| (k.extract().unwrap(), v.extract().unwrap()))
+                    .collect();
+                Ok(Map(vmap))
             }
             Err(_e) => {
                 let py_list: Result<&'source PyList, _> = ob.try_into_exact();
@@ -205,6 +205,18 @@ impl<'source> FromPyObject<'source> for Inum {
                 Ok(Int(int_num))
             }
         }
+    }
+}
+
+impl<K: Ord + ToPyObject, V: ToPyObject> IntoPyObject for VecMap<K, V> {
+    fn into_object(self, py: Python) -> PyObject {
+        self.into_py_dict(py).to_object(py)
+    }
+}
+
+impl<K: Ord + ToPyObject, V: ToPyObject> ToPyObject for VecMap<K, V> {
+    fn to_object(&self, py: Python) -> PyObject {
+        self.iter().into_py_dict(py).to_object(py)
     }
 }
 
@@ -340,12 +352,11 @@ mod tests {
     }
 
     #[test]
-    fn btmap() {
+    fn vmap() {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let mut bmap = BTreeMap::new();
-        bmap.insert(Bytes(vec![0]), ANum(I64(2)));
+        let bmap = VecMap::from_sorted(vec![(Bytes(vec![0]), Atom::from(2))]);
 
         let val = Map(bmap);
         let py_val = val.to_object(py);
@@ -362,8 +373,7 @@ mod tests {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let mut bmap = BTreeMap::new();
-        bmap.insert(Bytes(vec![0]), Atomic(ANum(I64(2))));
+        let bmap = VecMap::from_sorted(vec![(Bytes(vec![0]), Kson::from(2))]);
 
         let val = Contain(Map(bmap));
         let py_val = val.to_object(py);

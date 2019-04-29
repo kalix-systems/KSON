@@ -45,7 +45,7 @@ pub enum KMeta {
     KMInt(bool, LenOrDigs, Vec<u8>),
     KMStr(LenOrDigs, Bytes),
     KMArr(LenOrDigs, Vec<Kson>),
-    KMMap(LenOrDigs, BTreeMap<Bytes, Kson>),
+    KMMap(LenOrDigs, VecMap<Bytes, Kson>),
 }
 
 use KMeta::*;
@@ -285,13 +285,13 @@ fn decode(dat: &Bytes, ix: &mut usize) -> Option<Kson> {
         }
         KMap(big, len) => {
             let len = read_len(dat, ix, big, len)?;
-            let mut out = BTreeMap::new();
+            let mut out = Vec::with_capacity(len);
             for _ in 0..len {
                 let key: Bytes = decode(dat, ix)?.try_into().ok()?;
                 let val = decode(dat, ix)?;
-                out.insert(key, val);
+                out.push((key, val));
             }
-            Some(Contain(Map(out)))
+            Some(Contain(Map(VecMap::from(out))))
         }
     }
 }

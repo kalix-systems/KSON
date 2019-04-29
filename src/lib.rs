@@ -5,15 +5,21 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::clone_on_copy)]
 
+#[macro_use]
+extern crate kson_macro;
+
 pub mod bytes;
 pub mod encoding;
 pub mod inum;
 pub mod python;
 pub mod rep;
 pub mod util;
+pub mod vecmap;
 
+use hashbrown::HashMap;
 use pyo3::{prelude::*, types::PyAny};
 use rug::Integer;
+
 use std::collections::BTreeMap;
 use std::convert::{TryFrom, TryInto};
 use std::slice::Iter;
@@ -23,6 +29,7 @@ use std::vec::Vec;
 use bytes::*;
 use inum::*;
 use rep::KsonRep;
+use vecmap::*;
 
 pub const NULL: Kson = Atomic(Null);
 
@@ -80,8 +87,12 @@ impl Kson {
         Container::try_from(self).ok()?.into_vec()
     }
 
-    pub fn into_map(self) -> Option<BTreeMap<Bytes, Kson>> {
-        Container::try_from(self).ok()?.into_map()
+    pub fn into_vecmap(self) -> Option<VecMap<Bytes, Kson>> {
+        Container::try_from(self).ok()?.into_vecmap()
+    }
+
+    pub fn into_map(self) -> Option<HashMap<Bytes, Kson>> {
+        Some(self.into_vecmap()?.into_hashmap())
     }
 
     pub fn into_rep<T: KsonRep>(self) -> Option<T> {
@@ -96,7 +107,7 @@ from_fn!(Kson, Container<Kson>, |c| Contain(c));
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub enum Container<T> {
     Array(Vec<T>),
-    Map(BTreeMap<Bytes, T>),
+    Map(VecMap<Bytes, T>),
 }
 
 use Container::*;
@@ -107,8 +118,8 @@ impl<T> From<Vec<T>> for Container<T> {
     }
 }
 
-impl<T> From<BTreeMap<Bytes, T>> for Container<T> {
-    fn from(v: BTreeMap<Bytes, T>) -> Container<T> {
+impl<T> From<VecMap<Bytes, T>> for Container<T> {
+    fn from(v: VecMap<Bytes, T>) -> Container<T> {
         Map(v)
     }
 }
@@ -128,14 +139,18 @@ impl<T> Container<T> {
         }
     }
 
-    fn into_map(self) -> Option<BTreeMap<Bytes, T>> {
+    fn into_vecmap(self) -> Option<VecMap<Bytes, T>> {
         match self {
             Map(m) => Some(m),
             _ => None,
         }
     }
 
-    fn to_map(&self) -> Option<&BTreeMap<Bytes, T>> {
+    fn into_map(self) -> Option<HashMap<Bytes, T>> {
+        Some(self.into_vecmap()?.into_hashmap())
+    }
+
+    fn to_map(&self) -> Option<&VecMap<Bytes, T>> {
         match self {
             Map(m) => Some(m),
             _ => None,
@@ -178,11 +193,11 @@ impl<T> Container<T> {
                 Some(Array(out))
             }
             Map(m) => {
-                let mut out = BTreeMap::new();
+                let mut out = Vec::with_capacity(m.len());
                 for (k, v) in m {
-                    out.insert(k, f(v)?);
+                    out.push((k, f(v)?));
                 }
-                Some(Map(out))
+                Some(Map(VecMap::from_sorted(out)))
             }
         }
     }
@@ -200,11 +215,11 @@ impl<T> Container<T> {
                 Ok(Array(out))
             }
             Map(m) => {
-                let mut out = BTreeMap::new();
+                let mut out = Vec::with_capacity(m.len());
                 for (k, v) in m {
-                    out.insert(k, f(v)?);
+                    out.push((k, f(v)?));
                 }
-                Ok(Map(out))
+                Ok(Map(VecMap::from_sorted(out)))
             }
         }
     }
@@ -296,6 +311,9 @@ compose_from!(Atom, Inum, u64);
 compose_from!(Kson, Inum, Integer);
 compose_from!(Kson, Inum, i64);
 compose_from!(Kson, Inum, u64);
+
+compose_from!(Kson, Container, VecMap<Bytes, Kson>);
+compose_from!(Kson, Container, Vec<Kson>);
 
 from_prims!(Atom);
 from_prims!(Kson);

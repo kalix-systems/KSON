@@ -9,11 +9,11 @@ maplit = "1.0"
 mdo = "0.3"
 pyo3 = "0.6.0"
 mdo-future = "0.2"
-num-traits = "0.2"
-num-bigint = "0.2"
+# num-traits = "0.2"
+# num-bigint = "0.2"
 hashbrown = "0.2"
 rug="1.3"
-void="1.0"
+kson_macro = {path = "../kson_macro"}
 
 [dev-dependencies]
 proptest = "0.9"
@@ -33,4 +33,8 @@ harness=false
 
 [[bench]]
 name="decoder_profile"
+harness=false
+
+[[bench]]
+name="strings"
 harness=false
