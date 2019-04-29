@@ -79,11 +79,11 @@ impl<T: Clone + Into<Kson> + TryFrom<Kson>> KsonRep for T {
 
 impl<T: KsonRep> KsonRep for Vec<T> {
     fn into_kson(self) -> Kson {
-        Contain(Array(self).fmap(|t| t.into_kson()))
+        Contain(Array(self).fmap(KsonRep::into_kson))
     }
 
     fn to_kson(&self) -> Kson {
-        Contain(Array(self.iter().map(|t| t.to_kson()).collect()))
+        Contain(Array(self.iter().map(KsonRep::to_kson).collect()))
     }
 
     fn from_kson(ks: Kson) -> Option<Self> {
@@ -96,7 +96,7 @@ impl<T: KsonRep> KsonRep for Vec<T> {
 
 impl<T: KsonRep> KsonRep for VecMap<Bytes, T> {
     fn into_kson(self) -> Kson {
-        Contain(Map(self).fmap(|t| t.into_kson()))
+        Contain(Map(self).fmap(KsonRep::into_kson))
     }
 
     fn to_kson(&self) -> Kson {
@@ -142,7 +142,7 @@ impl KsonRep for () {
         Contain(Array(vec![]))
     }
     fn from_kson(ks: Kson) -> Option<()> {
-        if ks.into_vec()?.len() == 0 {
+        if ks.into_vec()?.is_empty() {
             Some(())
         } else {
             None

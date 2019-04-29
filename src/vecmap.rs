@@ -4,7 +4,7 @@ use std::{
     collections::BTreeMap, hash::*, iter::FromIterator, ops::Deref, slice::Iter, vec::IntoIter,
 };
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug, Default)]
 pub struct VecMap<K: Ord, V>(Vec<(K, V)>);
 
 impl<K: Ord, V> VecMap<K, V> {
@@ -23,6 +23,10 @@ impl<K: Ord, V> VecMap<K, V> {
 
     pub fn len(&self) -> usize {
         self.0.len()
+    }
+
+    pub fn is_empty(&self) -> bool {
+        self.0.is_empty()
     }
 
     pub fn iter(&self) -> Iter<(K, V)> {

@@ -232,14 +232,15 @@ fn read_u64(dat: &Bytes, ix: &mut usize, len: u8) -> Option<u64> {
 fn read_int(dat: &Bytes, ix: &mut usize, big: bool, pos: bool, len: u8) -> Option<Inum> {
     assert!(len - 1 <= MASK_INT_LEN_BITS);
     let u = read_u64(dat, ix, len)?;
-    let mut i;
-    if big {
-        let digs = read_bytes(dat, ix, u as usize)?;
-        i = Int(Integer::from_digits(digs, Order::Lsf));
-    } else {
-        assert!(u < i64::max_value() as u64);
-        i = I64(u as i64);
-    }
+    let mut i = {
+        if big {
+            let digs = read_bytes(dat, ix, u as usize)?;
+            Int(Integer::from_digits(digs, Order::Lsf))
+        } else {
+            assert!(u < i64::max_value() as u64);
+            I64(u as i64)
+        }
+    };
     if !pos {
         i *= -1;
         i += -1;
