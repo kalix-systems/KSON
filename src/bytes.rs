@@ -1,7 +1,8 @@
-use pyo3::prelude::*;
-use pyo3::types::*;
-use std::ops::{Deref, DerefMut};
-use std::vec::IntoIter;
+use pyo3::{prelude::*, types::*};
+use std::{
+    ops::{Deref, DerefMut},
+    vec::IntoIter,
+};
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub struct Bytes(pub Vec<u8>);

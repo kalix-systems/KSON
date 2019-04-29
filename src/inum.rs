@@ -1,11 +1,14 @@
-use pyo3::prelude::*;
-use pyo3::types::{PyAny, PyLong};
+use pyo3::{
+    prelude::*,
+    types::{PyAny, PyLong},
+};
 use rug::Integer;
-use std::convert::TryFrom;
-use std::ops::{AddAssign, MulAssign};
+use std::{
+    convert::TryFrom,
+    ops::{AddAssign, MulAssign},
+};
 
-use crate::util::*;
-use crate::{compose_from, from_as, from_fn};
+use crate::{compose_from, from_as, from_fn, util::*};
 
 /// `INum`s are either `i64` or `Integer`s
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]

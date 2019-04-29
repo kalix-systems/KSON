@@ -1,11 +1,8 @@
 use hashbrown::HashMap;
 
-use std::collections::BTreeMap;
-use std::hash::*;
-use std::iter::FromIterator;
-use std::ops::Deref;
-use std::slice::Iter;
-use std::vec::IntoIter;
+use std::{
+    collections::BTreeMap, hash::*, iter::FromIterator, ops::Deref, slice::Iter, vec::IntoIter,
+};
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub struct VecMap<K: Ord, V>(Vec<(K, V)>);
@@ -20,6 +17,7 @@ impl<K: Ord, V> VecMap<K, V> {
     }
 
     pub fn from_sorted(v: Vec<(K, V)>) -> Self {
+        assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
         VecMap(v)
     }
 

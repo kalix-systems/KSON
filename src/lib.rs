@@ -4,6 +4,7 @@
 #![allow(clippy::cast_ptr_alignment)]
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::clone_on_copy)]
+#![feature(is_sorted)]
 
 #[macro_use]
 extern crate kson_macro;
@@ -20,11 +21,13 @@ use hashbrown::HashMap;
 use pyo3::{prelude::*, types::PyAny};
 use rug::Integer;
 
-use std::collections::BTreeMap;
-use std::convert::{TryFrom, TryInto};
-use std::slice::Iter;
-use std::sync::Arc;
-use std::vec::Vec;
+use std::{
+    collections::BTreeMap,
+    convert::{TryFrom, TryInto},
+    slice::Iter,
+    sync::Arc,
+    vec::Vec,
+};
 
 use bytes::*;
 use inum::*;

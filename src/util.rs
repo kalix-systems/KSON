@@ -1,8 +1,6 @@
 use crate::bytes::Bytes;
-use pyo3::prelude::*;
-use pyo3::types::IntoPyDict;
-use std::boxed::Box;
-use std::convert::AsRef;
+use pyo3::{prelude::*, types::IntoPyDict};
+use std::{boxed::Box, convert::AsRef};
 
 /// converts a `u64` to an 8-byte `Bytes` in little endian order
 pub fn u64_to_bytes_le(x: u64) -> Bytes {

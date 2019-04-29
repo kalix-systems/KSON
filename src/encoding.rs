@@ -1,12 +1,7 @@
-use rug::integer::Order;
-use rug::Integer;
-use std::collections::BTreeMap;
-use std::ops::AddAssign;
-use std::vec::Vec;
+use rug::{integer::Order, Integer};
+use std::{collections::BTreeMap, ops::AddAssign, vec::Vec};
 
-use crate::bytes::*;
-use crate::util::*;
-use crate::*;
+use crate::{bytes::*, util::*, *};
 
 use Atom::*;
 use Container::*;

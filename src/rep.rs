@@ -1,16 +1,16 @@
 use hashbrown::HashMap;
 // use num_traits::*;
 use rug::Integer;
-use std::collections::BTreeMap;
-use std::fmt::Debug;
-use std::net::{Ipv4Addr, SocketAddrV4};
-use std::slice::Iter;
-use std::sync::Arc;
-use std::vec::{IntoIter, Vec};
+use std::{
+    collections::BTreeMap,
+    fmt::Debug,
+    net::{Ipv4Addr, SocketAddrV4},
+    slice::Iter,
+    sync::Arc,
+    vec::{IntoIter, Vec},
+};
 
-use crate::util::*;
-use crate::vecmap::*;
-use crate::*;
+use crate::{util::*, vecmap::*, *};
 
 pub trait KsonRep: Clone + Sized {
     fn to_kson(&self) -> Kson {

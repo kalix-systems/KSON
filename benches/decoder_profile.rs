@@ -6,9 +6,11 @@ use kson::bytes::Bytes;
 use rug::Integer;
 use std::collections::BTreeMap;
 
-use kson::encoding::{decode_full, encode_full};
-use kson::vecmap::*;
-use kson::*;
+use kson::{
+    encoding::{decode_full, encode_full},
+    vecmap::*,
+    *,
+};
 use util::*;
 
 const N_ARR: usize = 100;

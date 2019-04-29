@@ -1,18 +1,20 @@
 #![allow(non_snake_case)]
-use crate::bytes::Bytes;
-use crate::vecmap::*;
-use crate::Atom::*;
-use crate::Container::*;
-use crate::Inum::*;
-use crate::{Atom, Atomic, Contain, Container, Inum, Kson};
+use crate::{
+    bytes::Bytes,
+    vecmap::*,
+    Atom::{self, *},
+    Atomic, Contain,
+    Container::{self, *},
+    Inum::{self, *},
+    Kson,
+};
 use pyo3::{
     prelude::*,
     types::{IntoPyDict, PyAny, PyBool, PyBytes, PyDict, PyList, PyLong, PyTuple},
     PyErr,
 };
 use rug::{integer::Order::Msf, Integer};
-use std::collections::BTreeMap;
-use std::iter::FromIterator;
+use std::{collections::BTreeMap, iter::FromIterator};
 
 impl ToPyObject for Kson {
     fn to_object(&self, py: Python) -> PyObject {
@@ -134,19 +136,7 @@ where
                     .collect();
                 Ok(Map(vmap))
             }
-            Err(_e) => {
-                let py_list: Result<&'source PyList, _> = ob.try_into_exact();
-
-                match py_list {
-                    Ok(py_list) => {
-                        let vector =
-                            Vec::from_iter(py_list.iter().map(|v| -> T { v.extract().unwrap() }));
-
-                        Ok(Array(vector))
-                    }
-                    Err(_e) => ob.extract(),
-                }
-            }
+            Err(_e) => Ok(Array(ob.extract()?)),
         }
     }
 }
@@ -164,7 +154,7 @@ impl ToPyObject for Inum {
             Int(num) => PyRef::new(
                 py,
                 PyInt {
-                    sign: (num >= &0),
+                    sign: (*num >= 0),
                     digits: num.to_digits(Msf),
                 },
             )
