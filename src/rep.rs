@@ -1,3 +1,4 @@
+use bytes::Bytes;
 use hashbrown::HashMap;
 // use num_traits::*;
 use rug::Integer;
@@ -247,7 +248,7 @@ impl<T: KsonRep> KsonRep for Option<T> {
 impl KsonRep for Ipv4Addr {
     fn into_kson(self) -> Kson {
         let octs = self.octets();
-        Bytes(vec![octs[0], octs[1], octs[2], octs[3]]).into_kson()
+        Bytes::from(&[octs[0], octs[1], octs[2], octs[3]] as &[u8]).into_kson()
     }
     fn from_kson(ks: Kson) -> Option<Self> {
         let bs: Bytes = KsonRep::from_kson(ks)?;

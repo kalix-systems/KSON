@@ -9,7 +9,6 @@
 #[macro_use]
 extern crate kson_macro;
 
-pub mod bytes;
 pub mod encoding;
 pub mod inum;
 pub mod python;
@@ -17,8 +16,9 @@ pub mod rep;
 pub mod util;
 pub mod vecmap;
 
+use bytes::Bytes;
 use hashbrown::HashMap;
-use pyo3::{prelude::*, types::PyAny};
+// use pyo3::{prelude::*, types::PyAny};
 use rug::Integer;
 
 use std::{
@@ -29,7 +29,6 @@ use std::{
     vec::Vec,
 };
 
-use bytes::*;
 use inum::*;
 use rep::KsonRep;
 use vecmap::*;

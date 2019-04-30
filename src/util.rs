@@ -1,10 +1,11 @@
-use crate::bytes::Bytes;
+// use crate::bytes::Bytes;
+use bytes::Bytes;
 use pyo3::{prelude::*, types::IntoPyDict};
 use std::{boxed::Box, convert::AsRef};
 
 /// converts a `u64` to an 8-byte `Bytes` in little endian order
 pub fn u64_to_bytes_le(x: u64) -> Bytes {
-    Bytes(u64::to_le_bytes(x).to_vec())
+    Bytes::from(&u64::to_le_bytes(x) as &[u8])
 }
 
 /// converts an 8-byte `Bytes` to a `u64` in little endian order
@@ -19,7 +20,7 @@ pub fn bytes_to_u64_le(bs: Bytes) -> u64 {
 
 /// converts a `u64` to an 8-byte `Bytes` in big endian order
 pub fn u64_to_bytes_be(x: u64) -> Bytes {
-    Bytes(u64::to_be_bytes(x).to_vec())
+    Bytes::from(&u64::to_be_bytes(x) as &[u8])
 }
 
 /// converts an 8-byte `Bytes` to a `u64` in big endian order

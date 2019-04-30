@@ -4,8 +4,8 @@ extern crate criterion;
 extern crate common_utils;
 extern crate kson;
 
+use bytes::Bytes;
 use criterion::{black_box, Criterion};
-use kson::bytes::Bytes;
 
 use kson::{
     encoding::{decode_full, encode_full},
@@ -16,7 +16,7 @@ const N_BIG_ARR: usize = 100;
 const N_CHARS: usize = 100_000;
 
 fn big_str() -> Bytes {
-    Bytes([0; N_CHARS].to_vec())
+    Bytes::from(&[0u8; N_CHARS] as &[u8])
 }
 
 fn big_arr() -> Kson {
@@ -31,19 +31,19 @@ fn bench_enc(c: &mut Criterion) {
             "Encoding a Kson array of {} {}-character strings",
             N_BIG_ARR, N_CHARS
         ),
-        move |b| b.iter(|| encode_full(black_box(big_arr.clone()))),
+        move |b| b.iter(|| encode_full(black_box(&big_arr))),
     );
 }
 
 fn bench_dec(c: &mut Criterion) {
     let big_arr = big_arr();
-    let enc = encode_full(big_arr);
+    let enc = Bytes::from(encode_full(&big_arr));
     c.bench_function(
         &format!(
             "Decoding a Kson array of {} {}-character strings",
             N_BIG_ARR, N_CHARS
         ),
-        move |b| b.iter(|| decode_full(black_box(&enc.clone()))),
+        move |b| b.iter(|| decode_full(black_box(&enc))),
     );
 }
 

@@ -1,9 +1,8 @@
 extern crate criterion;
 extern crate kson;
 
+use bytes::Bytes;
 use criterion::black_box;
-use kson::bytes::Bytes;
-use std::collections::BTreeMap;
 
 use kson::{encoding::encode_full, util::*, vecmap::*, *};
 
@@ -27,9 +26,9 @@ const N_REPS: u8 = 100;
 fn main() {
     let big_k = black_box(big_k());
     // let size = black_box(&big_k).size();
-    let enc_outer = encode_full(black_box(big_k.clone()));
+    let enc_outer = encode_full(black_box(&big_k));
     for _ in 0..N_REPS {
-        let enc = encode_full(black_box(big_k.clone()));
+        let enc = encode_full(black_box(&big_k));
         if enc != enc_outer {
             panic!("this hsouldn't happen!");
         }

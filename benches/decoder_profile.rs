@@ -1,10 +1,8 @@
 extern crate criterion;
 extern crate kson;
 
+use bytes::Bytes;
 use criterion::black_box;
-use kson::bytes::Bytes;
-use rug::Integer;
-use std::collections::BTreeMap;
 
 use kson::{
     encoding::{decode_full, encode_full},
@@ -32,7 +30,7 @@ const N_REPS: u8 = 100;
 
 fn main() {
     let big_k = big_k();
-    let enc = encode_full(big_k.clone());
+    let enc = Bytes::from(encode_full(&big_k));
     for _ in 0..N_REPS {
         let dec = black_box(decode_full(black_box(&enc))).unwrap();
         if &dec != &big_k {

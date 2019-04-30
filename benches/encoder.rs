@@ -4,10 +4,8 @@ extern crate criterion;
 extern crate common_utils;
 extern crate kson;
 
+use bytes::Bytes;
 use criterion::{black_box, Criterion};
-use kson::bytes::Bytes;
-// use num_bigint::BigInt;
-use std::collections::BTreeMap;
 
 use kson::{
     encoding::{decode_full, encode_full},
@@ -42,7 +40,7 @@ fn bench_construction(c: &mut Criterion) {
     c.bench_function(
         &format!(
             "Creating a Kson object of size {}",
-            encode_full(big_k()).len()
+            encode_full(&big_k()).len()
         ),
         |b| b.iter(|| black_box(big_k())),
     );
@@ -61,16 +59,16 @@ fn bench_construction(c: &mut Criterion) {
 
 fn bench_enc(c: &mut Criterion) {
     let big_k = big_k();
-    let enc_len = encode_full(big_k.clone()).len();
+    let enc_len = encode_full(&big_k).len();
     c.bench_function(
         &format!("Encoding a Kson object, output size of {} bytes", enc_len),
-        move |b| b.iter(|| encode_full(black_box(big_k.clone()))),
+        move |b| b.iter(|| encode_full(black_box(&big_k))),
     );
 }
 
 fn bench_dec(c: &mut Criterion) {
     let big_k = big_k();
-    let enc = encode_full(big_k.clone());
+    let enc = Bytes::from(encode_full(&big_k));
     c.bench_function(
         &format!("Decoding a Kson object, input size of {} bytes", enc.len()),
         move |b| b.iter(|| decode_full(black_box(&enc)).unwrap()),
@@ -79,18 +77,18 @@ fn bench_dec(c: &mut Criterion) {
 
 fn bench_enc_flat(c: &mut Criterion) {
     let big_arr = big_arr();
-    let enc_len = encode_full(big_arr.clone()).len();
+    let enc_len = encode_full(&big_arr).len();
     c.bench_function(
         &format!("Encoding a Kson vector, output size of {} bytes", enc_len),
-        move |b| b.iter(|| encode_full(black_box(big_arr.clone()))),
+        move |b| b.iter(|| encode_full(black_box(&big_arr))),
     );
 }
 
 fn bench_dec_flat(c: &mut Criterion) {
     let big_arr = big_arr();
-    let enc = encode_full(big_arr.clone());
+    let enc = Bytes::from(encode_full(&big_arr));
     c.bench_function(
-        &format!("Decoding a Kson vector of ~size {}", enc.len()),
+        &format!("Decoding a Kson vector of length {}", enc.len()),
         move |b| b.iter(|| decode_full(black_box(&enc)).unwrap()),
     );
 }

@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 use crate::{
-    bytes::Bytes,
     vecmap::*,
     Atom::{self, *},
     Atomic, Contain,
@@ -8,6 +7,7 @@ use crate::{
     Inum::{self, *},
     Kson,
 };
+use bytes::Bytes;
 use pyo3::{
     prelude::*,
     types::{IntoPyDict, PyAny, PyBool, PyBytes, PyDict, PyList, PyLong, PyTuple},
@@ -58,8 +58,8 @@ impl IntoPyObject for Atom {
                 let val: Option<Self> = None;
                 val.into_object(py)
             }
-            Bool(b) => b.into_object(py),
-            Str(s) => s.into_object(py),
+            Bool(b) => PyBool::new(py, b).into_object(py),
+            Str(s) => PyBytes::new(py, &s).into_object(py),
             ANum(val) => val.to_object(py),
         }
     }
@@ -69,8 +69,8 @@ impl ToPyObject for Atom {
     fn to_object(&self, py: Python) -> PyObject {
         match &self {
             Null => py.None(),
-            Bool(b) => b.to_object(py),
-            Str(s) => s.to_object(py),
+            Bool(b) => PyBool::new(py, *b).into_object(py),
+            Str(s) => PyBytes::new(py, s).into_object(py),
             ANum(val) => val.to_object(py),
         }
     }
@@ -88,7 +88,7 @@ impl<'source> FromPyObject<'source> for Atom {
             Err(_e) => {
                 let py_bytes: Result<&'source PyBytes, _> = ob.try_into_exact();
                 match py_bytes {
-                    Ok(py_bytes) => Ok(Str(Bytes(py_bytes.as_bytes().to_vec()))),
+                    Ok(py_bytes) => Ok(Str(Bytes::from(py_bytes.as_bytes()))),
                     Err(_e) => {
                         let n: PyResult<Inum> = ob.extract();
                         match n {
@@ -132,7 +132,7 @@ where
             Ok(py_dict) => {
                 let vmap: VecMap<Bytes, T> = py_dict
                     .iter()
-                    .map(|(k, v)| (k.extract().unwrap(), v.extract().unwrap()))
+                    .map(|(k, v)| (bytes_from_any(k).unwrap(), v.extract().unwrap()))
                     .collect();
                 Ok(Map(vmap))
             }
@@ -198,35 +198,27 @@ impl<'source> FromPyObject<'source> for Inum {
     }
 }
 
-impl<K: Ord + ToPyObject, V: ToPyObject> IntoPyObject for VecMap<K, V> {
+impl<V: ToPyObject> IntoPyObject for VecMap<Bytes, V> {
     fn into_object(self, py: Python) -> PyObject {
-        self.into_py_dict(py).to_object(py)
+        self.into_iter()
+            .map(|(k, v)| (PyBytes::new(py, &k), v))
+            .into_py_dict(py)
+            .to_object(py)
     }
 }
 
-impl<K: Ord + ToPyObject, V: ToPyObject> ToPyObject for VecMap<K, V> {
+impl<V: ToPyObject> ToPyObject for VecMap<Bytes, V> {
     fn to_object(&self, py: Python) -> PyObject {
-        self.iter().into_py_dict(py).to_object(py)
+        self.iter()
+            .map(|(k, v)| (PyBytes::new(py, k), v))
+            .into_py_dict(py)
+            .to_object(py)
     }
 }
 
-impl ToPyObject for Bytes {
-    fn to_object(&self, py: Python) -> PyObject {
-        PyBytes::new(py, self.as_slice()).into_object(py)
-    }
-}
-
-impl IntoPyObject for Bytes {
-    fn into_object(self, py: Python) -> PyObject {
-        PyBytes::new(py, self.as_slice()).into_object(py)
-    }
-}
-
-impl<'a> FromPyObject<'a> for Bytes {
-    fn extract(obj: &'a PyAny) -> PyResult<Bytes> {
-        let bytes: &'a PyBytes = obj.try_into_exact()?;
-        Ok(Bytes(bytes.as_bytes().to_vec()))
-    }
+fn bytes_from_any(obj: &PyAny) -> PyResult<Bytes> {
+    let bytes: &PyBytes = obj.try_into_exact()?;
+    Ok(Bytes::from(bytes.as_bytes()))
 }
 
 #[cfg(test)]
@@ -271,14 +263,10 @@ mod tests {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let val = Bytes(vec![1]);
-        let py_val = val.to_object(py);
-        let unpy_val: Option<Bytes> = py_val.extract(py).ok();
-        assert_eq!(unpy_val.unwrap(), val);
-
-        let py_val = val.into_object(py);
-        let unpy_val: Option<Bytes> = py_val.extract(py).ok();
-        assert_eq!(unpy_val.unwrap(), Bytes(vec![1]));
+        let val = Bytes::from(vec![1]);
+        let py_val = PyBytes::new(py, &val).into_object(py);
+        let unpy_val: Atom = py_val.extract(py).unwrap();
+        assert_eq!(unpy_val, Str(Bytes::from(vec![1])));
     }
 
     #[test]
@@ -286,14 +274,14 @@ mod tests {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let val = Str(Bytes(vec![1]));
+        let val = Str(Bytes::from(vec![1]));
         let py_val = val.to_object(py);
         let unpy_val: Option<Atom> = py_val.extract(py).ok();
         assert_eq!(unpy_val.unwrap(), val);
 
         let py_val = val.into_object(py);
         let unpy_val: Option<Atom> = py_val.extract(py).ok();
-        assert_eq!(unpy_val.unwrap(), Str(Bytes(vec![1])));
+        assert_eq!(unpy_val.unwrap(), Str(Bytes::from(vec![1])));
     }
 
     #[test]
@@ -346,7 +334,7 @@ mod tests {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let bmap = VecMap::from_sorted(vec![(Bytes(vec![0]), Atom::from(2))]);
+        let bmap = VecMap::from_sorted(vec![(Bytes::from(vec![0]), Atom::from(2))]);
 
         let val = Map(bmap);
         let py_val = val.to_object(py);
@@ -363,7 +351,7 @@ mod tests {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let bmap = VecMap::from_sorted(vec![(Bytes(vec![0]), Kson::from(2))]);
+        let bmap = VecMap::from_sorted(vec![(Bytes::from(vec![0]), Kson::from(2))]);
 
         let val = Contain(Map(bmap));
         let py_val = val.to_object(py);
