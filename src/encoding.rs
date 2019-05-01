@@ -90,7 +90,7 @@ macro_rules! len_or_digs {
     };
 }
 
-fn atom_to_meta<'a>(a: &'a Atom) -> KMeta<'a> {
+fn atom_to_meta(a: &Atom) -> KMeta {
     match a {
         Null => KMC(0),
         Bool(t) => KMC(if *t { 1 } else { 2 }),
@@ -99,14 +99,14 @@ fn atom_to_meta<'a>(a: &'a Atom) -> KMeta<'a> {
     }
 }
 
-fn container_to_meta<'a>(c: &'a Container<Kson>) -> KMeta<'a> {
+fn container_to_meta(c: &Container<Kson>) -> KMeta {
     match c {
         Array(a) => KMArr(len_or_digs!(a), a),
         Map(m) => KMMap(len_or_digs!(m), m),
     }
 }
 
-fn kson_to_meta<'a>(ks: &'a Kson) -> KMeta<'a> {
+fn kson_to_meta(ks: &Kson) -> KMeta {
     match ks {
         Atomic(a) => atom_to_meta(a),
         Contain(c) => container_to_meta(c),
