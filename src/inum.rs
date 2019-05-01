@@ -29,9 +29,9 @@ from_fn!(Inum, u64, |u| {
     }
 });
 
-from_fn!(Inum, Integer, |i: Integer| i
-    .to_i64()
-    .map_or_else(|| Int(i), I64));
+from_fn!(Inum, Integer, |i: Integer| {
+    i.to_i64().map_or_else(|| Int(i), I64)
+});
 
 impl From<Inum> for Integer {
     fn from(i: Inum) -> Integer {
@@ -44,6 +44,7 @@ impl From<Inum> for Integer {
 
 impl TryFrom<Inum> for i64 {
     type Error = Integer;
+
     fn try_from(i: Inum) -> Result<Self, Integer> {
         match i {
             Inum::I64(i) => Ok(i),
@@ -54,6 +55,7 @@ impl TryFrom<Inum> for i64 {
 
 impl TryFrom<Inum> for u64 {
     type Error = Inum;
+
     fn try_from(n: Inum) -> Result<Self, Inum> {
         match &n {
             Inum::I64(i) => {
@@ -232,7 +234,7 @@ impl Inum {
 
 #[macro_export]
 macro_rules! from_prims {
-    ($to: tt) => {
+    ($to:tt) => {
         from_as!($to, i32, i64);
         from_as!($to, i16, i64);
         from_as!($to, i8, i64);

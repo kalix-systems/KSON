@@ -44,6 +44,7 @@ use Kson::*;
 
 impl TryFrom<Kson> for Atom {
     type Error = Container<Kson>;
+
     fn try_from(value: Kson) -> Result<Atom, Container<Kson>> {
         match value {
             Atomic(a) => Ok(a),
@@ -54,6 +55,7 @@ impl TryFrom<Kson> for Atom {
 
 impl<T: TryFrom<Kson>> TryFrom<Kson> for Container<T> {
     type Error = ();
+
     fn try_from(ks: Kson) -> Result<Container<T>, ()> {
         match ks {
             Contain(c) => c.traverse_result(|x| x.try_into().map_err(|_| ())),
@@ -84,9 +86,7 @@ impl Kson {
         }
     }
 
-    pub fn into_vec(self) -> Option<Vec<Kson>> {
-        Container::try_from(self).ok()?.into_vec()
-    }
+    pub fn into_vec(self) -> Option<Vec<Kson>> { Container::try_from(self).ok()?.into_vec() }
 
     pub fn into_vecmap(self) -> Option<VecMap<Bytes, Kson>> {
         Container::try_from(self).ok()?.into_vecmap()
@@ -96,9 +96,7 @@ impl Kson {
         Some(self.into_vecmap()?.into_hashmap())
     }
 
-    pub fn into_rep<T: KsonRep>(self) -> Option<T> {
-        T::from_kson(self)
-    }
+    pub fn into_rep<T: KsonRep>(self) -> Option<T> { T::from_kson(self) }
 }
 
 from_fn!(Kson, Atom, |a| Atomic(a));
@@ -114,15 +112,11 @@ pub enum Container<T> {
 use Container::*;
 
 impl<T> From<Vec<T>> for Container<T> {
-    fn from(v: Vec<T>) -> Container<T> {
-        Array(v)
-    }
+    fn from(v: Vec<T>) -> Container<T> { Array(v) }
 }
 
 impl<T> From<VecMap<Bytes, T>> for Container<T> {
-    fn from(v: VecMap<Bytes, T>) -> Container<T> {
-        Map(v)
-    }
+    fn from(v: VecMap<Bytes, T>) -> Container<T> { Map(v) }
 }
 
 impl<T> Container<T> {
@@ -147,9 +141,7 @@ impl<T> Container<T> {
         }
     }
 
-    fn into_map(self) -> Option<HashMap<Bytes, T>> {
-        Some(self.into_vecmap()?.into_hashmap())
-    }
+    fn into_map(self) -> Option<HashMap<Bytes, T>> { Some(self.into_vecmap()?.into_hashmap()) }
 
     fn to_map(&self) -> Option<&VecMap<Bytes, T>> {
         match self {
@@ -239,6 +231,7 @@ use Atom::*;
 
 impl TryFrom<Atom> for bool {
     type Error = Atom;
+
     fn try_from(a: Atom) -> Result<Self, Atom> {
         match a {
             Bool(b) => Ok(b),
@@ -249,6 +242,7 @@ impl TryFrom<Atom> for bool {
 
 impl TryFrom<Atom> for Inum {
     type Error = Atom;
+
     fn try_from(a: Atom) -> Result<Self, Atom> {
         match a {
             ANum(i) => Ok(i),
@@ -259,6 +253,7 @@ impl TryFrom<Atom> for Inum {
 
 impl TryFrom<Atom> for Bytes {
     type Error = Atom;
+
     fn try_from(a: Atom) -> Result<Self, Atom> {
         match a {
             Str(s) => Ok(s),

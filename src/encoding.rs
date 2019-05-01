@@ -81,7 +81,7 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
 }
 
 macro_rules! len_or_digs {
-    ($id: ident) => {
+    ($id:ident) => {
         if $id.len() <= MASK_LEN_BITS as usize {
             Len($id.len() as u8)
         } else {
@@ -114,7 +114,7 @@ fn kson_to_meta<'a>(ks: &'a Kson) -> KMeta<'a> {
 }
 
 macro_rules! len_or_tag {
-    ($tag: ident, $len_digs: ident, $id: ident, $f: expr) => {
+    ($tag:ident, $len_digs:ident, $id:ident, $f:expr) => {
         match $id {
             Len(l) => {
                 $tag |= $f(l);
@@ -128,13 +128,13 @@ macro_rules! len_or_tag {
             }
         }
     };
-    ($tag: ident, $len_digs: ident, $id: ident) => {
+    ($tag:ident, $len_digs:ident, $id:ident) => {
         len_or_tag!($tag, $len_digs, $id, |x| x)
     };
 }
 
 macro_rules! tag_and_len {
-    ($type: expr, $len_or_digs: ident, $out: ident) => {
+    ($type:expr, $len_or_digs:ident, $out:ident) => {
         let mut tag = $type;
         let len_digs;
         len_or_tag!(tag, len_digs, $len_or_digs);
@@ -177,9 +177,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
     }
 }
 
-pub fn encode(ks: &Kson, out: &mut Vec<u8>) {
-    encode_meta(kson_to_meta(ks), out)
-}
+pub fn encode(ks: &Kson, out: &mut Vec<u8>) { encode_meta(kson_to_meta(ks), out) }
 
 fn read_byte(dat: &Bytes, ix: &mut usize) -> Option<u8> {
     if *ix >= dat.len() {
@@ -212,12 +210,12 @@ pub enum KTag {
 use KTag::*;
 
 macro_rules! big_and_len {
-    ($ctor: expr, $mask: expr, $len_fn: expr, $byte: ident) => {{
+    ($ctor:expr, $mask:expr, $len_fn:expr, $byte:ident) => {{
         let big = $byte & BIG_BIT == BIG_BIT;
         let len = $byte & $mask;
         Some($ctor(big, $len_fn(len)))
     }};
-    ($ctor: expr, $byte: ident) => {
+    ($ctor:expr, $byte:ident) => {
         big_and_len!($ctor, MASK_LEN_BITS, |x| x, $byte)
     };
 }
@@ -284,12 +282,14 @@ fn read_len<B: Buf>(dat: &mut B, big: bool, len: u8) -> Option<usize> {
 pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
     let tag = read_tag(dat)?;
     match tag {
-        KC(u) => match u {
-            0 => Some(Atomic(Null)),
-            1 => Some(Atomic(Bool(true))),
-            2 => Some(Atomic(Bool(false))),
-            _ => None,
-        },
+        KC(u) => {
+            match u {
+                0 => Some(Atomic(Null)),
+                1 => Some(Atomic(Bool(true))),
+                2 => Some(Atomic(Bool(false))),
+                _ => None,
+            }
+        }
         KInt(big, pos, len) => read_int(dat, big, pos, len).map(|i| Atomic(ANum(i))),
         KStr(big, len) => {
             let len = read_len(dat, big, len)?;
@@ -322,6 +322,4 @@ pub fn encode_full(ks: &Kson) -> Vec<u8> {
     out
 }
 
-pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> {
-    decode(&mut bs.into_buf())
-}
+pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> { decode(&mut bs.into_buf()) }

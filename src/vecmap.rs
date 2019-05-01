@@ -8,30 +8,20 @@ use std::{
 pub struct VecMap<K: Ord, V>(Vec<(K, V)>);
 
 impl<K: Ord, V> VecMap<K, V> {
-    pub fn new() -> VecMap<K, V> {
-        VecMap(Vec::new())
-    }
+    pub fn new() -> VecMap<K, V> { VecMap(Vec::new()) }
 
-    pub fn with_capacity(cap: usize) -> VecMap<K, V> {
-        VecMap(Vec::with_capacity(cap))
-    }
+    pub fn with_capacity(cap: usize) -> VecMap<K, V> { VecMap(Vec::with_capacity(cap)) }
 
     pub fn from_sorted(v: Vec<(K, V)>) -> Self {
         assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
         VecMap(v)
     }
 
-    pub fn len(&self) -> usize {
-        self.0.len()
-    }
+    pub fn len(&self) -> usize { self.0.len() }
 
-    pub fn is_empty(&self) -> bool {
-        self.0.is_empty()
-    }
+    pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
-    pub fn iter(&self) -> Iter<(K, V)> {
-        self.0.iter()
-    }
+    pub fn iter(&self) -> Iter<(K, V)> { self.0.iter() }
 }
 
 impl<K: Ord + Hash, V> VecMap<K, V> {
@@ -55,11 +45,10 @@ impl<K: Ord + Hash, V, S: BuildHasher> From<HashMap<K, V, S>> for VecMap<K, V> {
 }
 
 impl<K: Ord, V> IntoIterator for VecMap<K, V> {
-    type Item = (K, V);
     type IntoIter = IntoIter<(K, V)>;
-    fn into_iter(self) -> IntoIter<(K, V)> {
-        self.0.into_iter()
-    }
+    type Item = (K, V);
+
+    fn into_iter(self) -> IntoIter<(K, V)> { self.0.into_iter() }
 }
 
 impl<K: Ord, V> FromIterator<(K, V)> for VecMap<K, V> {
@@ -69,7 +58,5 @@ impl<K: Ord, V> FromIterator<(K, V)> for VecMap<K, V> {
 }
 
 impl<K: Ord, V> From<BTreeMap<K, V>> for VecMap<K, V> {
-    fn from(bt: BTreeMap<K, V>) -> Self {
-        Self::from_iter(bt)
-    }
+    fn from(bt: BTreeMap<K, V>) -> Self { Self::from_iter(bt) }
 }

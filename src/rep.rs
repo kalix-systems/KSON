@@ -14,13 +14,9 @@ use std::{
 use crate::{util::*, vecmap::*, *};
 
 pub trait KsonRep: Clone + Sized {
-    fn to_kson(&self) -> Kson {
-        self.clone().into_kson()
-    }
+    fn to_kson(&self) -> Kson { self.clone().into_kson() }
 
-    fn into_kson(self) -> Kson {
-        self.to_kson()
-    }
+    fn into_kson(self) -> Kson { self.to_kson() }
 
     fn from_kson(ks: Kson) -> Option<Self>;
 }
@@ -70,22 +66,15 @@ try_from_kson!(i16, Atom, Inum, i64);
 try_from_kson!(i32, Atom, Inum, i64);
 
 impl<T: Clone + Into<Kson> + TryFrom<Kson>> KsonRep for T {
-    fn into_kson(self) -> Kson {
-        self.into()
-    }
-    fn from_kson(ks: Kson) -> Option<Self> {
-        ks.try_into().ok()
-    }
+    fn into_kson(self) -> Kson { self.into() }
+
+    fn from_kson(ks: Kson) -> Option<Self> { ks.try_into().ok() }
 }
 
 impl<T: KsonRep> KsonRep for Vec<T> {
-    fn into_kson(self) -> Kson {
-        Contain(Array(self).fmap(KsonRep::into_kson))
-    }
+    fn into_kson(self) -> Kson { Contain(Array(self).fmap(KsonRep::into_kson)) }
 
-    fn to_kson(&self) -> Kson {
-        Contain(Array(self.iter().map(KsonRep::to_kson).collect()))
-    }
+    fn to_kson(&self) -> Kson { Contain(Array(self.iter().map(KsonRep::to_kson).collect())) }
 
     fn from_kson(ks: Kson) -> Option<Self> {
         Container::try_from(ks)
@@ -96,9 +85,7 @@ impl<T: KsonRep> KsonRep for Vec<T> {
 }
 
 impl<T: KsonRep> KsonRep for VecMap<Bytes, T> {
-    fn into_kson(self) -> Kson {
-        Contain(Map(self).fmap(KsonRep::into_kson))
-    }
+    fn into_kson(self) -> Kson { Contain(Map(self).fmap(KsonRep::into_kson)) }
 
     fn to_kson(&self) -> Kson {
         Contain(Map(self
@@ -139,9 +126,8 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for Hash
 }
 
 impl KsonRep for () {
-    fn into_kson(self) -> Kson {
-        Contain(Array(vec![]))
-    }
+    fn into_kson(self) -> Kson { Contain(Array(vec![])) }
+
     fn from_kson(ks: Kson) -> Option<()> {
         if ks.into_vec()?.is_empty() {
             Some(())
@@ -152,9 +138,7 @@ impl KsonRep for () {
 }
 
 impl<A: KsonRep, B: KsonRep> KsonRep for (A, B) {
-    fn into_kson(self) -> Kson {
-        Contain(Array(vec![self.0.into_kson(), self.1.into_kson()]))
-    }
+    fn into_kson(self) -> Kson { Contain(Array(vec![self.0.into_kson(), self.1.into_kson()])) }
 
     fn from_kson(ks: Kson) -> Option<Self> {
         let arr = ks.into_vec()?;
@@ -250,6 +234,7 @@ impl KsonRep for Ipv4Addr {
         let octs = self.octets();
         Bytes::from(&[octs[0], octs[1], octs[2], octs[3]] as &[u8]).into_kson()
     }
+
     fn from_kson(ks: Kson) -> Option<Self> {
         let bs: Bytes = KsonRep::from_kson(ks)?;
         if bs.len() != 4 {
@@ -261,9 +246,8 @@ impl KsonRep for Ipv4Addr {
 }
 
 impl KsonRep for SocketAddrV4 {
-    fn into_kson(self) -> Kson {
-        (*self.ip(), self.port()).into_kson()
-    }
+    fn into_kson(self) -> Kson { (*self.ip(), self.port()).into_kson() }
+
     fn from_kson(ks: Kson) -> Option<Self> {
         let (ip, port) = KsonRep::from_kson(ks)?;
         Some(SocketAddrV4::new(ip, port))

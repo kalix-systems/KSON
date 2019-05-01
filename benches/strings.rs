@@ -15,9 +15,7 @@ use kson::{
 const N_BIG_ARR: usize = 100;
 const N_CHARS: usize = 100_000;
 
-fn big_str() -> Bytes {
-    Bytes::from(&[0u8; N_CHARS] as &[u8])
-}
+fn big_str() -> Bytes { Bytes::from(&[0u8; N_CHARS] as &[u8]) }
 
 fn big_arr() -> Kson {
     let v: Vec<Kson> = (0..N_BIG_ARR).map(|_| Kson::from(big_str())).collect();

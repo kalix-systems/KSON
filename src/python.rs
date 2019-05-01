@@ -143,7 +143,7 @@ where
 
 #[pyclass]
 struct PyInt {
-    sign: bool,
+    sign:   bool,
     digits: Vec<u64>,
 }
 
@@ -151,15 +151,17 @@ impl ToPyObject for Inum {
     fn to_object(&self, py: Python) -> PyObject {
         match &self {
             I64(num) => num.to_object(py),
-            Int(num) => PyRef::new(
-                py,
-                PyInt {
-                    sign: (*num >= 0),
-                    digits: num.to_digits(Msf),
-                },
-            )
-            .unwrap()
-            .to_object(py),
+            Int(num) => {
+                PyRef::new(
+                    py,
+                    PyInt {
+                        sign:   (*num >= 0),
+                        digits: num.to_digits(Msf),
+                    },
+                )
+                .unwrap()
+                .to_object(py)
+            }
         }
     }
 }
@@ -168,15 +170,17 @@ impl IntoPyObject for Inum {
     fn into_object(self, py: Python) -> PyObject {
         match self {
             I64(num) => num.into_object(py),
-            Int(num) => PyRef::new(
-                py,
-                PyInt {
-                    sign: (num >= 0),
-                    digits: num.to_digits(Msf),
-                },
-            )
-            .unwrap()
-            .into_object(py),
+            Int(num) => {
+                PyRef::new(
+                    py,
+                    PyInt {
+                        sign:   (num >= 0),
+                        digits: num.to_digits(Msf),
+                    },
+                )
+                .unwrap()
+                .into_object(py)
+            }
         }
     }
 }
