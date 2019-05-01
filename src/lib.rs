@@ -301,6 +301,7 @@ impl Atom {
 from_fn!(Atom, bool, Bool);
 from_fn!(Atom, Inum, ANum);
 from_fn!(Atom, Bytes, Str);
+compose_from!(Atom, Bytes, Vec<u8>);
 
 compose_from!(Kson, Atom, Inum);
 compose_from!(Kson, Atom, Bytes);

@@ -2,7 +2,6 @@ use common_utils::kson_strategy::*;
 use kson::Kson;
 use proptest::prelude::*;
 use pyo3::prelude::*;
-use rug::Integer;
 
 proptest! {
     #[test]

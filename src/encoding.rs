@@ -326,6 +326,6 @@ pub fn encode_full(ks: &Kson) -> Vec<u8> {
     out
 }
 
-pub fn decode_full(bs: &Bytes) -> Option<Kson> {
+pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> {
     decode(&mut bs.into_buf())
 }
