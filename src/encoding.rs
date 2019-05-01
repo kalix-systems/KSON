@@ -136,26 +136,26 @@ macro_rules! len_or_tag {
 macro_rules! tag_and_len {
     ($type: expr, $len_or_digs: ident, $out: ident) => {
         let mut tag = $type;
-        let mut len_digs;
+        let len_digs;
         len_or_tag!(tag, len_digs, $len_or_digs);
         $out.push(tag);
-        $out.append(&mut len_digs);
+        $out.extend_from_slice(&len_digs);
     };
 }
 
 fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
     match km {
         KMC(con) => out.push(TYPE_CON | con),
-        KMInt(pos, len_or_digs, mut digs) => {
+        KMInt(pos, len_or_digs, digs) => {
             let mut tag = TYPE_INT;
-            let mut len_digs;
+            let len_digs;
             len_or_tag!(tag, len_digs, len_or_digs, |x| x - 1);
             if pos {
                 tag |= INT_POSITIVE;
             }
             out.push(tag);
-            out.append(&mut len_digs);
-            out.append(&mut digs);
+            out.extend_from_slice(&len_digs);
+            out.extend_from_slice(&digs);
         }
         KMStr(len_or_digs, st) => {
             tag_and_len!(TYPE_STR, len_or_digs, out);
@@ -250,10 +250,6 @@ fn read_u64<B: Buf>(dat: &mut B, len: u8) -> Option<u64> {
     } else {
         None
     }
-    // let bytes = read_bytes(dat, ix, len as usize)?;
-    // let mask = u64::max_value() >> (64 - 8 * bytes.len());
-    // let p = bytes.as_ptr() as *const u64;
-    // Some(u64::from_le(unsafe { *p }) & mask)
 }
 
 fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> {
