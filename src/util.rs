@@ -1,4 +1,3 @@
-// use crate::bytes::Bytes;
 use bytes::Bytes;
 use pyo3::{prelude::*, types::IntoPyDict};
 use std::{boxed::Box, convert::AsRef};
