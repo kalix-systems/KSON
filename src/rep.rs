@@ -33,7 +33,7 @@ macro_rules! try_from_kson {
         impl TryFrom<Kson> for $t {
             type Error = ();
             fn try_from(ks: Kson) -> Result<$t, ()> {
-                Atom::try_from(ks).map_err(|_| ()).and_then(|a| a.try_into().map_err(|_| ()))
+                ks.try_into().map_err(|_| ())
             }
         }
     };
@@ -42,78 +42,77 @@ macro_rules! try_from_kson {
             type Error = ();
             fn try_from(ks: Kson) -> Result<$t, ()> {
                 chain_try_from!(Ok(ks), $($is)*)
-                // chain_try_from!(Atom::try_from(ks).map_err(|_| ()), $($is)*)
-                //     .try_into().map_err(|_| ())
             }
         }
     };
 }
 
-try_from_kson!(bool);
-try_from_kson!(Bytes);
-try_from_kson!(i64, Atom, Inum);
-try_from_kson!(u64, Atom, Inum);
+try_from_kson!(i64, Inum);
+try_from_kson!(u64, Inum);
 
-try_from_kson!(u8, Atom, Inum, i64);
-try_from_kson!(u16, Atom, Inum, i64);
-try_from_kson!(u32, Atom, Inum, i64);
-try_from_kson!(i8, Atom, Inum, i64);
-try_from_kson!(i16, Atom, Inum, i64);
-try_from_kson!(i32, Atom, Inum, i64);
+try_from_kson!(u8, Inum, i64);
+try_from_kson!(u16, Inum, i64);
+try_from_kson!(u32, Inum, i64);
+try_from_kson!(i8, Inum, i64);
+try_from_kson!(i16, Inum, i64);
+try_from_kson!(i32, Inum, i64);
 
-impl<T: Clone + Into<Kson> + TryFrom<Kson>> KsonRep for T {
-    /// Converts a value into `Kson`, consuming the value.
-    fn into_kson(self) -> Kson { self.into() }
+macro_rules! try_from_kson_rep {
+    ($t:ty) => {
+        impl KsonRep for $t {
+            fn into_kson(self) -> Kson { self.into() }
 
-    /// Converts a value from `Kson` if possible, otherwise returns `None`.
-    fn from_kson(ks: Kson) -> Option<Self> { ks.try_into().ok() }
+            fn from_kson(ks: Kson) -> Option<Self> { ks.try_into().ok() }
+        }
+    };
 }
 
-impl<T: KsonRep> KsonRep for Vec<T> {
-    fn into_kson(self) -> Kson { Contain(Array(self).fmap(KsonRep::into_kson)) }
+try_from_kson_rep!(Kson);
+try_from_kson_rep!(bool);
+try_from_kson_rep!(u8);
+try_from_kson_rep!(u16);
+try_from_kson_rep!(u32);
+try_from_kson_rep!(u64);
+try_from_kson_rep!(i8);
+try_from_kson_rep!(i16);
+try_from_kson_rep!(i32);
+try_from_kson_rep!(i64);
+try_from_kson_rep!(Inum);
+try_from_kson_rep!(Bytes);
 
-    fn to_kson(&self) -> Kson { Contain(Array(self.iter().map(KsonRep::to_kson).collect())) }
+impl<T: KsonRep> KsonRep for Vec<T> {
+    fn into_kson(self) -> Kson { Array(self.into_iter().map(T::into_kson).collect()) }
+
+    fn to_kson(&self) -> Kson { Array(self.iter().map(T::to_kson).collect()) }
 
     fn from_kson(ks: Kson) -> Option<Self> {
-        Container::try_from(ks)
-            .ok()?
-            .traverse_option(T::from_kson)?
-            .into_vec()
+        ks.into_vec()?.into_iter().map(T::from_kson).collect()
     }
 }
 
 impl<T: KsonRep> KsonRep for VecMap<Bytes, T> {
-    fn into_kson(self) -> Kson { Contain(Map(self).fmap(KsonRep::into_kson)) }
-
-    fn to_kson(&self) -> Kson {
-        Contain(Map(self
-            .iter()
-            .map(|(k, v)| (k.clone(), v.to_kson()))
-            .collect()))
+    fn into_kson(self) -> Kson {
+        Map(VecMap::from_sorted(
+            self.into_iter().map(|(k, v)| (k, v.into_kson())).collect(),
+        ))
     }
 
+    fn to_kson(&self) -> Kson { Map(self.iter().map(|(k, v)| (k.clone(), v.to_kson())).collect()) }
+
     fn from_kson(ks: Kson) -> Option<Self> {
-        Container::try_from(ks)
-            .ok()?
-            .traverse_option(T::from_kson)?
-            .into_vecmap()
+        let vm = ks.into_vecmap()?;
+        let mut out = Vec::with_capacity(vm.len());
+        for (k, v) in vm {
+            out.push((k, T::from_kson(v)?));
+        }
+        Some(VecMap::from_sorted(out))
     }
 }
 
 impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for HashMap<Bytes, T, S> {
-    fn into_kson(self) -> Kson {
-        Contain(Map(self
-            .into_iter()
-            .map(|(k, v)| (k, v.into_kson()))
-            .collect()))
-    }
+    fn into_kson(self) -> Kson { Map(self.into_iter().map(|(k, v)| (k, v.into_kson())).collect()) }
 
-    fn to_kson(&self) -> Kson {
-        Contain(Map(self
-            .iter()
-            .map(|(k, v)| (k.clone(), v.to_kson()))
-            .collect()))
-    }
+    fn to_kson(&self) -> Kson { Map(self.iter().map(|(k, v)| (k.clone(), v.to_kson())).collect()) }
 
     fn from_kson(ks: Kson) -> Option<Self> {
         ks.into_vecmap()?
@@ -124,7 +123,7 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for Hash
 }
 
 impl KsonRep for () {
-    fn into_kson(self) -> Kson { Contain(Array(vec![])) }
+    fn into_kson(self) -> Kson { Array(vec![]) }
 
     fn from_kson(ks: Kson) -> Option<()> {
         if ks.into_vec()?.is_empty() {
@@ -136,7 +135,7 @@ impl KsonRep for () {
 }
 
 impl<A: KsonRep, B: KsonRep> KsonRep for (A, B) {
-    fn into_kson(self) -> Kson { Contain(Array(vec![self.0.into_kson(), self.1.into_kson()])) }
+    fn into_kson(self) -> Kson { Array(vec![self.0.into_kson(), self.1.into_kson()]) }
 
     fn from_kson(ks: Kson) -> Option<Self> {
         let arr = ks.into_vec()?;
@@ -153,11 +152,11 @@ impl<A: KsonRep, B: KsonRep> KsonRep for (A, B) {
 
 impl<A: KsonRep, B: KsonRep, C: KsonRep> KsonRep for (A, B, C) {
     fn into_kson(self) -> Kson {
-        Contain(Array(vec![
+        Array(vec![
             self.0.into_kson(),
             self.1.into_kson(),
             self.2.into_kson(),
-        ]))
+        ])
     }
 
     fn from_kson(ks: Kson) -> Option<Self> {
@@ -175,12 +174,12 @@ impl<A: KsonRep, B: KsonRep, C: KsonRep> KsonRep for (A, B, C) {
 }
 impl<A: KsonRep, B: KsonRep, C: KsonRep, D: KsonRep> KsonRep for (A, B, C, D) {
     fn into_kson(self) -> Kson {
-        Contain(Array(vec![
+        Array(vec![
             self.0.into_kson(),
             self.1.into_kson(),
             self.2.into_kson(),
             self.3.into_kson(),
-        ]))
+        ])
     }
 
     fn from_kson(ks: Kson) -> Option<Self> {
@@ -206,23 +205,31 @@ impl<A: KsonRep, B: KsonRep, C: KsonRep, D: KsonRep> KsonRep for (A, B, C, D) {
 impl<T: KsonRep> KsonRep for Option<T> {
     fn into_kson(self) -> Kson {
         match self {
-            Some(x) => Contain(Array(vec![x.into_kson()])),
-            None => Atomic(Null),
+            Some(x) => Array(vec![x.into_kson()]),
+            None => Null,
+        }
+    }
+
+    fn to_kson(&self) -> Kson {
+        match self {
+            Some(x) => Array(vec![x.to_kson()]),
+            _ => Null,
         }
     }
 
     fn from_kson(ks: Kson) -> Option<Self> {
-        if let Some(Null) = ks.to_atom() {
-            Some(None)
-        } else if let Some(v) = ks.into_vec() {
-            if v.len() == 1 {
-                let v = v.into_iter().next().unwrap();
-                Some(Some(T::from_kson(v)?))
-            } else {
-                None
+        match ks {
+            Null => Some(None),
+            Array(v) => {
+                let mut iter = v.into_iter();
+                let val = iter.next()?;
+                if iter.next().is_none() {
+                    Some(Some(T::from_kson(val)?))
+                } else {
+                    None
+                }
             }
-        } else {
-            None
+            _ => None,
         }
     }
 }
@@ -275,7 +282,7 @@ pub fn struct_from_kson(ks: Kson, names: &[&str]) -> Option<Vec<Kson>> {
 
 pub fn enum_to_kson(name: &str, mut fields: Vec<Kson>) -> Kson {
     fields.insert(0, Kson::from(str_to_bs(name)));
-    Contain(Array(fields))
+    Array(fields)
 }
 
 pub fn enum_from_kson<T: Debug>(
@@ -301,15 +308,15 @@ pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Option<T> {
 
 /// Values whose KSON representation is never `KSNull`.
 pub trait KsonNotNull: KsonRep {}
-impl KsonNotNull for u8 {}
-impl KsonNotNull for u16 {}
-impl KsonNotNull for u32 {}
-impl KsonNotNull for u64 {}
-impl KsonNotNull for i8 {}
-impl KsonNotNull for i16 {}
-impl KsonNotNull for i32 {}
-impl KsonNotNull for i64 {}
-impl KsonNotNull for Bytes {}
+// impl KsonNotNull for u8 {}
+// impl KsonNotNull for u16 {}
+// impl KsonNotNull for u32 {}
+// impl KsonNotNull for u64 {}
+// impl KsonNotNull for i8 {}
+// impl KsonNotNull for i16 {}
+// impl KsonNotNull for i32 {}
+// impl KsonNotNull for i64 {}
+// impl KsonNotNull for Bytes {}
 impl<T: KsonRep> KsonNotNull for Vec<T> {}
 
 impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonNotNull
