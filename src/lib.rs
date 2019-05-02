@@ -5,22 +5,23 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::clone_on_copy)]
 #![feature(is_sorted)]
+#![feature(result_map_or_else)]
 
 #[macro_use]
 extern crate kson_macro;
 
 pub mod encoding;
 pub mod inum;
-pub mod python;
-pub mod rep;
+// pub mod python;
+// pub mod rep;
 pub mod util;
 pub mod vecmap;
 
 use bytes::Bytes;
 use hashbrown::HashMap;
 use inum::*;
-use rep::KsonRep;
-use rug::Integer;
+use num_bigint::BigInt;
+// use rep::KsonRep;
 use std::{
     convert::{TryFrom, TryInto},
     slice::Iter,
@@ -59,7 +60,7 @@ impl Kson {
         Some(self.into_vecmap()?.into_hashmap())
     }
 
-    pub fn into_rep<T: KsonRep>(self) -> Option<T> { T::from_kson(self) }
+    // pub fn into_rep<T: KsonRep>(self) -> Option<T> { T::from_kson(self) }
 
     /// Indicates whether a value is `Null`.
     fn is_null(&self) -> bool {
@@ -126,7 +127,7 @@ try_from_ctor!(Kson, Bytes, Str);
 try_from_ctor!(Kson, Vec<Kson>, Array);
 try_from_ctor!(Kson, VecMap<Bytes, Kson>, Map);
 
-compose_from!(Kson, Inum, Integer);
+compose_from!(Kson, Inum, BigInt);
 compose_from!(Kson, Inum, i64);
 compose_from!(Kson, Inum, u64);
 

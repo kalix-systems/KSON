@@ -1,5 +1,5 @@
 use bytes::{buf::IntoBuf, Buf, Bytes};
-use rug::{integer::Order, Integer};
+use num_bigint::BigInt;
 use std::{collections::BTreeMap, convert::TryInto, ops::AddAssign, vec::Vec};
 
 use crate::{
@@ -26,15 +26,12 @@ pub const TYPE_ARR: u8 = 0b0110_0000;
 pub const TYPE_MAP: u8 = 0b1000_0000;
 // 0x10
 pub const BIG_BIT: u8 = 0b0001_0000;
-// 0x0f
-pub const INT_POSITIVE: u8 = 0b0000_1000;
 
 pub const CON_NULL: u8 = 0b0000_0000;
 pub const CON_TRUE: u8 = 0b0000_0001;
 pub const CON_FALSE: u8 = 0b0000_0010;
 
 pub const MASK_LEN_BITS: u8 = 0b0000_1111;
-pub const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
 
 #[derive(Clone, Debug)]
 pub enum LenOrDigs {
@@ -48,7 +45,7 @@ use LenOrDigs::*;
 /// Metadata tags for KSON.
 pub enum KMeta<'a> {
     KMC(u8),
-    KMInt(bool, LenOrDigs, Vec<u8>),
+    KMInt(LenOrDigs, Vec<u8>),
     KMStr(LenOrDigs, &'a Bytes),
     KMArr(LenOrDigs, &'a Vec<Kson>),
     KMMap(LenOrDigs, &'a VecMap<Bytes, Kson>),
@@ -57,28 +54,16 @@ pub enum KMeta<'a> {
 use KMeta::*;
 
 fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
-    let pos = *i >= 0;
-    match i {
-        I64(i) => {
-            let j = if pos { *i } else { -*i - 1 };
-            let digs = u64_to_digits(j as u64);
-            assert!(digs.len() <= 8);
-            KMInt(pos, Len(digs.len() as u8), digs)
-        }
-        Int(i) => {
-            if pos {
-                let digs = Integer::to_digits(i, Order::Lsf);
-                assert!(digs.len() >= 8);
-                let len_digs_digs = u64_to_digits(digs.len() as u64);
-                KMInt(pos, Digs(len_digs_digs), digs)
-            } else {
-                let digs = Integer::to_digits(&(i.clone() + 1), Order::Lsf);
-                assert!(digs.len() >= 8);
-                let len_digs_digs = u64_to_digits(digs.len() as u64);
-                KMInt(pos, Digs(len_digs_digs), digs)
-            }
-        }
-    }
+    let digs = match i {
+        I64(i) => BigInt::from(*i).to_signed_bytes_le(),
+        Int(i) => i.to_signed_bytes_le(),
+    };
+    let len_or_digs = if digs.len() <= 8 {
+        Len(digs.len() as u8)
+    } else {
+        Digs(u64_to_digits(digs.len() as u64))
+    };
+    KMInt(len_or_digs, digs)
 }
 
 macro_rules! len_or_digs {
@@ -135,13 +120,10 @@ macro_rules! tag_and_len {
 fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
     match km {
         KMC(con) => out.push(TYPE_CON | con),
-        KMInt(pos, len_or_digs, digs) => {
+        KMInt(len_or_digs, digs) => {
             let mut tag = TYPE_INT;
             let len_digs;
             len_or_tag!(tag, len_digs, len_or_digs, |x| x - 1);
-            if pos {
-                tag |= INT_POSITIVE;
-            }
             out.push(tag);
             out.extend_from_slice(&len_digs);
             out.extend_from_slice(&digs);
@@ -191,7 +173,7 @@ fn read_bytes<B: Buf>(dat: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
 /// KSON tags.
 pub enum KTag {
     KC(u8),
-    KInt(bool, bool, u8),
+    KInt(bool, u8),
     KStr(bool, u8),
     KArr(bool, u8),
     KMap(bool, u8),
@@ -199,31 +181,17 @@ pub enum KTag {
 
 use KTag::*;
 
-macro_rules! big_and_len {
-    ($ctor:expr, $mask:expr, $len_fn:expr, $byte:ident) => {{
-        let big = $byte & BIG_BIT == BIG_BIT;
-        let len = $byte & $mask;
-        Some($ctor(big, $len_fn(len)))
-    }};
-    ($ctor:expr, $byte:ident) => {
-        big_and_len!($ctor, MASK_LEN_BITS, |x| x, $byte)
-    };
-}
-
 pub fn read_tag(input: &mut Buf) -> Option<KTag> {
     if input.has_remaining() {
         let byte = input.get_u8();
+        let big = byte & BIG_BIT == BIG_BIT;
+        let len = byte & MASK_LEN_BITS;
         match byte & MASK_TYPE {
             TYPE_CON => Some(KC(byte & MASK_META)),
-            TYPE_INT => {
-                let big = byte & BIG_BIT == BIG_BIT;
-                let pos = byte & INT_POSITIVE == INT_POSITIVE;
-                let len = byte & MASK_INT_LEN_BITS;
-                Some(KInt(big, pos, len + 1))
-            }
-            TYPE_STR => big_and_len!(KStr, byte),
-            TYPE_ARR => big_and_len!(KArr, byte),
-            TYPE_MAP => big_and_len!(KMap, byte),
+            TYPE_INT => Some(KInt(big, len + 1)),
+            TYPE_STR => Some(KStr(big, len)),
+            TYPE_ARR => Some(KArr(big, len)),
+            TYPE_MAP => Some(KMap(big, len)),
             _ => None,
         }
     } else {
@@ -240,25 +208,25 @@ fn read_u64<B: Buf>(dat: &mut B, len: u8) -> Option<u64> {
     }
 }
 
-fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> {
-    assert!(len - 1 <= MASK_INT_LEN_BITS);
+fn read_int<B: Buf>(dat: &mut B, big: bool, len: u8) -> Option<Inum> {
+    assert!(len - 1 <= MASK_LEN_BITS);
     let u = read_u64(dat, len)?;
-    let mut i = {
+    Some(
         if big {
-            Int(Integer::from_digits(
-                &read_bytes(dat, u as usize)?,
-                Order::Lsf,
-            ))
+            assert!(u > 8);
+            Int(BigInt::from_signed_bytes_le(&read_bytes(dat, u as usize)?))
         } else {
-            assert!(u < i64::max_value() as u64);
-            I64(u as i64)
-        }
-    };
-    if !pos {
-        i *= -1;
-        i += -1;
-    }
-    Some(i)
+            let maxval = (i64::max_value() as u64) >> (8 * (8 - len));
+            if u <= maxval {
+                println!("pos case, printing, {}, {}", u, maxval);
+                I64(u as i64)
+            } else {
+                println!("neg case, printing, {}, {}", u, maxval);
+                let i = (u - maxval) as i64;
+                I64(-i)
+            }
+        },
+    )
 }
 
 fn read_len<B: Buf>(dat: &mut B, big: bool, len: u8) -> Option<usize> {
@@ -280,7 +248,7 @@ pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
                 _ => None,
             }
         }
-        KInt(big, pos, len) => read_int(dat, big, pos, len).map(Kint),
+        KInt(big, len) => read_int(dat, big, len).map(Kint),
         KStr(big, len) => {
             let len = read_len(dat, big, len)?;
             Some(Str(Bytes::from(read_bytes(dat, len)?)))

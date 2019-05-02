@@ -1,16 +1,18 @@
-use rug::Integer;
+use num_bigint::{BigInt, ParseBigIntError};
+use num_traits::*;
 use std::{
     convert::TryFrom,
-    ops::{AddAssign, MulAssign},
+    num::ParseIntError,
+    ops::{Add, AddAssign, Div, Mul, MulAssign, Rem, Sub},
 };
 
 use crate::{from_as, from_fn};
 
-/// `Inum`s are either `i64` or `Integer`s (i.e., big integers).
+/// `Inum`s are either `i64` or `BigInt`s (i.e., big integers).
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub enum Inum {
     I64(i64),
-    Int(Integer),
+    Int(BigInt),
 }
 
 use Inum::*;
@@ -19,29 +21,29 @@ from_fn!(Inum, i64, I64);
 from_fn!(Inum, u64, |u| {
     let i = u as i64;
     if i >= 0 {
-        Inum::from(i)
+        I64(i)
     } else {
-        Inum::Int(Integer::from(u))
+        Int(BigInt::from(u))
     }
 });
 
-from_fn!(Inum, Integer, |i: Integer| {
+from_fn!(Inum, BigInt, |i: BigInt| {
     i.to_i64().map_or_else(|| Int(i), I64)
 });
 
-impl From<Inum> for Integer {
-    fn from(i: Inum) -> Integer {
+impl From<Inum> for BigInt {
+    fn from(i: Inum) -> BigInt {
         match i {
-            Inum::I64(i) => Integer::from(i), // Convert `i64` to `Integer`
+            Inum::I64(i) => BigInt::from(i), // Convert `i64` to `BigInt`
             Inum::Int(i) => i,
         }
     }
 }
 
 impl TryFrom<Inum> for i64 {
-    type Error = Integer;
+    type Error = BigInt;
 
-    fn try_from(i: Inum) -> Result<Self, Integer> {
+    fn try_from(i: Inum) -> Result<Self, BigInt> {
         match i {
             Inum::I64(i) => Ok(i),
             Inum::Int(i) => Err(i),
@@ -72,46 +74,79 @@ impl TryFrom<Inum> for u64 {
     }
 }
 
-impl AddAssign<i32> for Inum {
-    fn add_assign(&mut self, other: i32) {
+impl Zero for Inum {
+    fn zero() -> Self { I64(0) }
+
+    fn is_zero(&self) -> bool {
         match self {
-            I64(i) => *i += other as i64,
-            Int(i) => *i += other,
-        }
-    }
-}
-impl MulAssign<i32> for Inum {
-    fn mul_assign(&mut self, other: i32) {
-        match self {
-            I64(i) => *i *= other as i64,
-            Int(i) => *i *= other,
+            I64(0) => true,
+            _ => false,
         }
     }
 }
 
-impl PartialEq<i64> for Inum {
-    fn eq(&self, other: &i64) -> bool {
+impl One for Inum {
+    fn one() -> Self { I64(1) }
+
+    fn is_one(&self) -> bool {
         match self {
-            I64(i) => i.eq(other),
-            Int(i) => i.eq(other),
+            I64(1) => true,
+            _ => false,
         }
     }
 }
 
-impl PartialOrd<i64> for Inum {
-    fn partial_cmp(&self, other: &i64) -> Option<core::cmp::Ordering> {
-        match self {
-            I64(i) => i.partial_cmp(other),
-            Int(i) => i.partial_cmp(other),
+macro_rules! checked_impl {
+    ($arg:ty, $op_name:tt, $op_suff:tt, $op_checked:tt) => {
+        impl $op_name<$arg> for Inum {
+            type Output = Inum;
+
+            fn $op_suff(self, other: $arg) -> Inum {
+                match (self, other) {
+                    (I64(i), I64(j)) => {
+                        i.$op_checked(j)
+                            .map_or_else(|| Int(BigInt::from(i).$op_suff(BigInt::from(j))), I64)
+                    }
+                    (I64(i), Int(j)) => Inum::from(BigInt::from(i).$op_suff(j)),
+                    (Int(i), I64(j)) => Inum::from(i.$op_suff(BigInt::from(j))),
+                    (Int(i), Int(j)) => Inum::from(i.$op_suff(j)),
+                }
+            }
         }
+    };
+}
+
+checked_impl!(Inum, Add, add, checked_add);
+checked_impl!(Inum, Mul, mul, checked_mul);
+checked_impl!(Inum, Sub, sub, checked_sub);
+checked_impl!(Inum, Div, div, checked_div);
+checked_impl!(Inum, Rem, rem, checked_rem);
+
+// TODO: make a working version of this
+// checked_impl!(&Inum, Add, add, checked_add);
+// checked_impl!(&Inum, Mul, mul, checked_mul);
+// checked_impl!(&Inum, Sub, sub, checked_sub);
+// checked_impl!(&Inum, Div, div, checked_div);
+// checked_impl!(&Inum, Rem, rem, checked_rem);
+
+// TODO: op_assign macro, num_assign instance
+
+impl Num for Inum {
+    type FromStrRadixErr = ParseBigIntError;
+
+    fn from_str_radix(str: &str, radix: u32) -> Result<Self, ParseBigIntError> {
+        i64::from_str_radix(str, radix).map_or_else(
+            |_| BigInt::from_str_radix(str, radix).map(Int),
+            |i| Ok(I64(i)),
+        )
     }
 }
 
 impl Inum {
-    /// Consumes `self` to produce `Integer`.
-    fn into_int(self) -> Integer {
+    /// Consumes `self` to produce `BigInt`.
+    fn into_int(self) -> BigInt {
         match self {
-            Inum::I64(i) => Integer::from(i),
+            Inum::I64(i) => BigInt::from(i),
             Inum::Int(i) => i,
         }
     }
@@ -125,10 +160,10 @@ impl Inum {
         }
     }
 
-    /// Produces an `Integer`
-    fn to_int(&self) -> Integer {
+    /// Produces an `BigInt`
+    fn to_int(&self) -> BigInt {
         match self {
-            Inum::I64(i) => Integer::from(i.clone()),
+            Inum::I64(i) => BigInt::from(i.clone()),
             Inum::Int(i) => i.clone(),
         }
     }
