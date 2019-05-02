@@ -1,18 +1,14 @@
 use bytes::Bytes;
 use hashbrown::HashMap;
-// use num_traits::*;
-use rug::Integer;
 use std::{
-    collections::BTreeMap,
     fmt::Debug,
     net::{Ipv4Addr, SocketAddrV4},
-    slice::Iter,
-    sync::Arc,
     vec::{IntoIter, Vec},
 };
 
 use crate::{util::*, vecmap::*, *};
 
+/// A value representable as `Kson`.
 pub trait KsonRep: Clone + Sized {
     fn to_kson(&self) -> Kson { self.clone().into_kson() }
 
@@ -66,8 +62,10 @@ try_from_kson!(i16, Atom, Inum, i64);
 try_from_kson!(i32, Atom, Inum, i64);
 
 impl<T: Clone + Into<Kson> + TryFrom<Kson>> KsonRep for T {
+    /// Converts a value into `Kson`, consuming the value.
     fn into_kson(self) -> Kson { self.into() }
 
+    /// Converts a value from `Kson` if possible, otherwise returns `None`.
     fn from_kson(ks: Kson) -> Option<Self> { ks.try_into().ok() }
 }
 
@@ -278,7 +276,6 @@ pub fn struct_from_kson(ks: Kson, names: &[&str]) -> Option<Vec<Kson>> {
 pub fn enum_to_kson(name: &str, mut fields: Vec<Kson>) -> Kson {
     fields.insert(0, Kson::from(str_to_bs(name)));
     Contain(Array(fields))
-    // Kson::from(fields)
 }
 
 pub fn enum_from_kson<T: Debug>(
@@ -297,6 +294,7 @@ pub fn enum_from_kson<T: Debug>(
     None
 }
 
+/// Gets the next element from an iterator of `Kson` values as `T`.
 pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Option<T> {
     KsonRep::from_kson(iter.next()?)
 }

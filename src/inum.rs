@@ -1,16 +1,12 @@
-use pyo3::{
-    prelude::*,
-    types::{PyAny, PyLong},
-};
 use rug::Integer;
 use std::{
     convert::TryFrom,
     ops::{AddAssign, MulAssign},
 };
 
-use crate::{compose_from, from_as, from_fn, util::*};
+use crate::{from_as, from_fn};
 
-/// `INum`s are either `i64` or `Integer`s
+/// `Inum`s are either `i64` or `Integer`s (i.e., big integers).
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub enum Inum {
     I64(i64),
@@ -36,7 +32,7 @@ from_fn!(Inum, Integer, |i: Integer| {
 impl From<Inum> for Integer {
     fn from(i: Inum) -> Integer {
         match i {
-            Inum::I64(i) => Integer::from(i),
+            Inum::I64(i) => Integer::from(i), // Convert `i64` to `Integer`
             Inum::Int(i) => i,
         }
     }
@@ -112,6 +108,7 @@ impl PartialOrd<i64> for Inum {
 }
 
 impl Inum {
+    /// Consumes `self` to produce `Integer`.
     fn into_int(self) -> Integer {
         match self {
             Inum::I64(i) => Integer::from(i),
@@ -119,6 +116,8 @@ impl Inum {
         }
     }
 
+    /// Consumes `self` to produce `i64` if `self` is an `I64`,
+    /// otherwise returns `None`.
     fn into_i64(self) -> Option<i64> {
         match self {
             Inum::I64(i) => Some(i),
@@ -126,6 +125,7 @@ impl Inum {
         }
     }
 
+    /// Produces an `Integer`
     fn to_int(&self) -> Integer {
         match self {
             Inum::I64(i) => Integer::from(i.clone()),
@@ -133,6 +133,7 @@ impl Inum {
         }
     }
 
+    /// Produces an `i64` if `self` is an `I64`, otherwise returns `None`.
     fn to_i64(&self) -> Option<i64> {
         match self {
             Inum::I64(i) => Some(i.clone()),
@@ -140,6 +141,7 @@ impl Inum {
         }
     }
 
+    /// Produces an `i32` if `self` is small enough, otherwise returns `None`.
     fn to_i32(&self) -> Option<i32> {
         match self {
             Inum::I64(i) => {
@@ -153,6 +155,7 @@ impl Inum {
         }
     }
 
+    /// Produces an `i16` if `self` is small enough, otherwise returns `None`.
     fn to_i16(&self) -> Option<i16> {
         match self {
             Inum::I64(i) => {
@@ -166,6 +169,7 @@ impl Inum {
         }
     }
 
+    /// Produces an `i8` if `self` is small enough, otherwise returns `None`.
     fn to_i8(&self) -> Option<i8> {
         match self {
             Inum::I64(i) => {
@@ -179,6 +183,7 @@ impl Inum {
         }
     }
 
+    /// Produces a `u8` if `self` is small enough, otherwise returns `None`.
     fn to_u8(&self) -> Option<u8> {
         match self {
             Inum::I64(i) => {
@@ -192,6 +197,7 @@ impl Inum {
         }
     }
 
+    /// Produces a `u8` if `self` is small enough, otherwise returns `None`.
     fn to_u16(&self) -> Option<u16> {
         match self {
             Inum::I64(i) => {
@@ -205,6 +211,7 @@ impl Inum {
         }
     }
 
+    /// Produces a `u32` if `self` is small enough, otherwise returns `None`.
     fn to_u32(&self) -> Option<u32> {
         match self {
             Inum::I64(i) => {
@@ -218,6 +225,7 @@ impl Inum {
         }
     }
 
+    /// Produces an `i64` if `self` is an `I64`, otherwise returns `None`.
     fn to_u64(&self) -> Option<u64> {
         match self {
             Inum::I64(i) => {

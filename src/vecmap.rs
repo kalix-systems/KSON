@@ -1,30 +1,36 @@
 use hashbrown::HashMap;
-
-use std::{
-    collections::BTreeMap, hash::*, iter::FromIterator, ops::Deref, slice::Iter, vec::IntoIter,
-};
+use std::{collections::BTreeMap, hash::*, iter::FromIterator, slice::Iter, vec::IntoIter};
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug, Default)]
+/// A map implemented as a sorted `Vec` of pairs.
 pub struct VecMap<K: Ord, V>(Vec<(K, V)>);
 
 impl<K: Ord, V> VecMap<K, V> {
+    /// Creates a new `VecMap`.
     pub fn new() -> VecMap<K, V> { VecMap(Vec::new()) }
 
+    /// Creates a new `VecMap` with preallocated capacity.
     pub fn with_capacity(cap: usize) -> VecMap<K, V> { VecMap(Vec::with_capacity(cap)) }
 
+    /// Creates a `VecMap` from a sorted `Vec` of pairs.
     pub fn from_sorted(v: Vec<(K, V)>) -> Self {
+        // panic is `v` is not sorted
         assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
         VecMap(v)
     }
 
+    /// Returns length
     pub fn len(&self) -> usize { self.0.len() }
 
+    /// Indicates whether or not the `VecMap` is empty.
     pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
+    /// Returns an `Iter` of key value pairs.
     pub fn iter(&self) -> Iter<(K, V)> { self.0.iter() }
 }
 
 impl<K: Ord + Hash, V> VecMap<K, V> {
+    /// Consumes a `VecMap`, producing a `HashMap` from the entries.
     pub fn into_hashmap<S: BuildHasher + Default>(self) -> HashMap<K, V, S> {
         self.into_iter().collect()
     }

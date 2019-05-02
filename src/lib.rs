@@ -18,18 +18,15 @@ pub mod vecmap;
 
 use bytes::Bytes;
 use hashbrown::HashMap;
+use inum::*;
+use rep::KsonRep;
 use rug::Integer;
-
 use std::{
-    collections::BTreeMap,
     convert::{TryFrom, TryInto},
     slice::Iter,
     sync::Arc,
     vec::Vec,
 };
-
-use inum::*;
-use rep::KsonRep;
 use vecmap::*;
 
 pub const NULL: Kson = Atomic(Null);
@@ -263,6 +260,7 @@ impl TryFrom<Atom> for Bytes {
 }
 
 impl Atom {
+    /// Indicates whether a value is `Null`.
     fn is_null(&self) -> bool {
         match self {
             Null => true,

@@ -45,6 +45,7 @@ pub enum LenOrDigs {
 use LenOrDigs::*;
 
 #[derive(Clone, Debug)]
+/// Metadata tags for KSON.
 pub enum KMeta<'a> {
     KMC(u8),
     KMInt(bool, LenOrDigs, Vec<u8>),
@@ -199,6 +200,7 @@ fn read_bytes<B: Buf>(dat: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
 }
 
 #[derive(Clone, Debug)]
+/// KSON tags.
 pub enum KTag {
     KC(u8),
     KInt(bool, bool, u8),
@@ -316,10 +318,12 @@ pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
     }
 }
 
+/// Encodes a `Kson` object into a `Vec<u8>`
 pub fn encode_full(ks: &Kson) -> Vec<u8> {
     let mut out = vec![];
     encode(ks, &mut out);
     out
 }
 
+/// Decodes an `IntoBuf` into `Kson`, returns `None` if decoding fails.
 pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> { decode(&mut bs.into_buf()) }
