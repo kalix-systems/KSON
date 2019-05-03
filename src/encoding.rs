@@ -40,6 +40,9 @@ pub const CON_FALSE: u8 = 0b0000_0010;
 pub const MASK_LEN_BITS: u8 = 0b0000_1111;
 pub const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
 
+pub const BIGINT_MIN_LEN: u64 = MASK_INT_LEN_BITS as u64 + 2;
+pub const BIGCON_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
+
 #[derive(Clone, Debug)]
 pub enum LenOrDigs {
     Len(u8),
@@ -89,8 +92,20 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
                 KMInt(sign != Minus, Len(digs.len() as u8), digs)
             } else {
                 match sign {
-                    Plus => KMInt(true, Digs(u64_to_digits(digs.len() as u64 - 1)), digs),
-                    Minus => KMInt(false, Digs(u64_to_digits(digs.len() as u64 - 1)), digs),
+                    Plus => {
+                        KMInt(
+                            true,
+                            Digs(u64_to_digits(digs.len() as u64 - BIGINT_MIN_LEN)),
+                            digs,
+                        )
+                    }
+                    Minus => {
+                        KMInt(
+                            false,
+                            Digs(u64_to_digits(digs.len() as u64 - BIGINT_MIN_LEN)),
+                            digs,
+                        )
+                    }
                     NoSign => unreachable!("0 had long digits"),
                 }
             }
@@ -103,7 +118,7 @@ macro_rules! len_or_digs {
         if $id.len() <= MASK_LEN_BITS as usize {
             Len($id.len() as u8)
         } else {
-            Digs(u64_to_digits($id.len() as u64 - 1))
+            Digs(u64_to_digits($id.len() as u64 - BIGCON_MIN_LEN))
         }
     };
 }
@@ -256,7 +271,7 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
         if big {
             Int(BigInt::from_bytes_le(
                 Plus,
-                &read_bytes(dat, u as usize + 1)?,
+                &read_bytes(dat, u as usize + BIGINT_MIN_LEN as usize)?,
             ))
         } else {
             Inum::from(u)
@@ -272,7 +287,7 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
 
 fn read_len<B: Buf>(dat: &mut B, big: bool, len: u8) -> Option<usize> {
     if big {
-        Some(read_u64(dat, len + 1)? as usize + 1)
+        Some(read_u64(dat, len + 1)? as usize + BIGCON_MIN_LEN as usize)
     } else {
         Some(len as usize)
     }
@@ -420,7 +435,7 @@ mod tests {
         // tag
         assert_eq!(out[0], 0b0011_1000);
         // length in bytes
-        assert_eq!(out[1], 8);
+        assert_eq!(out[1], 0);
         // digits
         assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 0, 1]);
     }
@@ -436,7 +451,7 @@ mod tests {
         // tag
         assert_eq!(out[0], 0b0011_0000);
         // length in bytes
-        assert_eq!(out[1], 8);
+        assert_eq!(out[1], 0);
         // digits
         assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 0, 1]);
     }
