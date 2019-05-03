@@ -146,4 +146,10 @@ mod tests {
         );
     }
 
+    #[test]
+    fn from_vec() {
+        let v = vec![0, 1, 2, 3, 4];
+        let k_val = Kson::from(v.clone());
+        assert_eq!(k_val.into_rep(), Some(v));
+    }
 }
