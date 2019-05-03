@@ -30,8 +30,6 @@ use std::{
 };
 use vecmap::*;
 
-pub const NULL: Kson = Null;
-
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub enum Kson {
     Null,
