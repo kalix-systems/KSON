@@ -333,7 +333,7 @@ mod tests {
         encode_meta(meta, out);
 
         // tag
-        assert_eq!(out[0], 0b0010_1000);
+        assert_eq!(out[0], 0b001_0_1_000);
         // digit, should be 0
         assert_eq!(out[1], 0);
 
@@ -353,7 +353,7 @@ mod tests {
         encode_meta(meta, out);
 
         // tag
-        assert_eq!(out[0], 0b0010_1000);
+        assert_eq!(out[0], 0b001_0_1_000);
         // digit, should be 1
         assert_eq!(out[1], 1);
     }
@@ -365,8 +365,8 @@ mod tests {
         let out = &mut Vec::new();
         encode_meta(meta, out);
 
-        // tag 001 (int) + 0 (small) + 1 (positive) + 001 (length=1+1)
-        assert_eq!(out[0], 0b0010_1001);
+        // tag
+        assert_eq!(out[0], 0b001_0_1_001);
         // LSD, should be 1
         assert_eq!(out[1], 1);
         // MSD, should be 1
@@ -380,7 +380,7 @@ mod tests {
         let out = &mut Vec::new();
         encode_meta(meta, out);
 
-        assert_eq!(out[0], 0b0010_1111);
+        assert_eq!(out[0], 0b001_0_1_111);
         assert_eq!(out[1..], [255, 255, 255, 255, 255, 255, 255, 127]);
     }
 
@@ -392,7 +392,7 @@ mod tests {
         encode_meta(meta, out);
 
         // tag
-        assert_eq!(out[0], 0b0010_0000);
+        assert_eq!(out[0], 0b0010_0_000);
         // should be 0
         assert_eq!(out[1], 1);
     }
@@ -405,7 +405,7 @@ mod tests {
         encode_meta(meta, out);
 
         // tag
-        assert_eq!(out[0], 0b0010_0001);
+        assert_eq!(out[0], 0b001_0_0_001);
         // LSD, should be 0
         assert_eq!(out[1], 0);
         // MSD, should be 1
@@ -420,7 +420,7 @@ mod tests {
         encode_meta(meta, out);
 
         // tag
-        assert_eq!(out[0], 0b0010_0111);
+        assert_eq!(out[0], 0b001_0_0_111);
         assert_eq!(out[1..], [255, 255, 255, 255, 255, 255, 255, 127]);
     }
 
@@ -433,7 +433,7 @@ mod tests {
         encode_meta(meta, out);
 
         // tag
-        assert_eq!(out[0], 0b0011_1000);
+        assert_eq!(out[0], 0b001_1_1_000);
         // length in bytes
         assert_eq!(out[1], 8);
         // digits
@@ -449,11 +449,120 @@ mod tests {
         encode_meta(meta, out);
 
         // tag
-        assert_eq!(out[0], 0b0011_0000);
+        assert_eq!(out[0], 0b001_1_0_000);
         // length in bytes
         assert_eq!(out[1], 8);
         // digits
         assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 128]);
     }
+
+    #[test]
+    fn constants() {
+        let out = &mut Vec::new();
+        encode_meta(kson_to_meta(&Null), out);
+
+        assert_eq!(out[0], CON_NULL);
+
+        let out = &mut Vec::new();
+        encode_meta(kson_to_meta(&Bool(true)), out);
+
+        assert_eq!(out[0], CON_TRUE);
+
+        let out = &mut Vec::new();
+        encode_meta(kson_to_meta(&Bool(false)), out);
+
+        assert_eq!(out[0], CON_FALSE);
+    }
+
+    #[test]
+    fn small_string() {
+        let small_bs = Byt(Bytes::from("w"));
+
+        let out = &mut Vec::new();
+        encode_meta(kson_to_meta(&small_bs), out);
+
+        // tag
+        assert_eq!(out[0], 0b010_0_0001);
+        // characters
+        assert_eq!(out[1], 119);
+    }
+
+    #[test]
+    fn large_string() {
+        let large_bs = Byt(Bytes::from_static(&[b'w'; 140]));
+
+        let out = &mut Vec::new();
+        encode_meta(kson_to_meta(&large_bs), out);
+
+        // tag
+        assert_eq!(out[0], 0b010_1_0000);
+        // length
+        assert_eq!(out[1], 140);
+        // bytes
+        assert_eq!(out[2..].to_vec(), vec![b'w' as u8; 140]);
+    }
+
+    #[test]
+    fn small_array() {
+        let small_array = Kson::from(vec![0]);
+
+        let out = &mut Vec::new();
+        encode_meta(kson_to_meta(&small_array), out);
+
+        // tag
+        assert_eq!(out[0], 0b011_0_0001);
+        // ignore second element, it's an integer tag
+        // just check that the value is right
+        assert_eq!(out[2], 0);
+    }
+
+    #[test]
+    fn large_array() {
+        let large_array = Kson::from(vec![0; 140]);
+
+        let out = &mut Vec::new();
+        encode_meta(kson_to_meta(&large_array), out);
+
+        // tag
+        assert_eq!(out[0], 0b011_1_0000);
+        // length
+        assert_eq!(out[1], 140);
+        // ignore third element, it's just an integer tag
+        let out_vals: Vec<&u8> = out[3..].iter().step_by(2).collect();
+        assert_eq!(out_vals, vec![&0; 140]);
+    }
+
+    #[test]
+    fn small_map() {
+        let small_map = Kson::from(VecMap::from_sorted(vec![(
+            Bytes::from_static(b"a"),
+            Bytes::from_static(b"b"),
+        )]));
+
+        let out = &mut Vec::new();
+        encode_meta(kson_to_meta(&small_map), out);
+
+        // tag
+        assert_eq!(out[0], 0b100_0_0001);
+        // ignore second element, it's an integer tag
+        // just check that the value is right
+        // assert_eq!(out[2], 0);
+    }
+
+    //#[test]
+    // fn large_map() {
+    //    let large_map = Kson::from(vec![0; 140]);
+
+    //    let out = &mut Vec::new();
+    //    encode_meta(kson_to_meta(&large_map), out);
+
+    //    // tag
+    //    assert_eq!(out[0], 0b011_1_0000);
+    //    // length
+    //    assert_eq!(out[1], 140);
+    //    // ignore third element, it's just an integer tag
+    //    let out_vals: Vec<&u8> = out[3..].iter().step_by(2).collect();
+    //    assert_eq!(out_vals, vec![&0; 140]);
+    //}
 
 }
