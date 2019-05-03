@@ -196,7 +196,7 @@ fn read_bytes<B: Buf>(dat: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
 #[derive(Clone, Debug)]
 /// KSON tags.
 pub enum KTag {
-    KC(u8),
+    KCon(u8),
     KInt(bool, bool, u8),
     KByt(bool, u8),
     KArr(bool, u8),
@@ -220,7 +220,7 @@ pub fn read_tag(input: &mut Buf) -> Option<KTag> {
     if input.has_remaining() {
         let byte = input.get_u8();
         match byte & MASK_TYPE {
-            TYPE_CON => Some(KC(byte & MASK_META)),
+            TYPE_CON => Some(KCon(byte & MASK_META)),
             TYPE_INT => {
                 let big = byte & BIG_BIT == BIG_BIT;
                 let pos = byte & INT_POSITIVE == INT_POSITIVE;
@@ -261,8 +261,6 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
     };
     if !pos {
         i = -i - I64(1);
-        // i *= -1;
-        // i += -1;
     }
     Some(i)
 }
@@ -278,7 +276,7 @@ fn read_len<B: Buf>(dat: &mut B, big: bool, len: u8) -> Option<usize> {
 pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
     let tag = read_tag(dat)?;
     match tag {
-        KC(u) => {
+        KCon(u) => {
             match u {
                 0 => Some(Null),
                 1 => Some(Bool(true)),
@@ -327,9 +325,30 @@ mod tests {
     use super::*;
 
     #[test]
+    fn inum_meta_no_sign() {
+        let n = Inum::from(0);
+        let meta = inum_to_meta(&n);
+
+        let out = &mut Vec::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], 0b0010_1000);
+        // digit, should be 0
+        assert_eq!(out[1], 0);
+
+        let n = Inum::from(-0);
+        let meta = inum_to_meta(&n);
+
+        let out = &mut Vec::new();
+        encode_meta(meta, out);
+    }
+
+    #[test]
     fn inum_meta_small_pos_one_byte() {
         let small_pos = I64(1);
         let meta = inum_to_meta(&small_pos);
+
         let out = &mut Vec::new();
         encode_meta(meta, out);
 
