@@ -73,18 +73,26 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
             // TODO: do the arithmetic on bytes directly so we don't have to allocate a new bigint
             let (sign, mut digs) = i.to_bytes_le();
             debug_assert!(digs.len() >= 8);
-            match i.sign() {
-                Plus => KMInt(true, Digs(u64_to_digits(digs.len() as u64)), digs),
-                Minus => {
-                    for dig in digs.iter_mut() {
-                        *dig = dig.wrapping_sub(1);
-                        if *dig != 255 {
-                            break;
-                        }
+            if sign == Minus {
+                for dig in digs.iter_mut() {
+                    *dig = dig.wrapping_sub(1);
+                    if *dig != 255 {
+                        break;
                     }
-                    KMInt(false, Digs(u64_to_digits(digs.len() as u64)), digs)
                 }
-                NoSign => KMInt(true, Len(0), vec![0]),
+                let last = digs.pop().unwrap();
+                if last != 0 {
+                    digs.push(last)
+                }
+            };
+            if digs.len() <= 8 {
+                KMInt(sign != Minus, Len(digs.len() as u8), digs)
+            } else {
+                match sign {
+                    Plus => KMInt(true, Digs(u64_to_digits(digs.len() as u64)), digs),
+                    Minus => KMInt(false, Digs(u64_to_digits(digs.len() as u64)), digs),
+                    NoSign => unreachable!("0 had long digits"),
+                }
             }
         }
     }
@@ -219,6 +227,7 @@ pub fn read_tag(input: &mut Buf) -> Option<KTag> {
                 let big = byte & BIG_BIT == BIG_BIT;
                 let pos = byte & INT_POSITIVE == INT_POSITIVE;
                 let len = byte & MASK_INT_LEN_BITS;
+                debug_assert!(len <= MASK_INT_LEN_BITS);
                 Some(KInt(big, pos, len + 1))
             }
             TYPE_BYT => big_and_len!(KByt, byte),
@@ -247,10 +256,7 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
         if big {
             Int(BigInt::from_bytes_le(Plus, &read_bytes(dat, u as usize)?))
         } else {
-            // Inum::from(u)
-            // I'm kinda surprised this works
-            debug_assert!(u < i64::max_value() as u64);
-            I64(u as i64)
+            Inum::from(u)
         }
     };
     if !pos {
@@ -319,6 +325,7 @@ pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> { decode(&mut bs.into_buf(
 #[cfg(test)]
 mod tests {
     use super::*;
+    use std::ops::Neg;
 
     #[test]
     fn inum_meta_small_pos_one_byte() {
@@ -401,7 +408,7 @@ mod tests {
 
     #[test]
     fn inum_meta_big_pos() {
-        let big_pos = Inum::from(BigInt::from(i64::max_value()) + 1);
+        let big_pos = Inum::from(BigInt::from(u64::max_value()) + 1);
         let meta = inum_to_meta(&big_pos);
         let out = &mut Vec::new();
 
@@ -410,14 +417,14 @@ mod tests {
         // tag
         assert_eq!(out[0], 0b0011_1000);
         // length in bytes
-        assert_eq!(out[1], 8);
+        assert_eq!(out[1], 9);
         // digits
-        assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 128]);
+        assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 0, 1]);
     }
 
     #[test]
     fn inum_meta_big_neg() {
-        let big_neg = Inum::from(BigInt::from(i64::min_value()) - 1);
+        let big_neg = Inum::from(BigInt::from(u64::max_value()) + 2).neg();
         let meta = inum_to_meta(&big_neg);
         let out = &mut Vec::new();
 
@@ -426,9 +433,8 @@ mod tests {
         // tag
         assert_eq!(out[0], 0b0011_0000);
         // length in bytes
-        assert_eq!(out[1], 8);
+        assert_eq!(out[1], 9);
         // digits
-        assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 128]);
+        assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 0, 1]);
     }
-
 }
