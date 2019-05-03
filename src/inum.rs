@@ -3,7 +3,7 @@ use num_traits::*;
 use std::{
     convert::TryFrom,
     num::ParseIntError,
-    ops::{Add, AddAssign, Div, Mul, MulAssign, Rem, Sub},
+    ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Rem, Sub},
 };
 
 use crate::{from_as, from_fn};
@@ -114,6 +114,21 @@ macro_rules! checked_impl {
             }
         }
     };
+    ($op_name:tt, $op_suff:tt, $op_checked:tt) => {
+        impl $op_name for Inum {
+            type Output = Inum;
+
+            fn $op_suff(self) -> Inum {
+                match self {
+                    I64(i) => {
+                        i.$op_checked()
+                            .map_or_else(|| Int(BigInt::from(i).$op_suff()), I64)
+                    }
+                    Int(i) => Inum::from(i.$op_suff()),
+                }
+            }
+        }
+    };
 }
 
 checked_impl!(Inum, Add, add, checked_add);
@@ -121,6 +136,7 @@ checked_impl!(Inum, Mul, mul, checked_mul);
 checked_impl!(Inum, Sub, sub, checked_sub);
 checked_impl!(Inum, Div, div, checked_div);
 checked_impl!(Inum, Rem, rem, checked_rem);
+checked_impl!(Neg, neg, checked_neg);
 
 // TODO: make a working version of this
 // checked_impl!(&Inum, Add, add, checked_add);

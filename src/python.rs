@@ -5,12 +5,12 @@ use crate::{
     Kson::{self, *},
 };
 use bytes::Bytes;
+use num_bigint::{BigInt, Sign::*};
 use pyo3::{
     prelude::*,
     types::{IntoPyDict, PyAny, PyBool, PyBytes, PyDict, PyList, PyLong, PyTuple},
     PyErr,
 };
-use rug::{integer::Order::Msf, Integer};
 use std::{collections::BTreeMap, iter::FromIterator};
 
 impl ToPyObject for Kson {
@@ -72,8 +72,9 @@ fn pydict_to_kson(pd: &PyDict) -> PyResult<Kson> {
 
 #[pyclass]
 struct PyInt {
-    sign:   bool,
-    digits: Vec<u64>,
+    sign: bool,
+    /// little-endian digits
+    digits: Vec<u8>,
 }
 
 impl ToPyObject for Inum {
@@ -84,8 +85,8 @@ impl ToPyObject for Inum {
                 PyRef::new(
                     py,
                     PyInt {
-                        sign:   (*num >= 0),
-                        digits: num.to_digits(Msf),
+                        sign:   num.sign() != Minus,
+                        digits: num.to_bytes_le().1,
                     },
                 )
                 .unwrap()
@@ -103,8 +104,8 @@ impl IntoPyObject for Inum {
                 PyRef::new(
                     py,
                     PyInt {
-                        sign:   (num >= 0),
-                        digits: num.to_digits(Msf),
+                        sign:   num.sign() != Minus,
+                        digits: num.to_bytes_le().1,
                     },
                 )
                 .unwrap()
@@ -121,7 +122,7 @@ impl<'source> FromPyObject<'source> for Inum {
             Ok(num) => Ok(I64(num.extract()?)),
             Err(_e) => {
                 let num: &'source PyInt = ob.try_into_exact()?;
-                let mut int_num = Integer::from_digits(num.digits.as_slice(), Msf);
+                let mut int_num = BigInt::from_bytes_le(Plus, num.digits.as_slice());
                 if !num.sign {
                     int_num = -int_num;
                 }

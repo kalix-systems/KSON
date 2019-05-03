@@ -12,8 +12,8 @@ extern crate kson_macro;
 
 pub mod encoding;
 pub mod inum;
-// pub mod python;
-// pub mod rep;
+pub mod python;
+pub mod rep;
 pub mod util;
 pub mod vecmap;
 

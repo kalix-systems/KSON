@@ -17,7 +17,7 @@ use util::*;
 const N_BIG_ARR: usize = 2000;
 
 fn big_arr() -> Kson {
-    let v: Vec<Kson> = (0..N_BIG_ARR).map(|i| Kson::from(i as u64)).collect();
+    let v: Vec<Kson> = (0..N_BIG_ARR).map(|i| Kson::from(i as i64)).collect();
     Kson::from(v)
 }
 
