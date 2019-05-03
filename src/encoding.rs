@@ -89,8 +89,8 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
                 KMInt(sign != Minus, Len(digs.len() as u8), digs)
             } else {
                 match sign {
-                    Plus => KMInt(true, Digs(u64_to_digits(digs.len() as u64)), digs),
-                    Minus => KMInt(false, Digs(u64_to_digits(digs.len() as u64)), digs),
+                    Plus => KMInt(true, Digs(u64_to_digits(digs.len() as u64 - 1)), digs),
+                    Minus => KMInt(false, Digs(u64_to_digits(digs.len() as u64 - 1)), digs),
                     NoSign => unreachable!("0 had long digits"),
                 }
             }
@@ -103,7 +103,7 @@ macro_rules! len_or_digs {
         if $id.len() <= MASK_LEN_BITS as usize {
             Len($id.len() as u8)
         } else {
-            Digs(u64_to_digits($id.len() as u64))
+            Digs(u64_to_digits($id.len() as u64 - 1))
         }
     };
 }
@@ -127,9 +127,9 @@ macro_rules! len_or_tag {
                 $len_digs = vec![];
             }
             Digs(l_d) => {
-                let len_len = l_d.len() as u8;
+                let len_len = l_d.len() as u8 - 1;
                 $tag |= BIG_BIT;
-                $tag |= len_len - 1;
+                $tag |= len_len;
                 $len_digs = l_d;
             }
         }
@@ -254,7 +254,10 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
     let u = read_u64(dat, len)?;
     let mut i = {
         if big {
-            Int(BigInt::from_bytes_le(Plus, &read_bytes(dat, u as usize)?))
+            Int(BigInt::from_bytes_le(
+                Plus,
+                &read_bytes(dat, u as usize + 1)?,
+            ))
         } else {
             Inum::from(u)
         }
@@ -269,7 +272,7 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
 
 fn read_len<B: Buf>(dat: &mut B, big: bool, len: u8) -> Option<usize> {
     if big {
-        Some(read_u64(dat, len + 1)? as usize)
+        Some(read_u64(dat, len + 1)? as usize + 1)
     } else {
         Some(len as usize)
     }
@@ -417,7 +420,7 @@ mod tests {
         // tag
         assert_eq!(out[0], 0b0011_1000);
         // length in bytes
-        assert_eq!(out[1], 9);
+        assert_eq!(out[1], 8);
         // digits
         assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 0, 1]);
     }
@@ -433,7 +436,7 @@ mod tests {
         // tag
         assert_eq!(out[0], 0b0011_0000);
         // length in bytes
-        assert_eq!(out[1], 9);
+        assert_eq!(out[1], 8);
         // digits
         assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 0, 1]);
     }
