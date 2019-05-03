@@ -155,9 +155,9 @@ checked_impl!(Neg, neg, checked_neg);
 impl Num for Inum {
     type FromStrRadixErr = ParseBigIntError;
 
-    fn from_str_radix(str: &str, radix: u32) -> Result<Self, ParseBigIntError> {
-        i64::from_str_radix(str, radix).map_or_else(
-            |_| BigInt::from_str_radix(str, radix).map(Int),
+    fn from_str_radix(n_str: &str, radix: u32) -> Result<Self, ParseBigIntError> {
+        i64::from_str_radix(n_str, radix).map_or_else(
+            |_| BigInt::from_str_radix(n_str, radix).map(Int),
             |i| Ok(I64(i)),
         )
     }
@@ -177,3 +177,17 @@ macro_rules! from_prims {
 }
 
 from_prims!(Inum);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn crash_from_str_radix() {
+        let n_str = "AAAAAAAAAAA";
+
+        Inum::from_str_radix(n_str, 37).ok();
+    }
+
+}
