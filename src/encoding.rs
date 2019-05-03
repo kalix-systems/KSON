@@ -1,10 +1,7 @@
 use bytes::{buf::IntoBuf, Buf, Bytes};
-use num_bigint::{
-    BigInt,
-    Sign::{self, *},
-};
+use num_bigint::{BigInt, Sign::*};
 use num_traits::*;
-use std::{collections::BTreeMap, convert::TryInto, ops::AddAssign, vec::Vec};
+use std::convert::TryInto;
 
 use crate::{
     util::*,
@@ -53,7 +50,7 @@ use LenOrDigs::*;
 pub enum KMeta<'a> {
     KMC(u8),
     KMInt(bool, LenOrDigs, Vec<u8>),
-    KMStr(LenOrDigs, &'a Bytes),
+    KMByt(LenOrDigs, &'a Bytes),
     KMArr(LenOrDigs, &'a Vec<Kson>),
     KMMap(LenOrDigs, &'a VecMap<Bytes, Kson>),
 }
@@ -111,7 +108,7 @@ fn kson_to_meta(ks: &Kson) -> KMeta {
         Null => KMC(0),
         Bool(t) => KMC(if *t { 1 } else { 2 }),
         Kint(i) => inum_to_meta(i),
-        Str(bs) => KMStr(len_or_digs!(bs), bs),
+        Byt(bs) => KMByt(len_or_digs!(bs), bs),
         Array(a) => KMArr(len_or_digs!(a), a),
         Map(m) => KMMap(len_or_digs!(m), m),
     }
@@ -161,7 +158,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
             out.extend_from_slice(&len_digs);
             out.extend_from_slice(&digs);
         }
-        KMStr(len_or_digs, st) => {
+        KMByt(len_or_digs, st) => {
             tag_and_len!(TYPE_STR, len_or_digs, out);
             out.extend_from_slice(st);
         }
@@ -174,7 +171,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
         KMMap(len_or_digs, m) => {
             tag_and_len!(TYPE_MAP, len_or_digs, out);
             for (k, v) in m.iter() {
-                encode(&Str(k.clone()), out);
+                encode(&Byt(k.clone()), out);
                 encode(v, out);
             }
         }
@@ -182,15 +179,6 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
 }
 
 pub fn encode(ks: &Kson, out: &mut Vec<u8>) { encode_meta(kson_to_meta(ks), out) }
-
-fn read_byte(dat: &Bytes, ix: &mut usize) -> Option<u8> {
-    if *ix >= dat.len() {
-        return None;
-    }
-    let v = dat[*ix];
-    *ix += 1;
-    Some(v)
-}
 
 fn read_bytes<B: Buf>(dat: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
     if dat.remaining() >= num_bytes {
@@ -207,7 +195,7 @@ fn read_bytes<B: Buf>(dat: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
 pub enum KTag {
     KC(u8),
     KInt(bool, bool, u8),
-    KStr(bool, u8),
+    KByt(bool, u8),
     KArr(bool, u8),
     KMap(bool, u8),
 }
@@ -236,7 +224,7 @@ pub fn read_tag(input: &mut Buf) -> Option<KTag> {
                 let len = byte & MASK_INT_LEN_BITS;
                 Some(KInt(big, pos, len + 1))
             }
-            TYPE_STR => big_and_len!(KStr, byte),
+            TYPE_STR => big_and_len!(KByt, byte),
             TYPE_ARR => big_and_len!(KArr, byte),
             TYPE_MAP => big_and_len!(KMap, byte),
             _ => None,
@@ -296,9 +284,9 @@ pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
             }
         }
         KInt(big, pos, len) => read_int(dat, big, pos, len).map(Kint),
-        KStr(big, len) => {
+        KByt(big, len) => {
             let len = read_len(dat, big, len)?;
-            Some(Str(Bytes::from(read_bytes(dat, len)?)))
+            Some(Byt(Bytes::from(read_bytes(dat, len)?)))
         }
         KArr(big, len) => {
             let len = read_len(dat, big, len)?;

@@ -8,17 +8,15 @@ use bytes::Bytes;
 use num_bigint::{BigInt, Sign::*};
 use pyo3::{
     prelude::*,
-    types::{IntoPyDict, PyAny, PyBool, PyBytes, PyDict, PyList, PyLong, PyTuple},
-    PyErr,
+    types::{IntoPyDict, PyAny, PyBool, PyBytes, PyDict, PyLong},
 };
-use std::{collections::BTreeMap, iter::FromIterator};
 
 impl ToPyObject for Kson {
     fn to_object(&self, py: Python) -> PyObject {
         match &self {
             Null => py.None(),
             Bool(b) => PyBool::new(py, *b).into_object(py),
-            Str(s) => PyBytes::new(py, s).into_object(py),
+            Byt(s) => PyBytes::new(py, s).into_object(py),
             Kint(val) => val.to_object(py),
             Array(vector) => vector.to_object(py),
             Map(vmap) => vmap.to_object(py),
@@ -34,7 +32,7 @@ impl IntoPyObject for Kson {
                 val.into_object(py)
             }
             Bool(b) => PyBool::new(py, b).into_object(py),
-            Str(s) => PyBytes::new(py, &s).into_object(py),
+            Byt(s) => PyBytes::new(py, &s).into_object(py),
             Kint(val) => val.into_object(py),
             Array(vector) => vector.into_object(py),
             Map(vmap) => vmap.into_object(py),
@@ -49,7 +47,7 @@ impl<'source> FromPyObject<'source> for Kson {
         } else {
             ob.extract()
                 .map(Bool)
-                .or_else(|_| ob.extract().and_then(bytes_from_any).map(Str))
+                .or_else(|_| ob.extract().and_then(bytes_from_any).map(Byt))
                 .or_else(|_| ob.extract().map(Kint))
                 .or_else(|_| ob.extract().map(Array))
                 .or_else(|_| ob.extract().and_then(pydict_to_kson))
@@ -191,14 +189,14 @@ mod tests {
         let gil = Python::acquire_gil();
         let py = gil.python();
 
-        let val = Str(Bytes::from(vec![1]));
+        let val = Byt(Bytes::from(vec![1]));
         let py_val = val.to_object(py);
         let unpy_val: Option<Kson> = py_val.extract(py).ok();
         assert_eq!(unpy_val.unwrap(), val);
 
         let py_val = val.into_object(py);
         let unpy_val: Option<Kson> = py_val.extract(py).ok();
-        assert_eq!(unpy_val.unwrap(), Str(Bytes::from(vec![1])));
+        assert_eq!(unpy_val.unwrap(), Byt(Bytes::from(vec![1])));
     }
 
     #[test]

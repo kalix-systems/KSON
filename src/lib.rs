@@ -1,14 +1,13 @@
-#![allow(dead_code)]
-#![allow(unused_variables)]
-#![allow(unused_imports)]
-#![allow(clippy::cast_ptr_alignment)]
+//#![allow(dead_code)]
+//#![allow(unused_variables)]
+//#![allow(unused_imports)]
 #![allow(clippy::cast_lossless)]
+// TODO figure out if dereferencing is still slower than cloning
 #![allow(clippy::clone_on_copy)]
 #![feature(is_sorted)]
 #![feature(result_map_or_else)]
 
-#[macro_use]
-extern crate kson_macro;
+pub extern crate kson_macro;
 
 pub mod encoding;
 pub mod inum;
@@ -22,12 +21,7 @@ use hashbrown::HashMap;
 use inum::*;
 use num_bigint::BigInt;
 use rep::KsonRep;
-use std::{
-    convert::{TryFrom, TryInto},
-    slice::Iter,
-    sync::Arc,
-    vec::Vec,
-};
+use std::convert::{TryFrom, TryInto};
 use vecmap::*;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
@@ -35,7 +29,7 @@ pub enum Kson {
     Null,
     Bool(bool),
     Kint(Inum),
-    Str(Bytes),
+    Byt(Bytes),
     Array(Vec<Kson>),
     Map(VecMap<Bytes, Kson>),
 }
@@ -82,9 +76,9 @@ impl Kson {
         }
     }
 
-    fn to_str(&self) -> Option<&Bytes> {
+    fn to_bytes(&self) -> Option<&Bytes> {
         match self {
-            Str(s) => Some(s),
+            Byt(s) => Some(s),
             _ => None,
         }
     }
@@ -119,8 +113,8 @@ from_fn!(Kson, bool, Bool);
 try_from_ctor!(Kson, bool, Bool);
 from_fn!(Kson, Inum, Kint);
 try_from_ctor!(Kson, Inum, Kint);
-from_fn!(Kson, Bytes, Str);
-try_from_ctor!(Kson, Bytes, Str);
+from_fn!(Kson, Bytes, Byt);
+try_from_ctor!(Kson, Bytes, Byt);
 
 try_from_ctor!(Kson, Vec<Kson>, Array);
 try_from_ctor!(Kson, VecMap<Bytes, Kson>, Map);

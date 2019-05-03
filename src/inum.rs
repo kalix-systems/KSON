@@ -2,8 +2,7 @@ use num_bigint::{BigInt, ParseBigIntError};
 use num_traits::*;
 use std::{
     convert::TryFrom,
-    num::ParseIntError,
-    ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Rem, Sub},
+    ops::{Add, Div, Mul, Neg, Rem, Sub},
 };
 
 use crate::{from_as, from_fn};
@@ -79,8 +78,11 @@ impl Zero for Inum {
 
     fn is_zero(&self) -> bool {
         match self {
-            I64(0) => true,
-            _ => false,
+            I64(i) => i.is_zero(),
+            Int(i) => {
+                debug_assert!(!i.is_zero());
+                false
+            }
         }
     }
 }
@@ -90,8 +92,11 @@ impl One for Inum {
 
     fn is_one(&self) -> bool {
         match self {
-            I64(1) => true,
-            _ => false,
+            I64(i) => i.is_one(),
+            Int(i) => {
+                debug_assert!(!i.is_one());
+                false
+            }
         }
     }
 }
@@ -155,139 +160,6 @@ impl Num for Inum {
             |_| BigInt::from_str_radix(str, radix).map(Int),
             |i| Ok(I64(i)),
         )
-    }
-}
-
-impl Inum {
-    /// Consumes `self` to produce `BigInt`.
-    fn into_int(self) -> BigInt {
-        match self {
-            Inum::I64(i) => BigInt::from(i),
-            Inum::Int(i) => i,
-        }
-    }
-
-    /// Consumes `self` to produce `i64` if `self` is an `I64`,
-    /// otherwise returns `None`.
-    fn into_i64(self) -> Option<i64> {
-        match self {
-            Inum::I64(i) => Some(i),
-            _ => None,
-        }
-    }
-
-    /// Produces an `BigInt`
-    fn to_int(&self) -> BigInt {
-        match self {
-            Inum::I64(i) => BigInt::from(i.clone()),
-            Inum::Int(i) => i.clone(),
-        }
-    }
-
-    /// Produces an `i64` if `self` is an `I64`, otherwise returns `None`.
-    fn to_i64(&self) -> Option<i64> {
-        match self {
-            Inum::I64(i) => Some(i.clone()),
-            _ => None,
-        }
-    }
-
-    /// Produces an `i32` if `self` is small enough, otherwise returns `None`.
-    fn to_i32(&self) -> Option<i32> {
-        match self {
-            Inum::I64(i) => {
-                if std::i32::MIN as i64 <= *i || *i <= std::i32::MAX as i64 {
-                    Some(i.clone() as i32)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
-    /// Produces an `i16` if `self` is small enough, otherwise returns `None`.
-    fn to_i16(&self) -> Option<i16> {
-        match self {
-            Inum::I64(i) => {
-                if std::i16::MIN as i64 <= *i || *i <= std::i16::MAX as i64 {
-                    Some(i.clone() as i16)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
-    /// Produces an `i8` if `self` is small enough, otherwise returns `None`.
-    fn to_i8(&self) -> Option<i8> {
-        match self {
-            Inum::I64(i) => {
-                if std::i8::MIN as i64 <= *i || *i <= std::i8::MAX as i64 {
-                    Some(i.clone() as i8)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
-    /// Produces a `u8` if `self` is small enough, otherwise returns `None`.
-    fn to_u8(&self) -> Option<u8> {
-        match self {
-            Inum::I64(i) => {
-                if 0 <= *i && *i <= std::u8::MAX as i64 {
-                    Some(i.clone() as u8)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
-    /// Produces a `u8` if `self` is small enough, otherwise returns `None`.
-    fn to_u16(&self) -> Option<u16> {
-        match self {
-            Inum::I64(i) => {
-                if 0 <= *i && *i <= std::u16::MAX as i64 {
-                    Some(i.clone() as u16)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
-    /// Produces a `u32` if `self` is small enough, otherwise returns `None`.
-    fn to_u32(&self) -> Option<u32> {
-        match self {
-            Inum::I64(i) => {
-                if 0 <= *i && *i <= std::u32::MAX as i64 {
-                    Some(i.clone() as u32)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
-    }
-
-    /// Produces an `i64` if `self` is an `I64`, otherwise returns `None`.
-    fn to_u64(&self) -> Option<u64> {
-        match self {
-            Inum::I64(i) => {
-                if 0 <= *i {
-                    Some(i.clone() as u64)
-                } else {
-                    None
-                }
-            }
-            _ => None,
-        }
     }
 }
 
