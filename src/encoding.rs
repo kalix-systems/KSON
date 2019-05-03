@@ -235,7 +235,7 @@ pub fn read_tag(input: &mut Buf) -> Option<KTag> {
 }
 
 fn read_u64<B: Buf>(dat: &mut B, len: u8) -> Option<u64> {
-    assert!(len <= 8);
+    debug_assert!(len <= 8);
     if dat.remaining() >= len as usize {
         Some(dat.get_uint_le(len as usize))
     } else {
@@ -244,7 +244,7 @@ fn read_u64<B: Buf>(dat: &mut B, len: u8) -> Option<u64> {
 }
 
 fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> {
-    assert!(len - 1 <= MASK_INT_LEN_BITS);
+    debug_assert!(len - 1 <= MASK_INT_LEN_BITS);
     let u = read_u64(dat, len)?;
     let mut i = {
         if big {
@@ -252,7 +252,7 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
         } else {
             // Inum::from(u)
             // I'm kinda surprised this works
-            assert!(u < i64::max_value() as u64);
+            debug_assert!(u < i64::max_value() as u64);
             I64(u as i64)
         }
     };
