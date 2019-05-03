@@ -1,5 +1,9 @@
 use bytes::{buf::IntoBuf, Buf, Bytes};
-use rug::{integer::Order, Integer};
+use num_bigint::{
+    BigInt,
+    Sign::{self, *},
+};
+use num_traits::*;
 use std::{collections::BTreeMap, convert::TryInto, ops::AddAssign, vec::Vec};
 
 use crate::{
@@ -57,25 +61,36 @@ pub enum KMeta<'a> {
 use KMeta::*;
 
 fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
-    let pos = *i >= 0;
     match i {
         I64(i) => {
+            let pos = !i.is_negative();
             let j = if pos { *i } else { -*i - 1 };
             let digs = u64_to_digits(j as u64);
-            assert!(digs.len() <= 8);
+            debug_assert!(digs.len() <= 8);
             KMInt(pos, Len(digs.len() as u8), digs)
         }
         Int(i) => {
-            if pos {
-                let digs = Integer::to_digits(i, Order::Lsf);
-                assert!(digs.len() >= 8);
-                let len_digs_digs = u64_to_digits(digs.len() as u64);
-                KMInt(pos, Digs(len_digs_digs), digs)
-            } else {
-                let digs = Integer::to_digits(&(i.clone() + 1), Order::Lsf);
-                assert!(digs.len() >= 8);
-                let len_digs_digs = u64_to_digits(digs.len() as u64);
-                KMInt(pos, Digs(len_digs_digs), digs)
+            // TODO: do the arithmetic on bytes directly so we don't have to allocate a new bigint
+            // let (sign, mut digs) = i.to_bytes_le();
+            // debug_assert!(digs.len() >= 8);
+            match i.sign() {
+                Plus => {
+                    let digs = i.to_bytes_le().1;
+                    KMInt(true, Digs(u64_to_digits(digs.len() as u64)), digs)
+                }
+                Minus => {
+                    let j: BigInt = -i - 1;
+                    let digs = j.to_bytes_le().1;
+                    KMInt(false, Digs(u64_to_digits(digs.len() as u64)), digs)
+                    // for dig in digs.iter_mut() {
+                    //     *dig = dig.wrapping_(1);
+                    //     if !dig.is_zero() {
+                    //         break;
+                    //     }
+                    // }
+                    // KMInt(false, Digs(u64_to_digits(digs.len() as u64)), digs)
+                }
+                NoSign => KMInt(true, Len(0), vec![0]),
             }
         }
     }
@@ -245,18 +260,18 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
     let u = read_u64(dat, len)?;
     let mut i = {
         if big {
-            Int(Integer::from_digits(
-                &read_bytes(dat, u as usize)?,
-                Order::Lsf,
-            ))
+            Int(BigInt::from_bytes_le(Plus, &read_bytes(dat, u as usize)?))
         } else {
+            // Inum::from(u)
+            // I'm kinda surprised this works
             assert!(u < i64::max_value() as u64);
             I64(u as i64)
         }
     };
     if !pos {
-        i *= -1;
-        i += -1;
+        i = -i - I64(1);
+        // i *= -1;
+        // i += -1;
     }
     Some(i)
 }

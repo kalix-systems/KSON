@@ -10,7 +10,8 @@ mdo = "0.3"
 pyo3 = "0.6.0"
 mdo-future = "0.2"
 hashbrown = "0.2"
-rug = "1.3"
+num-traits = "0.2"
+num-bigint = "0.2"
 bytes = "0.4"
 kson_macro = {path = "../kson_macro"}
 

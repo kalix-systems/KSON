@@ -5,6 +5,7 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::clone_on_copy)]
 #![feature(is_sorted)]
+#![feature(result_map_or_else)]
 
 #[macro_use]
 extern crate kson_macro;
@@ -19,8 +20,8 @@ pub mod vecmap;
 use bytes::Bytes;
 use hashbrown::HashMap;
 use inum::*;
+use num_bigint::BigInt;
 use rep::KsonRep;
-use rug::Integer;
 use std::{
     convert::{TryFrom, TryInto},
     slice::Iter,
@@ -124,7 +125,7 @@ try_from_ctor!(Kson, Bytes, Str);
 try_from_ctor!(Kson, Vec<Kson>, Array);
 try_from_ctor!(Kson, VecMap<Bytes, Kson>, Map);
 
-compose_from!(Kson, Inum, Integer);
+compose_from!(Kson, Inum, BigInt);
 compose_from!(Kson, Inum, i64);
 compose_from!(Kson, Inum, u64);
 
