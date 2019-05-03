@@ -61,7 +61,7 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
     match i {
         I64(i) => {
             let pos = !i.is_negative();
-            let j = if pos { *i } else { -*i - 1 };
+            let j = if pos { *i } else { -(*i + 1) };
             let digs = u64_to_digits(j as u64);
             debug_assert!(digs.len() <= 8);
             KMInt(pos, Len(digs.len() as u8), digs)
