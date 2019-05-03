@@ -11,23 +11,23 @@ use crate::{
 };
 // TODO: replace len vecs w/heapless vec of size at most 8
 
-// 0xe0
+/// 0xe0
 pub const MASK_TYPE: u8 = 0b1110_0000;
-// 0x1f
+/// 0x1f
 pub const MASK_META: u8 = 0b0001_1111;
-// 0x00
+/// 0x00
 pub const TYPE_CON: u8 = 0b0000_0000;
-// 0x20
+/// 0x20
 pub const TYPE_INT: u8 = 0b0010_0000;
-// 0x40
+/// 0x40
 pub const TYPE_STR: u8 = 0b0100_0000;
-// 0x60
+/// 0x60
 pub const TYPE_ARR: u8 = 0b0110_0000;
-// 0x80
+/// 0x80
 pub const TYPE_MAP: u8 = 0b1000_0000;
-// 0x10
+/// 0x10
 pub const BIG_BIT: u8 = 0b0001_0000;
-// 0x0f
+/// 0x0f
 pub const INT_POSITIVE: u8 = 0b0000_1000;
 
 pub const CON_NULL: u8 = 0b0000_0000;
