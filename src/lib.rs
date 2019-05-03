@@ -21,7 +21,7 @@ use bytes::Bytes;
 use hashbrown::HashMap;
 use inum::*;
 use num_bigint::BigInt;
-// use rep::KsonRep;
+use rep::KsonRep;
 use std::{
     convert::{TryFrom, TryInto},
     slice::Iter,
@@ -60,7 +60,7 @@ impl Kson {
         Some(self.into_vecmap()?.into_hashmap())
     }
 
-    // pub fn into_rep<T: KsonRep>(self) -> Option<T> { T::from_kson(self) }
+    pub fn into_rep<T: KsonRep>(self) -> Option<T> { T::from_kson(self) }
 
     /// Indicates whether a value is `Null`.
     fn is_null(&self) -> bool {
