@@ -1,12 +1,9 @@
-// use crate::bytes::Bytes;
 use bytes::Bytes;
-use pyo3::{prelude::*, types::IntoPyDict};
-use std::{boxed::Box, convert::AsRef};
 
-/// converts a `u64` to an 8-byte `Bytes` in little endian order
+/// Converts a `u64` to an 8-byte `Bytes` in little endian order
 pub fn u64_to_bytes_le(x: u64) -> Bytes { Bytes::from(u64::to_le_bytes(x).to_vec()) }
 
-/// converts a `u64` to the smallest possible vec of digits, little-endian
+/// Converts a `u64` to the smallest possible vec of digits, little-endian
 pub fn u64_to_digits(val: u64) -> Vec<u8> {
     let len = 8 - u64::leading_zeros(val) / 8;
     if len == 0 {
@@ -19,13 +16,8 @@ pub fn u64_to_digits(val: u64) -> Vec<u8> {
     }
 }
 
-/// Converts a `str` to a `Bytes`.
+/// Converts `&str` to `Bytes`.
 pub fn str_to_bs(s: &str) -> Bytes { Bytes::from(Vec::from(s.as_bytes())) }
-
-// /// Tries to unwrap a value. If this fails, return a clone.
-// pub fn unwrap_or_clone<T: Sized + Clone>(ptr: Arc<T>) -> T {
-//     Arc::try_unwrap(ptr).unwrap_or_else(|a| a.as_ref().clone())
-// }
 
 #[macro_export]
 macro_rules! compose_from {

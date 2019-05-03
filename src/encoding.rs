@@ -1,13 +1,13 @@
 use bytes::{buf::IntoBuf, Buf, Bytes};
 use rug::{integer::Order, Integer};
-use std::{collections::BTreeMap, ops::AddAssign, vec::Vec};
+use std::{collections::BTreeMap, convert::TryInto, ops::AddAssign, vec::Vec};
 
-use crate::{util::*, *};
-
-use Atom::*;
-use Container::*;
-use Inum::*;
-use Kson::*;
+use crate::{
+    util::*,
+    vecmap::VecMap,
+    Inum::{self, *},
+    Kson::{self, *},
+};
 // TODO: replace len vecs w/heapless vec of size at most 8
 
 // 0xe0
@@ -45,6 +45,7 @@ pub enum LenOrDigs {
 use LenOrDigs::*;
 
 #[derive(Clone, Debug)]
+/// Metadata tags for KSON.
 pub enum KMeta<'a> {
     KMC(u8),
     KMInt(bool, LenOrDigs, Vec<u8>),
@@ -90,26 +91,14 @@ macro_rules! len_or_digs {
     };
 }
 
-fn atom_to_meta<'a>(a: &'a Atom) -> KMeta<'a> {
-    match a {
+fn kson_to_meta(ks: &Kson) -> KMeta {
+    match ks {
         Null => KMC(0),
         Bool(t) => KMC(if *t { 1 } else { 2 }),
-        ANum(i) => inum_to_meta(i),
+        Kint(i) => inum_to_meta(i),
         Str(bs) => KMStr(len_or_digs!(bs), bs),
-    }
-}
-
-fn container_to_meta<'a>(c: &'a Container<Kson>) -> KMeta<'a> {
-    match c {
         Array(a) => KMArr(len_or_digs!(a), a),
         Map(m) => KMMap(len_or_digs!(m), m),
-    }
-}
-
-fn kson_to_meta<'a>(ks: &'a Kson) -> KMeta<'a> {
-    match ks {
-        Atomic(a) => atom_to_meta(a),
-        Contain(c) => container_to_meta(c),
     }
 }
 
@@ -170,7 +159,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
         KMMap(len_or_digs, m) => {
             tag_and_len!(TYPE_MAP, len_or_digs, out);
             for (k, v) in m.iter() {
-                encode(&Atomic(Str(k.clone())), out);
+                encode(&Str(k.clone()), out);
                 encode(v, out);
             }
         }
@@ -199,6 +188,7 @@ fn read_bytes<B: Buf>(dat: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
 }
 
 #[derive(Clone, Debug)]
+/// KSON tags.
 pub enum KTag {
     KC(u8),
     KInt(bool, bool, u8),
@@ -284,16 +274,16 @@ pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
     match tag {
         KC(u) => {
             match u {
-                0 => Some(Atomic(Null)),
-                1 => Some(Atomic(Bool(true))),
-                2 => Some(Atomic(Bool(false))),
+                0 => Some(Null),
+                1 => Some(Bool(true)),
+                2 => Some(Bool(false)),
                 _ => None,
             }
         }
-        KInt(big, pos, len) => read_int(dat, big, pos, len).map(|i| Atomic(ANum(i))),
+        KInt(big, pos, len) => read_int(dat, big, pos, len).map(Kint),
         KStr(big, len) => {
             let len = read_len(dat, big, len)?;
-            Some(Atomic(Str(Bytes::from(read_bytes(dat, len)?))))
+            Some(Str(Bytes::from(read_bytes(dat, len)?)))
         }
         KArr(big, len) => {
             let len = read_len(dat, big, len)?;
@@ -301,7 +291,7 @@ pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
             for _ in 0..len {
                 out.push(decode(dat)?)
             }
-            Some(Contain(Array(out)))
+            Some(Array(out))
         }
         KMap(big, len) => {
             let len = read_len(dat, big, len)?;
@@ -311,15 +301,17 @@ pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
                 let val = decode(dat)?;
                 out.push((key, val));
             }
-            Some(Contain(Map(VecMap::from(out))))
+            Some(Map(VecMap::from(out)))
         }
     }
 }
 
+/// Encodes a `Kson` object into a `Vec<u8>`
 pub fn encode_full(ks: &Kson) -> Vec<u8> {
     let mut out = vec![];
     encode(ks, &mut out);
     out
 }
 
+/// Decodes an `IntoBuf` into `Kson`, returns `None` if decoding fails.
 pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> { decode(&mut bs.into_buf()) }
