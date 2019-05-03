@@ -71,24 +71,18 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
         }
         Int(i) => {
             // TODO: do the arithmetic on bytes directly so we don't have to allocate a new bigint
-            // let (sign, mut digs) = i.to_bytes_le();
-            // debug_assert!(digs.len() >= 8);
+            let (sign, mut digs) = i.to_bytes_le();
+            debug_assert!(digs.len() >= 8);
             match i.sign() {
-                Plus => {
-                    let digs = i.to_bytes_le().1;
-                    KMInt(true, Digs(u64_to_digits(digs.len() as u64)), digs)
-                }
+                Plus => KMInt(true, Digs(u64_to_digits(digs.len() as u64)), digs),
                 Minus => {
-                    let j: BigInt = -i - 1;
-                    let digs = j.to_bytes_le().1;
+                    for dig in digs.iter_mut() {
+                        *dig = dig.wrapping_sub(1);
+                        if *dig != 255 {
+                            break;
+                        }
+                    }
                     KMInt(false, Digs(u64_to_digits(digs.len() as u64)), digs)
-                    // for dig in digs.iter_mut() {
-                    //     *dig = dig.wrapping_(1);
-                    //     if !dig.is_zero() {
-                    //         break;
-                    //     }
-                    // }
-                    // KMInt(false, Digs(u64_to_digits(digs.len() as u64)), digs)
                 }
                 NoSign => KMInt(true, Len(0), vec![0]),
             }

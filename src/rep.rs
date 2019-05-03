@@ -80,6 +80,16 @@ try_from_kson_rep!(i64);
 try_from_kson_rep!(Inum);
 try_from_kson_rep!(Bytes);
 
+impl KsonRep for String {
+    fn into_kson(self) -> Kson { Byt(Bytes::from(self.into_bytes())) }
+
+    fn to_kson(&self) -> Kson { Byt(Bytes::from(self.as_bytes())) }
+
+    fn from_kson(ks: Kson) -> Option<Self> {
+        String::from_utf8(Bytes::from_kson(ks)?.to_vec()).ok()
+    }
+}
+
 impl<T: KsonRep> KsonRep for Vec<T> {
     fn into_kson(self) -> Kson { Array(self.into_iter().map(T::into_kson).collect()) }
 

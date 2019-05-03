@@ -85,6 +85,8 @@ impl Kson {
             _ => None,
         }
     }
+
+    pub fn from_static(bytes: &'static [u8]) -> Kson { Byt(Bytes::from_static(bytes)) }
 }
 
 impl<T: Into<Kson>> From<Vec<T>> for Kson {
