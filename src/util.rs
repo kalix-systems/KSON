@@ -9,8 +9,7 @@ pub fn u64_to_digits(val: u64) -> Vec<u8> {
     if len == 0 {
         vec![0]
     } else {
-        let bytes = u64::to_le_bytes(val);
-        let mut out = bytes.to_vec();
+        let mut out = u64::to_le_bytes(val).to_vec();
         out.truncate(len as usize);
         out
     }
