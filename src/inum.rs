@@ -30,14 +30,12 @@ from_fn!(Inum, BigInt, |i: BigInt| {
     i.to_i64().map_or_else(|| Int(i), I64)
 });
 
-impl From<Inum> for BigInt {
-    fn from(i: Inum) -> BigInt {
-        match i {
-            Inum::I64(i) => BigInt::from(i), // Convert `i64` to `BigInt`
-            Inum::Int(i) => i,
-        }
+from_fn!(BigInt, Inum, |i: Inum| {
+    match i {
+        Inum::I64(i) => BigInt::from(i),
+        Inum::Int(i) => i,
     }
-}
+});
 
 impl TryFrom<Inum> for i64 {
     type Error = BigInt;
@@ -155,9 +153,9 @@ checked_impl!(Neg, neg, checked_neg);
 impl Num for Inum {
     type FromStrRadixErr = ParseBigIntError;
 
-    fn from_str_radix(str: &str, radix: u32) -> Result<Self, ParseBigIntError> {
-        i64::from_str_radix(str, radix).map_or_else(
-            |_| BigInt::from_str_radix(str, radix).map(Int),
+    fn from_str_radix(n_str: &str, radix: u32) -> Result<Self, ParseBigIntError> {
+        i64::from_str_radix(n_str, radix).map_or_else(
+            |_| BigInt::from_str_radix(n_str, radix).map(Int),
             |i| Ok(I64(i)),
         )
     }
@@ -177,3 +175,31 @@ macro_rules! from_prims {
 }
 
 from_prims!(Inum);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    #[should_panic]
+    fn crash_from_str_radix() {
+        let n_str = "A";
+        Inum::from_str_radix(n_str, 37).ok();
+    }
+
+    #[test]
+    fn from_str_radix() {
+        let num = "zzzzzzzzzzzzzz";
+        match Inum::from_str_radix(num, 36).unwrap() {
+            Int(_) => (),
+            _ => panic!("Should be `Int`"),
+        }
+
+        let num = "z";
+        match Inum::from_str_radix(num, 36).unwrap() {
+            I64(_) => (),
+            _ => panic!("Should be `I64`"),
+        }
+    }
+
+}

@@ -62,6 +62,7 @@ impl Kson {
         }
     }
 
+    /// Tries to cast value as an `Inum`, returns `None` if it fails.
     fn to_inum(&self) -> Option<&Inum> {
         match self {
             Kint(i) => Some(i),
@@ -69,6 +70,7 @@ impl Kson {
         }
     }
 
+    /// Tries to cast value as a `bool`, returns `None` if it fails.
     fn to_bool(&self) -> Option<bool> {
         match self {
             Bool(b) => Some(*b),
@@ -76,6 +78,7 @@ impl Kson {
         }
     }
 
+    /// Tries to cast value as `Bytes`, returns `None` if it fails.
     fn to_bytes(&self) -> Option<&Bytes> {
         match self {
             Byt(s) => Some(s),
@@ -126,3 +129,29 @@ compose_from!(Kson, Inum, i64);
 compose_from!(Kson, Inum, u64);
 
 from_prims!(Kson);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn trivial_tests() {
+        assert!(Null.is_null());
+
+        assert!(5.to_kson().to_inum().is_some());
+
+        assert!(true.to_kson().to_bool().unwrap());
+
+        assert_eq!(
+            Bytes::from("word").to_kson().to_bytes().unwrap(),
+            &Bytes::from("word")
+        );
+    }
+
+    #[test]
+    fn from_vec() {
+        let v = vec![0, 1, 2, 3, 4];
+        let k_val = Kson::from(v.clone());
+        assert_eq!(k_val.into_rep(), Some(v));
+    }
+}

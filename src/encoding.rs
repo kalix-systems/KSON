@@ -11,27 +11,30 @@ use crate::{
 };
 // TODO: replace len vecs w/heapless vec of size at most 8
 
-// 0xe0
+/// 0xe0
 pub const MASK_TYPE: u8 = 0b1110_0000;
-// 0x1f
+/// 0x1f
 pub const MASK_META: u8 = 0b0001_1111;
-// 0x00
+/// 0x00
 pub const TYPE_CON: u8 = 0b0000_0000;
-// 0x20
+/// Integer type bits, 0x20
 pub const TYPE_INT: u8 = 0b0010_0000;
-// 0x40
-pub const TYPE_STR: u8 = 0b0100_0000;
-// 0x60
+/// String type bits, 0x40
+pub const TYPE_BYT: u8 = 0b0100_0000;
+/// Array type bits, 0x60
 pub const TYPE_ARR: u8 = 0b0110_0000;
-// 0x80
+/// Map type bits, 0x80
 pub const TYPE_MAP: u8 = 0b1000_0000;
-// 0x10
+/// Large integer indicator bit, 0x10
 pub const BIG_BIT: u8 = 0b0001_0000;
-// 0x0f
+/// Integer sign bit, 0x0f
 pub const INT_POSITIVE: u8 = 0b0000_1000;
 
+/// `Null` constant.
 pub const CON_NULL: u8 = 0b0000_0000;
+/// `True` constant.
 pub const CON_TRUE: u8 = 0b0000_0001;
+/// `False` constant.
 pub const CON_FALSE: u8 = 0b0000_0010;
 
 pub const MASK_LEN_BITS: u8 = 0b0000_1111;
@@ -46,9 +49,9 @@ pub enum LenOrDigs {
 use LenOrDigs::*;
 
 #[derive(Clone, Debug)]
-/// Metadata tags for KSON.
+/// Tagged KSON.
 pub enum KMeta<'a> {
-    KMC(u8),
+    KMCon(u8),
     KMInt(bool, LenOrDigs, Vec<u8>),
     KMByt(LenOrDigs, &'a Bytes),
     KMArr(LenOrDigs, &'a Vec<Kson>),
@@ -105,8 +108,8 @@ macro_rules! len_or_digs {
 
 fn kson_to_meta(ks: &Kson) -> KMeta {
     match ks {
-        Null => KMC(0),
-        Bool(t) => KMC(if *t { 1 } else { 2 }),
+        Null => KMCon(0),
+        Bool(t) => KMCon(if *t { 1 } else { 2 }),
         Kint(i) => inum_to_meta(i),
         Byt(bs) => KMByt(len_or_digs!(bs), bs),
         Array(a) => KMArr(len_or_digs!(a), a),
@@ -146,7 +149,7 @@ macro_rules! tag_and_len {
 
 fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
     match km {
-        KMC(con) => out.push(TYPE_CON | con),
+        KMCon(con) => out.push(TYPE_CON | con),
         KMInt(pos, len_or_digs, digs) => {
             let mut tag = TYPE_INT;
             let len_digs;
@@ -159,7 +162,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
             out.extend_from_slice(&digs);
         }
         KMByt(len_or_digs, st) => {
-            tag_and_len!(TYPE_STR, len_or_digs, out);
+            tag_and_len!(TYPE_BYT, len_or_digs, out);
             out.extend_from_slice(st);
         }
         KMArr(len_or_digs, vs) => {
@@ -224,7 +227,7 @@ pub fn read_tag(input: &mut Buf) -> Option<KTag> {
                 let len = byte & MASK_INT_LEN_BITS;
                 Some(KInt(big, pos, len + 1))
             }
-            TYPE_STR => big_and_len!(KByt, byte),
+            TYPE_BYT => big_and_len!(KByt, byte),
             TYPE_ARR => big_and_len!(KArr, byte),
             TYPE_MAP => big_and_len!(KMap, byte),
             _ => None,
@@ -235,7 +238,7 @@ pub fn read_tag(input: &mut Buf) -> Option<KTag> {
 }
 
 fn read_u64<B: Buf>(dat: &mut B, len: u8) -> Option<u64> {
-    assert!(len <= 8);
+    debug_assert!(len <= 8);
     if dat.remaining() >= len as usize {
         Some(dat.get_uint_le(len as usize))
     } else {
@@ -244,7 +247,7 @@ fn read_u64<B: Buf>(dat: &mut B, len: u8) -> Option<u64> {
 }
 
 fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> {
-    assert!(len - 1 <= MASK_INT_LEN_BITS);
+    debug_assert!(len - 1 <= MASK_INT_LEN_BITS);
     let u = read_u64(dat, len)?;
     let mut i = {
         if big {
@@ -252,7 +255,7 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
         } else {
             // Inum::from(u)
             // I'm kinda surprised this works
-            assert!(u < i64::max_value() as u64);
+            debug_assert!(u < i64::max_value() as u64);
             I64(u as i64)
         }
     };
@@ -318,3 +321,120 @@ pub fn encode_full(ks: &Kson) -> Vec<u8> {
 
 /// Decodes an `IntoBuf` into `Kson`, returns `None` if decoding fails.
 pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> { decode(&mut bs.into_buf()) }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn inum_meta_small_pos_one_byte() {
+        let small_pos = I64(1);
+        let meta = inum_to_meta(&small_pos);
+        let out = &mut Vec::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], 0b0010_1000);
+        // digit, should be 1
+        assert_eq!(out[1], 1);
+    }
+
+    #[test]
+    fn inum_meta_small_pos_two_bytes() {
+        let small_pos = I64(257);
+        let meta = inum_to_meta(&small_pos);
+        let out = &mut Vec::new();
+        encode_meta(meta, out);
+
+        // tag 001 (int) + 0 (small) + 1 (positive) + 001 (length=1+1)
+        assert_eq!(out[0], 0b0010_1001);
+        // LSD, should be 1
+        assert_eq!(out[1], 1);
+        // MSD, should be 1
+        assert_eq!(out[2], 1);
+    }
+
+    #[test]
+    fn inum_meta_small_pos_eight_bytes() {
+        let small_pos = I64(i64::max_value());
+        let meta = inum_to_meta(&small_pos);
+        let out = &mut Vec::new();
+        encode_meta(meta, out);
+
+        assert_eq!(out[0], 0b0010_1111);
+        assert_eq!(out[1..], [255, 255, 255, 255, 255, 255, 255, 127]);
+    }
+
+    #[test]
+    fn inum_meta_small_neg_one_byte() {
+        let small_neg = I64(-2);
+        let meta = inum_to_meta(&small_neg);
+        let out = &mut Vec::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], 0b0010_0000);
+        // should be 0
+        assert_eq!(out[1], 1);
+    }
+
+    #[test]
+    fn inum_meta_small_neg_two_byte() {
+        let small_neg = I64(-257);
+        let meta = inum_to_meta(&small_neg);
+        let out = &mut Vec::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], 0b0010_0001);
+        // LSD, should be 0
+        assert_eq!(out[1], 0);
+        // MSD, should be 1
+        assert_eq!(out[2], 1);
+    }
+
+    #[test]
+    fn inum_meta_small_neg_eight_bytes() {
+        let small_neg = I64(i64::min_value());
+        let meta = inum_to_meta(&small_neg);
+        let out = &mut Vec::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], 0b0010_0111);
+        assert_eq!(out[1..], [255, 255, 255, 255, 255, 255, 255, 127]);
+    }
+
+    #[test]
+    fn inum_meta_big_pos() {
+        let big_pos = Inum::from(BigInt::from(i64::max_value()) + 1);
+        let meta = inum_to_meta(&big_pos);
+        let out = &mut Vec::new();
+
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], 0b0011_1000);
+        // length in bytes
+        assert_eq!(out[1], 8);
+        // digits
+        assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 128]);
+    }
+
+    #[test]
+    fn inum_meta_big_neg() {
+        let big_neg = Inum::from(BigInt::from(i64::min_value()) - 1);
+        let meta = inum_to_meta(&big_neg);
+        let out = &mut Vec::new();
+
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], 0b0011_0000);
+        // length in bytes
+        assert_eq!(out[1], 8);
+        // digits
+        assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 128]);
+    }
+
+}

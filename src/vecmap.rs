@@ -14,8 +14,8 @@ impl<K: Ord, V> VecMap<K, V> {
 
     /// Creates a `VecMap` from a sorted `Vec` of pairs.
     pub fn from_sorted(v: Vec<(K, V)>) -> Self {
-        // panic is `v` is not sorted
-        assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
+        // panic if `v` is not sorted
+        debug_assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
         VecMap(v)
     }
 
