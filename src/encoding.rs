@@ -181,9 +181,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
     }
 }
 
-pub fn encode(ks: &Kson, out: &mut Vec<u8>) {
-    encode_meta(kson_to_meta(ks), out)
-}
+pub fn encode(ks: &Kson, out: &mut Vec<u8>) { encode_meta(kson_to_meta(ks), out) }
 
 fn read_bytes<B: Buf>(dat: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
     if dat.remaining() >= num_bytes {
@@ -322,9 +320,7 @@ pub fn encode_full(ks: &Kson) -> Vec<u8> {
 }
 
 /// Decodes an `IntoBuf` into `Kson`, returns `None` if decoding fails.
-pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> {
-    decode(&mut bs.into_buf())
-}
+pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> { decode(&mut bs.into_buf()) }
 
 #[cfg(test)]
 mod tests {
@@ -404,8 +400,41 @@ mod tests {
         let out = &mut Vec::new();
         encode_meta(meta, out);
 
+        // tag
         assert_eq!(out[0], 0b0010_0111);
         assert_eq!(out[1..], [255, 255, 255, 255, 255, 255, 255, 127]);
+    }
+
+    #[test]
+    fn inum_meta_big_pos() {
+        let big_pos = Inum::from(BigInt::from(i64::max_value()) + 1);
+        let meta = inum_to_meta(&big_pos);
+        let out = &mut Vec::new();
+
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], 0b0011_1000);
+        // length in bytes
+        assert_eq!(out[1], 8);
+        // digits
+        assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 128]);
+    }
+
+    #[test]
+    fn inum_meta_big_neg() {
+        let big_neg = Inum::from(BigInt::from(i64::min_value()) - 1);
+        let meta = inum_to_meta(&big_neg);
+        let out = &mut Vec::new();
+
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], 0b0011_0000);
+        // length in bytes
+        assert_eq!(out[1], 8);
+        // digits
+        assert_eq!(out[2..], [0, 0, 0, 0, 0, 0, 0, 128]);
     }
 
 }
