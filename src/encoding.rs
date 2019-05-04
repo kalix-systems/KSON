@@ -615,4 +615,13 @@ mod tests {
             .enumerate()
             .for_each(|(i, x)| assert_eq!(*x as usize, i));
     }
+
+    #[test]
+    fn trivial() {
+        assert!(read_bytes(&mut Vec::new().into_buf(), 3).is_none());
+
+        assert!(read_u64(&mut Vec::new().into_buf(), 3).is_none());
+
+        assert!(decode(&mut vec![0b0000_0011].into_buf()).is_none());
+    }
 }
