@@ -7,6 +7,7 @@
 #![feature(is_sorted)]
 #![feature(result_map_or_else)]
 
+/// Procedural macros.
 pub extern crate kson_macro;
 
 /// KSON binary encoder and decoder.
@@ -18,7 +19,7 @@ pub mod python;
 /// Types representable as `Kson`.
 pub mod rep;
 /// Helper functions.
-pub mod util;
+mod util;
 /// A map wrapper around a sorted vector of pairs.
 pub mod vecmap;
 
@@ -44,8 +45,20 @@ pub enum Kson {
 use Kson::*;
 
 impl Kson {
-    /// Converts a `Kson` value to a vector of `Kson`, if possible.
-    /// Returns `None` if the value is not a `Kson::Array`.
+    /// Converts a `Kson` value to a vector of `Kson`.
+    /// This will return `None` if the value is not a `Kson` array.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::{rep::*, Kson};
+    ///
+    /// let numbers = vec![1, 2, 3];
+    ///
+    /// let ks = numbers.into_kson();
+    ///
+    /// let k_numbers = ks.to_vec().unwrap();
+    /// ```
     pub fn to_vec(&self) -> Option<&Vec<Kson>> {
         match self {
             Array(a) => Some(a),
@@ -53,27 +66,122 @@ impl Kson {
         }
     }
 
-    /// Consumes a `Kson` value, converting it into a vector of `Kson`, if possible.
-    /// Returns `None` if the value is not a `Kson::Array`.
+    /// Consumes a `Kson` value, converting it into a vector of `Kson`.
+    /// This will return `None` if the value is not a `Kson` array.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::{rep::*, Kson};
+    ///
+    /// let numbers = vec![1, 2, 3];
+    ///
+    /// let ks = numbers.into_kson();
+    ///
+    /// let k_numbers = ks.into_vec().unwrap();
+    /// ```
     pub fn into_vec(self) -> Option<Vec<Kson>> { self.try_into().ok() }
 
-    /// Consumes a `Kson` value, converting it into a `VecMap`, if
-    /// possible. Returns `None` if the value is not a `Kson::Map`.
+    /// Converts a `Kson` value to a `VecMap`.
+    /// This will return `None` if the value is a not a `Kson` map.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bytes::Bytes;
+    /// use hashbrown::HashMap;
+    /// use kson::{rep::*, Kson};
+    ///
+    /// let mut simple_map = HashMap::new();
+    /// simple_map.insert(Bytes::from("foo"), 1);
+    ///
+    /// let k_map = simple_map.into_kson();
+    ///
+    /// let vmap = k_map.to_vecmap();
+    /// ```
+    pub fn to_vecmap(&self) -> Option<&VecMap<Bytes, Kson>> {
+        match self {
+            Map(vmap) => Some(vmap),
+            _ => None,
+        }
+    }
+
+    /// Consumes a `Kson` value, converting it into a `HashMap`.
+    /// This will return `None` if the value is a not a `Kson` map.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bytes::Bytes;
+    /// use hashbrown::HashMap;
+    /// use kson::{rep::*, Kson};
+    ///
+    /// let mut simple_map = HashMap::new();
+    /// simple_map.insert(Bytes::from("foo"), 1);
+    ///
+    /// let k_map = simple_map.into_kson();
+    ///
+    /// let vmap = k_map.into_vecmap();
+    /// ```
     pub fn into_vecmap(self) -> Option<VecMap<Bytes, Kson>> { self.try_into().ok() }
 
-    /// Consumes a `Kson` value, converting it to a `HashMap`, if possible. Returns `None`
-    /// if the value is not a `Kson::Map`.
+    /// Consumes a `Kson` value, converting it into a `VecMap`.
+    /// This will return `None` if the value is a not a `Kson` map.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use bytes::Bytes;
+    /// use hashbrown::HashMap;
+    /// use kson::{rep::*, Kson};
+    ///
+    /// let mut simple_map = HashMap::new();
+    /// simple_map.insert(Bytes::from("foo"), 1);
+    ///
+    /// let k_map = simple_map.into_kson();
+    ///
+    /// let vmap = k_map.into_map();
+    /// ```
     pub fn into_map(self) -> Option<HashMap<Bytes, Kson>> {
         Some(self.into_vecmap()?.into_hashmap())
     }
 
     /// Consumes a `Kson` value, converting it to a value of type `T`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::{rep::*, Kson::Null};
+    ///
+    /// let ks_num = 1.to_kson();
+    ///
+    /// let num: u8 = ks_num.into_rep().unwrap();
+    /// assert_eq!(num, 1);
+    /// ```
     pub fn into_rep<T: KsonRep>(self) -> Option<T> { T::from_kson(self) }
 
     /// Converts a bytestring literal to `Kson`.
+    ///
+    /// # Example
+    /// ```
+    /// use kson::{rep::*, Kson};
+    ///
+    /// let foo = b"this is an example";
+    ///
+    /// let ks_foo = Kson::from_static(foo);
+    /// ```
     pub fn from_static(bytes: &'static [u8]) -> Kson { Byt(Bytes::from_static(bytes)) }
 
     /// Indicates whether a value is `Null`.
+    /// # Example
+    ///
+    /// ```
+    /// use kson::Kson::Null;
+    ///
+    /// let foo = Null;
+    ///
+    /// assert!(foo.is_null());
+    /// ```
     pub fn is_null(&self) -> bool {
         match self {
             Null => true,
@@ -81,7 +189,16 @@ impl Kson {
         }
     }
 
-    /// Tries to convet value to an `Inum`, returns `None` if it fails.
+    /// Tries to convet value to an `Inum`.
+    /// This will return `None` if the value is not an `Inum`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::rep::*;
+    ///
+    /// let ks_num = 1.into_kson();
+    /// ```
     pub fn to_inum(&self) -> Option<&Inum> {
         match self {
             Kint(i) => Some(i),
@@ -89,7 +206,18 @@ impl Kson {
         }
     }
 
-    /// Tries to convert value to a `bool`, returns `None` if it fails.
+    /// Tries to convert value to a `bool`.
+    /// This will return `None` if the value is not a `Kson` bool.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::rep::*;
+    ///
+    /// let b = true.into_kson();
+    ///
+    /// assert!(b.to_bool().unwrap());
+    /// ```
     pub fn to_bool(&self) -> Option<bool> {
         match self {
             Bool(b) => Some(*b),
@@ -97,7 +225,18 @@ impl Kson {
         }
     }
 
-    /// Tries to convert value to `Bytes`, returns `None` if it fails.
+    /// Tries to convert value to `Bytes`.
+    /// This will return `None` if the value is not a `Kson` bytestring.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::Kson;
+    ///
+    /// let foo = Kson::from_static(b"This is an example");
+    ///
+    /// let foo_bytes = foo.to_bytes().unwrap();
+    /// ```
     pub fn to_bytes(&self) -> Option<&Bytes> {
         match self {
             Byt(s) => Some(s),
