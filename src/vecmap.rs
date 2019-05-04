@@ -6,31 +6,82 @@ use std::{collections::BTreeMap, hash::*, iter::FromIterator, slice::Iter, vec::
 pub struct VecMap<K: Ord, V>(Vec<(K, V)>);
 
 impl<K: Ord, V> VecMap<K, V> {
-    /// Creates a new `VecMap`.
-    pub fn new() -> VecMap<K, V> { VecMap(Vec::new()) }
-
-    /// Creates a new `VecMap` with preallocated capacity.
-    pub fn with_capacity(cap: usize) -> VecMap<K, V> { VecMap(Vec::with_capacity(cap)) }
-
-    /// Creates a `VecMap` from a sorted `Vec` of pairs.
+    /// Creates a `VecMap` from a vector of key-value pairs sorted by their first
+    /// elements.  
+    /// # Arguments
+    ///
+    /// * `v: Vec<(K, V)>` - A vector of key-value pairs sorted by their first element.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::vecmap::*;
+    ///
+    /// let vmap = VecMap::from_sorted(vec![(1, "foo"), (2, "bar"), (3, "baz")]);
+    /// ```
+    ///
+    /// # Panics
+    ///
+    /// This function will panic if `v` is not sorted.
     pub fn from_sorted(v: Vec<(K, V)>) -> Self {
         // panic if `v` is not sorted
-        debug_assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
+        assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
         VecMap(v)
     }
 
-    /// Returns length
+    /// Returns length.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::vecmap::*;
+    ///
+    /// let vmap = VecMap::from_sorted(vec![("foo", "bar")]);
+    ///
+    /// assert_eq!(vmap.len(), 1);
+    /// ```
     pub fn len(&self) -> usize { self.0.len() }
 
     /// Indicates whether or not the `VecMap` is empty.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::vecmap::*;
+    ///
+    /// let vmap = VecMap::from_sorted(Vec::<(u8, u8)>::new());
+    ///
+    /// assert!(vmap.is_empty());
+    /// ```
     pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
-    /// Returns an `Iter` of key value pairs.
+    /// Returns an `Iter` of the key value pairs.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::vecmap::*;
+    ///
+    /// let vmap = VecMap::from_sorted(vec![(1, "foo"), (2, "bar"), (3, "baz")]);
+    ///
+    /// let (k, v) = vmap.iter().next().unwrap();
+    /// ```
     pub fn iter(&self) -> Iter<(K, V)> { self.0.iter() }
 }
 
 impl<K: Ord + Hash, V> VecMap<K, V> {
     /// Consumes a `VecMap`, producing a `HashMap` from the entries.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use hashbrown::HashMap;
+    /// use kson::vecmap::*;
+    ///
+    /// let vmap = VecMap::from_sorted(vec![(1, "foo"), (2, "bar"), (3, "baz")]);
+    ///
+    /// let hmap: HashMap<u8, &str> = vmap.into_hashmap();
+    /// ```
     pub fn into_hashmap<S: BuildHasher + Default>(self) -> HashMap<K, V, S> {
         self.into_iter().collect()
     }

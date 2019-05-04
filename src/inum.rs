@@ -10,13 +10,16 @@ use crate::{from_as, from_fn};
 /// `Inum`s are either `i64` or `BigInt`s (i.e., big integers).
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub enum Inum {
+    /// Small integer type.
     I64(i64),
+    /// Large integer type.
     Int(BigInt),
 }
 
 use Inum::*;
 
 from_fn!(Inum, i64, I64);
+
 from_fn!(Inum, u64, |u| {
     let i = u as i64;
     if i >= 0 {

@@ -34,11 +34,17 @@ use vecmap::*;
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 /// KSON types.
 pub enum Kson {
+    /// Null type. Equivalent to `None`.
     Null,
+    /// Boolean type.
     Bool(bool),
+    /// Integer type.
     Kint(Inum),
+    /// Bytestring type.
     Byt(Bytes),
+    /// Array type.
     Array(Vec<Kson>),
+    /// Map type.
     Map(VecMap<Bytes, Kson>),
 }
 
