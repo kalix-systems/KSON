@@ -9,10 +9,43 @@ use std::{
 
 /// A value representable as `Kson`.
 pub trait KsonRep: Clone + Sized {
+    /// Converts value into `Kson`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::rep::*;
+    ///
+    /// let k_num = 1.to_kson();
+    /// ```
     fn to_kson(&self) -> Kson { self.clone().into_kson() }
 
+    /// Consumes value, converting it into kson.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::rep::*;
+    ///
+    /// let k_num = 1.into_kson();
+    /// ```
     fn into_kson(self) -> Kson { self.to_kson() }
 
+    /// Converts value from `Kson`.
+    ///
+    /// # Arguments
+    ///
+    /// `ks: Kson` - The value to be converted from `Kson`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::rep::*;
+    ///
+    /// let k_num = "foo".to_string().into_kson();
+    ///
+    /// assert_eq!(String::from_kson(k_num).unwrap(), "foo");
+    /// ```
     fn from_kson(ks: Kson) -> Option<Self>;
 }
 
@@ -315,7 +348,7 @@ pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Option<T> {
     KsonRep::from_kson(iter.next()?)
 }
 
-/// Values whose KSON representation is never `KSNull`.
+/// Values whose KSON representation is never `Null`.
 pub trait KsonNotNull: KsonRep {}
 // impl KsonNotNull for u8 {}
 // impl KsonNotNull for u16 {}
