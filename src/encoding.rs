@@ -12,36 +12,36 @@ use crate::{
 // TODO: replace len vecs w/heapless vec of size at most 8
 
 /// 0xe0
-pub const MASK_TYPE: u8 = 0b1110_0000;
+const MASK_TYPE: u8 = 0b1110_0000;
 /// 0x1f
-pub const MASK_META: u8 = 0b0001_1111;
+const MASK_META: u8 = 0b0001_1111;
 /// 0x00
-pub const TYPE_CON: u8 = 0b0000_0000;
+const TYPE_CON: u8 = 0b0000_0000;
 /// Integer type bits, 0x20
-pub const TYPE_INT: u8 = 0b0010_0000;
+const TYPE_INT: u8 = 0b0010_0000;
 /// String type bits, 0x40
-pub const TYPE_BYT: u8 = 0b0100_0000;
+const TYPE_BYT: u8 = 0b0100_0000;
 /// Array type bits, 0x60
-pub const TYPE_ARR: u8 = 0b0110_0000;
+const TYPE_ARR: u8 = 0b0110_0000;
 /// Map type bits, 0x80
-pub const TYPE_MAP: u8 = 0b1000_0000;
+const TYPE_MAP: u8 = 0b1000_0000;
 /// Large integer indicator bit, 0x10
-pub const BIG_BIT: u8 = 0b0001_0000;
+const BIG_BIT: u8 = 0b0001_0000;
 /// Integer sign bit, 0x0f
-pub const INT_POSITIVE: u8 = 0b0000_1000;
+const INT_POSITIVE: u8 = 0b0000_1000;
 
 /// `Null` constant.
-pub const CON_NULL: u8 = 0b0000_0000;
+const CON_NULL: u8 = 0b0000_0000;
 /// `True` constant.
-pub const CON_TRUE: u8 = 0b0000_0001;
+const CON_TRUE: u8 = 0b0000_0001;
 /// `False` constant.
-pub const CON_FALSE: u8 = 0b0000_0010;
+const CON_FALSE: u8 = 0b0000_0010;
 
-pub const MASK_LEN_BITS: u8 = 0b0000_1111;
-pub const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
+const MASK_LEN_BITS: u8 = 0b0000_1111;
+const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
 
-pub const BIGINT_MIN_LEN: u64 = MASK_INT_LEN_BITS as u64 + 2;
-pub const BIGCON_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
+const BIGINT_MIN_LEN: u64 = MASK_INT_LEN_BITS as u64 + 2;
+const BIGCON_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
 
 #[derive(Clone, Debug)]
 pub enum LenOrDigs {
@@ -52,7 +52,7 @@ pub enum LenOrDigs {
 use LenOrDigs::*;
 
 #[derive(Clone, Debug)]
-/// Tagged KSON.
+/// Tagged `Kson`.
 pub enum KMeta<'a> {
     KMCon(u8),
     KMInt(bool, LenOrDigs, Vec<u8>),
@@ -63,6 +63,7 @@ pub enum KMeta<'a> {
 
 use KMeta::*;
 
+/// Converts `Inum` to tagged `Kson`.
 fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
     match i {
         I64(i) => {
@@ -106,7 +107,7 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
                             digs,
                         )
                     }
-                    NoSign => unreachable!("0 had long digits"),
+                    NoSign => unreachable!("0 encoded as BigInt"),
                 }
             }
         }
@@ -123,10 +124,11 @@ macro_rules! len_or_digs {
     };
 }
 
+/// Converts `Kson` to tagged `Kson`.
 fn kson_to_meta(ks: &Kson) -> KMeta {
     match ks {
-        Null => KMCon(0),
-        Bool(t) => KMCon(if *t { 1 } else { 2 }),
+        Null => KMCon(CON_NULL),
+        Bool(t) => KMCon(if *t { CON_TRUE } else { CON_FALSE }),
         Kint(i) => inum_to_meta(i),
         Byt(bs) => KMByt(len_or_digs!(bs), bs),
         Array(a) => KMArr(len_or_digs!(a), a),
@@ -164,6 +166,7 @@ macro_rules! tag_and_len {
     };
 }
 
+/// Encode tagged `Kson`.
 fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
     match km {
         KMCon(con) => out.push(TYPE_CON | con),
@@ -198,8 +201,10 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
     }
 }
 
+/// Encode `Kson`, storing output in `out`.
 pub fn encode(ks: &Kson, out: &mut Vec<u8>) { encode_meta(kson_to_meta(ks), out) }
 
+/// Read a specific number of bytes from a buffer.
 fn read_bytes<B: Buf>(dat: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
     if dat.remaining() >= num_bytes {
         let mut bts = vec![0; num_bytes];
@@ -233,7 +238,8 @@ macro_rules! big_and_len {
     };
 }
 
-pub fn read_tag(input: &mut Buf) -> Option<KTag> {
+/// Try to read tag byte from buffer.
+fn read_tag(input: &mut Buf) -> Option<KTag> {
     if input.has_remaining() {
         let byte = input.get_u8();
         match byte & MASK_TYPE {
@@ -255,6 +261,7 @@ pub fn read_tag(input: &mut Buf) -> Option<KTag> {
     }
 }
 
+/// Try to read `u64` from buffer.
 fn read_u64<B: Buf>(dat: &mut B, len: u8) -> Option<u64> {
     debug_assert!(len <= 8);
     if dat.remaining() >= len as usize {
@@ -264,6 +271,7 @@ fn read_u64<B: Buf>(dat: &mut B, len: u8) -> Option<u64> {
     }
 }
 
+/// Try to read `Inum` from buffer.
 fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> {
     debug_assert!(len - 1 <= MASK_INT_LEN_BITS);
     let u = read_u64(dat, len)?;
@@ -283,6 +291,7 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
     Some(i)
 }
 
+/// Try to read length from from buffer.
 fn read_len<B: Buf>(dat: &mut B, big: bool, len: u8) -> Option<usize> {
     if big {
         Some(read_u64(dat, len + 1)? as usize + BIGCON_MIN_LEN as usize)
@@ -291,6 +300,7 @@ fn read_len<B: Buf>(dat: &mut B, big: bool, len: u8) -> Option<usize> {
     }
 }
 
+/// Tries to decode a buffer into `Kson`
 pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
     let tag = read_tag(dat)?;
     match tag {
@@ -328,7 +338,7 @@ pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
     }
 }
 
-/// Encodes a `Kson` object into a `Vec<u8>`
+/// Encodes a `Kson` object into a vector of bytes.
 pub fn encode_full(ks: &Kson) -> Vec<u8> {
     let mut out = vec![];
     encode(ks, &mut out);
@@ -494,7 +504,7 @@ mod tests {
 
     #[test]
     fn small_string() {
-        let small_bs = Byt(Bytes::from("w"));
+        let small_bs = Kson::from_static(b"w");
 
         let out = &mut Vec::new();
         encode_meta(kson_to_meta(&small_bs), out);
@@ -507,7 +517,7 @@ mod tests {
 
     #[test]
     fn large_string() {
-        let large_bs = Byt(Bytes::from_static(&[b'w'; 140]));
+        let large_bs = Kson::from_static(&[b'w'; 140]);
 
         let out = &mut Vec::new();
         encode_meta(kson_to_meta(&large_bs), out);
@@ -617,6 +627,7 @@ mod tests {
     }
 
     #[test]
+    // for completeness
     fn trivial() {
         assert!(read_bytes(&mut Vec::new().into_buf(), 3).is_none());
 

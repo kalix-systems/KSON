@@ -25,6 +25,7 @@ use std::convert::{TryFrom, TryInto};
 use vecmap::*;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
+/// KSON types.
 pub enum Kson {
     Null,
     Bool(bool),
@@ -37,6 +38,8 @@ pub enum Kson {
 use Kson::*;
 
 impl Kson {
+    /// Converts a `Kson` value to a vector of `Kson`, if possible.
+    /// Returns `None` if the value is not a `Kson::Array`.
     pub fn to_vec(&self) -> Option<&Vec<Kson>> {
         match self {
             Array(a) => Some(a),
@@ -44,49 +47,57 @@ impl Kson {
         }
     }
 
+    /// Consumes a `Kson` value, converting it into a vector of `Kson`, if possible.
+    /// Returns `None` if the value is not a `Kson::Array`.
     pub fn into_vec(self) -> Option<Vec<Kson>> { self.try_into().ok() }
 
+    /// Consumes a `Kson` value, converting it into a `VecMap`, if
+    /// possible. Returns `None` if the value is not a `Kson::Map`.
     pub fn into_vecmap(self) -> Option<VecMap<Bytes, Kson>> { self.try_into().ok() }
 
+    /// Consumes a `Kson` value, converting it to a `HashMap`, if possible. Returns `None`
+    /// if the value is not a `Kson::Map`.
     pub fn into_map(self) -> Option<HashMap<Bytes, Kson>> {
         Some(self.into_vecmap()?.into_hashmap())
     }
 
+    /// Consumes a `Kson` value, converting it to a value of type `T`.
     pub fn into_rep<T: KsonRep>(self) -> Option<T> { T::from_kson(self) }
 
+    /// Converts a bytestring literal to `Kson`.
+    pub fn from_static(bytes: &'static [u8]) -> Kson { Byt(Bytes::from_static(bytes)) }
+
     /// Indicates whether a value is `Null`.
-    fn is_null(&self) -> bool {
+    pub fn is_null(&self) -> bool {
         match self {
             Null => true,
             _ => false,
         }
     }
 
-    /// Tries to cast value as an `Inum`, returns `None` if it fails.
-    fn to_inum(&self) -> Option<&Inum> {
+    /// Tries to convet value to an `Inum`, returns `None` if it fails.
+    pub fn to_inum(&self) -> Option<&Inum> {
         match self {
             Kint(i) => Some(i),
             _ => None,
         }
     }
 
-    /// Tries to cast value as a `bool`, returns `None` if it fails.
-    fn to_bool(&self) -> Option<bool> {
+    /// Tries to convert value to a `bool`, returns `None` if it fails.
+    pub fn to_bool(&self) -> Option<bool> {
         match self {
             Bool(b) => Some(*b),
             _ => None,
         }
     }
 
-    /// Tries to cast value as `Bytes`, returns `None` if it fails.
-    fn to_bytes(&self) -> Option<&Bytes> {
+    /// Tries to convert value to `Bytes`, returns `None` if it fails.
+    pub fn to_bytes(&self) -> Option<&Bytes> {
         match self {
             Byt(s) => Some(s),
             _ => None,
         }
     }
-
-    pub fn from_static(bytes: &'static [u8]) -> Kson { Byt(Bytes::from_static(bytes)) }
 }
 
 impl<T: Into<Kson>> From<Vec<T>> for Kson {
