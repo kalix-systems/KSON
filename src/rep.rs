@@ -1,3 +1,4 @@
+use crate::{util::*, vecmap::*, *};
 use bytes::Bytes;
 use hashbrown::HashMap;
 use std::{
@@ -5,8 +6,6 @@ use std::{
     net::{Ipv4Addr, SocketAddrV4},
     vec::{IntoIter, Vec},
 };
-
-use crate::{util::*, vecmap::*, *};
 
 /// A value representable as `Kson`.
 pub trait KsonRep: Clone + Sized {

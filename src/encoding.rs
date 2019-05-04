@@ -1,14 +1,13 @@
-use bytes::{buf::IntoBuf, Buf, Bytes};
-use num_bigint::{BigInt, Sign::*};
-use num_traits::*;
-use std::convert::TryInto;
-
 use crate::{
     util::*,
     vecmap::VecMap,
     Inum::{self, *},
     Kson::{self, *},
 };
+use bytes::{buf::IntoBuf, Buf, Bytes};
+use num_bigint::{BigInt, Sign::*};
+use num_traits::*;
+use std::convert::TryInto;
 // TODO: replace len vecs w/heapless vec of size at most 8
 
 /// 0xe0
@@ -64,6 +63,10 @@ pub enum KMeta<'a> {
 use KMeta::*;
 
 /// Converts `Inum` to tagged `Kson`.
+///
+/// # Arguments
+///
+/// * `i` - An `Inum` that holds the integer.
 fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
     match i {
         I64(i) => {
@@ -202,13 +205,29 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
 }
 
 /// Encode `Kson`, storing output in `out`.
+///
+/// # Arguments
+///
+/// * `ks` - A reference to the `Kson` value to be encoded.
+/// * `out` - A mutable reference to a vector where the encoder output will be stored.
+///
+/// # Example
+///
+/// ```
+/// use kson::{encoding::*, Kson::Null};
+///
+/// let out = &mut Vec::new();
+/// let ks = Null;
+///
+/// encode(&ks, out);
+/// ```
 pub fn encode(ks: &Kson, out: &mut Vec<u8>) { encode_meta(kson_to_meta(ks), out) }
 
 /// Read a specific number of bytes from a buffer.
-fn read_bytes<B: Buf>(dat: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
-    if dat.remaining() >= num_bytes {
+fn read_bytes<B: Buf>(data: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
+    if data.remaining() >= num_bytes {
         let mut bts = vec![0; num_bytes];
-        dat.copy_to_slice(&mut bts);
+        data.copy_to_slice(&mut bts);
         Some(bts)
     } else {
         None
@@ -262,24 +281,24 @@ fn read_tag(input: &mut Buf) -> Option<KTag> {
 }
 
 /// Try to read `u64` from buffer.
-fn read_u64<B: Buf>(dat: &mut B, len: u8) -> Option<u64> {
+fn read_u64<B: Buf>(data: &mut B, len: u8) -> Option<u64> {
     debug_assert!(len <= 8);
-    if dat.remaining() >= len as usize {
-        Some(dat.get_uint_le(len as usize))
+    if data.remaining() >= len as usize {
+        Some(data.get_uint_le(len as usize))
     } else {
         None
     }
 }
 
 /// Try to read `Inum` from buffer.
-fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> {
+fn read_int<B: Buf>(data: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> {
     debug_assert!(len - 1 <= MASK_INT_LEN_BITS);
-    let u = read_u64(dat, len)?;
+    let u = read_u64(data, len)?;
     let mut i = {
         if big {
             Int(BigInt::from_bytes_le(
                 Plus,
-                &read_bytes(dat, u as usize + BIGINT_MIN_LEN as usize)?,
+                &read_bytes(data, u as usize + BIGINT_MIN_LEN as usize)?,
             ))
         } else {
             Inum::from(u)
@@ -292,17 +311,29 @@ fn read_int<B: Buf>(dat: &mut B, big: bool, pos: bool, len: u8) -> Option<Inum> 
 }
 
 /// Try to read length from from buffer.
-fn read_len<B: Buf>(dat: &mut B, big: bool, len: u8) -> Option<usize> {
+fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Option<usize> {
     if big {
-        Some(read_u64(dat, len + 1)? as usize + BIGCON_MIN_LEN as usize)
+        Some(read_u64(data, len + 1)? as usize + BIGCON_MIN_LEN as usize)
     } else {
         Some(len as usize)
     }
 }
 
-/// Tries to decode a buffer into `Kson`
-pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
-    let tag = read_tag(dat)?;
+/// Tries to decode a buffer into `Kson`.
+///
+/// # Arguments
+///
+/// * `data` - A buffer containing binary encoded KSON.
+///
+/// # Example
+///
+/// ```
+/// use kson::{encoding::*, Kson::Null};
+///
+/// let k_null = encode_full(&Null);
+/// ```
+pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
+    let tag = read_tag(data)?;
     match tag {
         KCon(u) => {
             match u {
@@ -312,25 +343,25 @@ pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
                 _ => None,
             }
         }
-        KInt(big, pos, len) => read_int(dat, big, pos, len).map(Kint),
+        KInt(big, pos, len) => read_int(data, big, pos, len).map(Kint),
         KByt(big, len) => {
-            let len = read_len(dat, big, len)?;
-            Some(Byt(Bytes::from(read_bytes(dat, len)?)))
+            let len = read_len(data, big, len)?;
+            Some(Byt(Bytes::from(read_bytes(data, len)?)))
         }
         KArr(big, len) => {
-            let len = read_len(dat, big, len)?;
+            let len = read_len(data, big, len)?;
             let mut out = Vec::with_capacity(len);
             for _ in 0..len {
-                out.push(decode(dat)?)
+                out.push(decode(data)?)
             }
             Some(Array(out))
         }
         KMap(big, len) => {
-            let len = read_len(dat, big, len)?;
+            let len = read_len(data, big, len)?;
             let mut out = Vec::with_capacity(len);
             for _ in 0..len {
-                let key: Bytes = decode(dat)?.try_into().ok()?;
-                let val = decode(dat)?;
+                let key: Bytes = decode(data)?.try_into().ok()?;
+                let val = decode(data)?;
                 out.push((key, val));
             }
             Some(Map(VecMap::from(out)))
@@ -339,13 +370,38 @@ pub fn decode<B: Buf>(dat: &mut B) -> Option<Kson> {
 }
 
 /// Encodes a `Kson` object into a vector of bytes.
+///
+/// # Arguments
+///
+/// * `ks` - A reference to the `Kson` value to be encoded.
+///
+/// # Example
+///
+/// ```
+/// use kson::{encoding::*, Kson::Null};
+///
+/// let ks = Null;
+/// let enc: Vec<u8> = encode_full(&ks);
+/// ```
 pub fn encode_full(ks: &Kson) -> Vec<u8> {
     let mut out = vec![];
     encode(ks, &mut out);
     out
 }
 
-/// Decodes an `IntoBuf` into `Kson`, returns `None` if decoding fails.
+/// Decodes a bytestring into `Kson`, returns `None` if decoding fails.
+///
+/// # Arguments
+///
+/// * `bs` - A buffer containing the bytestring to be decoded.
+///
+/// ```
+/// use kson::{encoding::*, Kson::Null};
+///
+/// let bs = encode_full(&Null);
+///
+/// let dec = decode_full(bs);
+/// ```
 pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> { decode(&mut bs.into_buf()) }
 
 #[cfg(test)]

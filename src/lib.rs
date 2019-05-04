@@ -9,11 +9,17 @@
 
 pub extern crate kson_macro;
 
+/// KSON binary encoder and decoder.
 pub mod encoding;
+/// Integer variants.
 pub mod inum;
+/// Python support.
 pub mod python;
+/// Types representable as `Kson`.
 pub mod rep;
+/// Helper functions.
 pub mod util;
+/// A map wrapper around a sorted vector of pairs.
 pub mod vecmap;
 
 use bytes::Bytes;
