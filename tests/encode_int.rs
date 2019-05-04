@@ -1,4 +1,3 @@
-use bytes::buf::IntoBuf;
 use common_utils::kson_strategy::*;
 use kson::{encoding::*, *};
 use proptest::prelude::*;
@@ -13,7 +12,7 @@ proptest! {
         let enc = encode_full(&k);
         // println!("tag is {:b}", enc[0]);
         // println!("encoded as {:?}", enc.as_slice());
-        let dec = decode(&mut (&enc).into_buf());
+        let dec = decode_full(&enc);
         // println!("decoded as {:?}", dec);
         if dec != Some(k.clone()) {
             panic!(format!("Tried encoding\n {:?}\n as \n{:?}\n got \n{:?}\n", k, enc, dec))
@@ -27,7 +26,7 @@ proptest! {
         let enc = encode_full(&k);
         // println!("tag is {:b}", enc[0]);
         // println!("encoded as {:?}", enc.as_slice());
-        let dec = decode(&mut (&enc).into_buf());
+        let dec = decode_full(&enc);
         // println!("decoded as {:?}", dec);
         if dec != Some(k.clone()) {
             panic!(format!("Tried encoding\n {:?}\n as \n{:?}\n got \n{:?}\n", k, enc, dec))
