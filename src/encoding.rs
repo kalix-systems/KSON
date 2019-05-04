@@ -505,8 +505,9 @@ mod tests {
 
         // tag
         assert_eq!(out[0], 0b011_0_0001);
-        // ignore second element, it's an integer tag
-        // just check that the value is right
+        // element tag
+        assert_eq!(out[1], 0b001_0_1_000);
+        // check that the value is right
         assert_eq!(out[2], 0);
     }
 
@@ -521,7 +522,11 @@ mod tests {
         assert_eq!(out[0], 0b011_1_0000);
         // length
         assert_eq!(out[1], 140);
-        // ignore third element, it's just an integer tag
+
+        // element tags
+        let out_tags: Vec<&u8> = out[2..].iter().step_by(2).collect();
+        assert_eq!(out_tags, vec![&0b001_0_1_000; 140]);
+
         let out_vals: Vec<&u8> = out[3..].iter().step_by(2).collect();
         assert_eq!(out_vals, vec![&0; 140]);
     }
@@ -538,25 +543,53 @@ mod tests {
 
         // tag
         assert_eq!(out[0], 0b100_0_0001);
-        // ignore second element, it's an integer tag
-        // just check that the value is right
-        // assert_eq!(out[2], 0);
+        // element tags
+        assert_eq!(vec![out[1], out[3]], vec![0b010_0_0001, 0b010_0_0001]);
+        // check that the values are right
+        assert_eq!(vec![out[2], out[4]], vec![b'a' as u8, b'b' as u8]);
     }
 
-    //#[test]
-    // fn large_map() {
-    //    let large_map = Kson::from(vec![0; 140]);
+    #[test]
+    fn large_map() {
+        let large_map = Kson::from(VecMap::from_sorted(
+            (0..140)
+                .map(|x| (Bytes::from(vec![x as u8]), Bytes::from(vec![x as u8])))
+                .collect(),
+        ));
 
-    //    let out = &mut Vec::new();
-    //    encode_meta(kson_to_meta(&large_map), out);
+        let out = &mut Vec::new();
+        encode_meta(kson_to_meta(&large_map), out);
 
-    //    // tag
-    //    assert_eq!(out[0], 0b011_1_0000);
-    //    // length
-    //    assert_eq!(out[1], 140);
-    //    // ignore third element, it's just an integer tag
-    //    let out_vals: Vec<&u8> = out[3..].iter().step_by(2).collect();
-    //    assert_eq!(out_vals, vec![&0; 140]);
-    //}
+        // tag
+        assert_eq!(out[0], 0b100_1_0000);
+        // length
+        assert_eq!(out[1], 140);
+
+        // key tags
+        out[2..]
+            .iter()
+            .step_by(4)
+            .for_each(|x| assert_eq!(*x, 0b010_0_0001));
+
+        // val tags
+        out[4..]
+            .iter()
+            .step_by(4)
+            .for_each(|x| assert_eq!(*x, 0b010_0_0001));
+
+        // keys
+        out[3..]
+            .iter()
+            .step_by(4)
+            .enumerate()
+            .for_each(|(i, x)| assert_eq!(*x as usize, i));
+
+        // values
+        out[5..]
+            .iter()
+            .step_by(4)
+            .enumerate()
+            .for_each(|(i, x)| assert_eq!(*x as usize, i));
+    }
 
 }
