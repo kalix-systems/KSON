@@ -55,7 +55,7 @@ impl<'source> FromPyObject<'source> for Kson {
     }
 }
 
-fn bytes_from_any(obj: &PyAny) -> PyResult<Bytes> {
+pub fn bytes_from_any(obj: &PyAny) -> PyResult<Bytes> {
     let bytes: &PyBytes = obj.try_into_exact()?;
     Ok(Bytes::from(bytes.as_bytes()))
 }

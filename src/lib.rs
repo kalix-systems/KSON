@@ -19,7 +19,7 @@ pub mod python;
 /// Types representable as `Kson`.
 pub mod rep;
 /// Helper functions.
-mod util;
+pub mod util;
 /// A map wrapper around a sorted vector of pairs.
 pub mod vecmap;
 
