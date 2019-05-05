@@ -164,15 +164,15 @@ macro_rules! tag_and_len {
         let mut tag = $type;
         let len_digs;
         len_or_tag!(tag, len_digs, $len_or_digs);
-        $out.push(tag);
+        $out.extend_from_slice(&[tag]);
         $out.extend_from_slice(&len_digs);
     };
 }
 
 /// Encode tagged `Kson`.
-fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
+fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
     match km {
-        KMCon(con) => out.push(TYPE_CON | con),
+        KMCon(con) => out.extend_from_slice(&[TYPE_CON | con]),
         KMInt(pos, len_or_digs, digs) => {
             let mut tag = TYPE_INT;
             let len_digs;
@@ -180,7 +180,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
             if pos {
                 tag |= INT_POSITIVE;
             }
-            out.push(tag);
+            out.extend_from_slice(&[tag]);
             out.extend_from_slice(&len_digs);
             out.extend_from_slice(&digs);
         }
@@ -221,7 +221,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
 ///
 /// encode(&ks, out);
 /// ```
-pub fn encode(ks: &Kson, out: &mut Vec<u8>) { encode_meta(kson_to_meta(ks), out) }
+pub fn encode(ks: &Kson, out: &mut Bytes) { encode_meta(kson_to_meta(ks), out) }
 
 /// Read a specific number of bytes from a buffer.
 fn read_bytes<B: Buf>(data: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
@@ -381,10 +381,10 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
 /// use kson::{encoding::*, Kson::Null};
 ///
 /// let ks = Null;
-/// let enc: Vec<u8> = encode_full(&ks);
+/// let enc: Bytes = encode_full(&ks);
 /// ```
-pub fn encode_full(ks: &Kson) -> Vec<u8> {
-    let mut out = vec![];
+pub fn encode_full(ks: &Kson) -> Bytes {
+    let mut out = Bytes::new();
     encode(ks, &mut out);
     out
 }
@@ -414,7 +414,7 @@ mod tests {
         let n = Inum::from(0);
         let meta = inum_to_meta(&n);
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(meta, out);
 
         // tag
@@ -425,7 +425,7 @@ mod tests {
         let n = Inum::from(-0);
         let meta = inum_to_meta(&n);
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(meta, out);
     }
 
@@ -434,7 +434,7 @@ mod tests {
         let small_pos = I64(1);
         let meta = inum_to_meta(&small_pos);
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(meta, out);
 
         // tag
@@ -447,7 +447,7 @@ mod tests {
     fn inum_meta_small_pos_two_bytes() {
         let small_pos = I64(257);
         let meta = inum_to_meta(&small_pos);
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(meta, out);
 
         // tag
@@ -462,7 +462,7 @@ mod tests {
     fn inum_meta_small_pos_eight_bytes() {
         let small_pos = I64(i64::max_value());
         let meta = inum_to_meta(&small_pos);
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(meta, out);
 
         assert_eq!(out[0], 0b001_0_1_111);
@@ -473,7 +473,7 @@ mod tests {
     fn inum_meta_small_neg_one_byte() {
         let small_neg = I64(-2);
         let meta = inum_to_meta(&small_neg);
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(meta, out);
 
         // tag
@@ -486,7 +486,7 @@ mod tests {
     fn inum_meta_small_neg_two_byte() {
         let small_neg = I64(-257);
         let meta = inum_to_meta(&small_neg);
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(meta, out);
 
         // tag
@@ -501,7 +501,7 @@ mod tests {
     fn inum_meta_small_neg_eight_bytes() {
         let small_neg = I64(i64::min_value());
         let meta = inum_to_meta(&small_neg);
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(meta, out);
 
         // tag
@@ -513,7 +513,7 @@ mod tests {
     fn inum_meta_big_pos() {
         let big_pos = Inum::from(BigInt::from(u64::max_value()) + 1);
         let meta = inum_to_meta(&big_pos);
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
 
         encode_meta(meta, out);
 
@@ -529,7 +529,7 @@ mod tests {
     fn inum_meta_big_neg() {
         let big_neg = Inum::from(BigInt::from(u64::max_value()) + 2).neg();
         let meta = inum_to_meta(&big_neg);
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
 
         encode_meta(meta, out);
 
@@ -542,17 +542,17 @@ mod tests {
     }
     #[test]
     fn constants() {
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(kson_to_meta(&Null), out);
 
         assert_eq!(out[0], CON_NULL);
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(kson_to_meta(&Bool(true)), out);
 
         assert_eq!(out[0], CON_TRUE);
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(kson_to_meta(&Bool(false)), out);
 
         assert_eq!(out[0], CON_FALSE);
@@ -562,7 +562,7 @@ mod tests {
     fn small_string() {
         let small_bs = Kson::from_static(b"w");
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(kson_to_meta(&small_bs), out);
 
         // tag
@@ -575,7 +575,7 @@ mod tests {
     fn large_string() {
         let large_bs = Kson::from_static(&[b'w'; 140]);
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(kson_to_meta(&large_bs), out);
 
         // tag
@@ -590,7 +590,7 @@ mod tests {
     fn small_array() {
         let small_array = Kson::from(vec![0]);
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(kson_to_meta(&small_array), out);
 
         // tag
@@ -605,7 +605,7 @@ mod tests {
     fn large_array() {
         let large_array = Kson::from(vec![0; 140]);
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(kson_to_meta(&large_array), out);
 
         // tag
@@ -628,7 +628,7 @@ mod tests {
             Bytes::from_static(b"b"),
         )]));
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(kson_to_meta(&small_map), out);
 
         // tag
@@ -647,7 +647,7 @@ mod tests {
                 .collect(),
         ));
 
-        let out = &mut Vec::new();
+        let out = &mut Bytes::new();
         encode_meta(kson_to_meta(&large_map), out);
 
         // tag
@@ -685,9 +685,9 @@ mod tests {
     #[test]
     // for completeness
     fn trivial() {
-        assert!(read_bytes(&mut Vec::new().into_buf(), 3).is_none());
+        assert!(read_bytes(&mut Bytes::new().into_buf(), 3).is_none());
 
-        assert!(read_u64(&mut Vec::new().into_buf(), 3).is_none());
+        assert!(read_u64(&mut Bytes::new().into_buf(), 3).is_none());
 
         assert!(decode(&mut vec![0b0000_0011].into_buf()).is_none());
     }

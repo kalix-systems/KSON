@@ -10,7 +10,7 @@ proptest! {
     fn encode_decode(k in arb_kson()) {
         println!("trying to encode {:?}", k);
         let enc = encode_full(&k);
-        println!("encoded as {:x?}", enc.as_slice());
+        println!("encoded as {:x?}", &enc);
         let dec = decode(&mut enc.into_buf());
         println!("decoded as {:?}", dec);
         if dec != Some(k.clone()) {
