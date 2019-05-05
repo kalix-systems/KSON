@@ -43,6 +43,9 @@ const BIGINT_MIN_LEN: u64 = MASK_INT_LEN_BITS as u64 + 2;
 const BIGCON_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
 
 #[derive(Clone, Debug)]
+/// The second element in a tagged KSON integer.
+/// It is either a length (in the case of large integers)
+/// or digits (in the case of small integers).
 pub enum LenOrDigs {
     Len(u8),
     Digs(Vec<u8>),

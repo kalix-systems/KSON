@@ -301,6 +301,35 @@ impl KsonRep for SocketAddrV4 {
     }
 }
 
+/// Manually specify how the fields of a struct should be converted to `Kson`. Usually,
+/// you should just add `#[derive(KsonRep)]` to your struct definition instead of doing it
+/// manually.
+///
+/// # Arguments
+///
+/// * `entries: Vec<&str, Kson>` - A vector of pairs containing the name of the field and
+///   the value.
+///
+/// # Example
+///
+/// ```
+/// use kson::rep::*;
+///
+/// struct SillyStruct {
+///     foo: String,
+///     bar: u8,
+/// }
+///
+/// let example_struct = SillyStruct {
+///     foo: "field".to_string(),
+///     bar: 1,
+/// };
+///
+/// let ks_struct = struct_to_kson(vec![
+///     ("foo", example_struct.foo.to_kson()),
+///     ("bar", example_struct.bar.to_kson()),
+/// ]);
+/// ```
 pub fn struct_to_kson(entries: Vec<(&str, Kson)>) -> Kson {
     let vm: VecMap<Bytes, Kson> = entries
         .into_iter()
@@ -309,6 +338,42 @@ pub fn struct_to_kson(entries: Vec<(&str, Kson)>) -> Kson {
     Kson::from(vm)
 }
 
+/// Manually specify how the fields a struct should be read from `Kson`. Usually, you
+/// should just add `#[derive(KsonRep)]` to your struct definition instead of doing it
+/// manually.
+///
+/// # Arguments
+///
+/// * `ks: Kson` - The `Kson` value containg the struct data.
+/// * `names: &[&str]` - The names of the fields in the order they are to be extracted.
+///
+/// # Example
+///
+/// ```
+/// use kson::rep::*;
+///
+/// struct SillyStruct {
+///     foo: String,
+///     bar: u8,
+/// }
+///
+/// let example_struct = SillyStruct {
+///     foo: "field".to_string(),
+///     bar: 1,
+/// };
+///
+/// let ks_struct = struct_to_kson(vec![
+///     ("foo", example_struct.foo.to_kson()),
+///     ("bar", example_struct.bar.to_kson()),
+/// ]);
+///
+/// let fields = struct_from_kson(ks_struct, &["foo", "bar"]).unwrap();
+///
+/// let extracted_struct = SillyStruct {
+///     foo: String::from_kson(fields[0].clone()).unwrap(),
+///     bar: u8::from_kson(fields[1].clone()).unwrap(),
+/// };
+/// ```
 pub fn struct_from_kson(ks: Kson, names: &[&str]) -> Option<Vec<Kson>> {
     let m = ks.into_map()?;
     let outs: Vec<Kson> = names
@@ -322,11 +387,35 @@ pub fn struct_from_kson(ks: Kson, names: &[&str]) -> Option<Vec<Kson>> {
     }
 }
 
+/// Manually specify how the variants an enum should be converted to `Kson`. Usually, you
+/// should just add `#[derive(KsonRep)]` to your enum definition instead of doing it
+/// manually.
+///
+/// # Arguments
+///
+/// * `name: &str` - The name of the enum.
+/// * `fields: Vec<Kson>` - The variants of the enum.
+///
+/// # Example
+///
+/// ```
+/// // use kson::rep::*;
+///
+/// // enum SillyEnum {
+/// //    String,
+/// //    u8,
+/// //}
+///
+/// // let ks_enum = enum_to_kson("SillyEnum", vec![String.to_kson(), u8.to_kson()]);
+/// ```
 pub fn enum_to_kson(name: &str, mut fields: Vec<Kson>) -> Kson {
     fields.insert(0, Kson::from(str_to_bs(name)));
     Array(fields)
 }
 
+/// Manually specify how the variants an enum should be read from `Kson`. Usually, you
+/// should just add `#[derive(KsonRep)]` to your enum definition instead of doing it
+/// manually.
 pub fn enum_from_kson<T: Debug>(
     ks: Kson,
     fns: Vec<(&str, Box<FnMut(IntoIter<Kson>) -> Option<T>>)>,
@@ -344,6 +433,22 @@ pub fn enum_from_kson<T: Debug>(
 }
 
 /// Gets the next element from an iterator of `Kson` values as `T`.
+///
+/// # Arguments
+///
+/// * `iter: &mut IntoIter<Kson>` - An interator of `Kson` values to be converted into
+///   `T`.
+///
+/// # Example
+///
+/// ```
+/// use kson::{rep::*, Kson};
+///
+/// let ks_values = vec![1, 2, 3].into_kson().into_vec().unwrap();
+///
+/// let first: u8 = pop_kson(&mut ks_values.into_iter()).unwrap();
+/// assert_eq!(first, 1);
+/// ```
 pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Option<T> {
     KsonRep::from_kson(iter.next()?)
 }
