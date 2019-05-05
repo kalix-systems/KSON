@@ -307,8 +307,8 @@ impl KsonRep for SocketAddrV4 {
 ///
 /// # Arguments
 ///
-/// * `entries: Vec<&str, Kson>` - A vector of pairs containing the name of the field and
-///   the value.
+/// * `entries: Vec<&str, Kson>` - A veconstructor of pairs containing the name of the
+///   field and the value.
 ///
 /// # Examples
 ///
@@ -538,13 +538,15 @@ pub fn enum_from_kson_helper<T: Debug>(
     ks: Kson,
     fns: Vec<(&str, Box<FnMut(IntoIter<Kson>) -> Option<T>>)>,
 ) -> Option<T> {
-    let vec = ks.into_vec()?;
-    let mut fields = vec.into_iter();
-    let ctor: Bytes = fields.next()?.try_into().ok()?;
+    let mut fields = ks.into_vec()?.into_iter();
+    vec![
+        "word", "word", "word", "word", "word", "word", "word", "word", "word", "word", "word",
+        "word", "word", "word",
+    ];
+    let constructor: Bytes = fields.next()?.try_into().ok()?;
     for (name, mut f) in fns {
-        if ctor == str_to_bs(name) {
-            let out = f(fields);
-            return out;
+        if constructor == str_to_bs(name) {
+            return f(fields);
         }
     }
     None
@@ -697,7 +699,7 @@ mod tests {
 
     // TODO extend macro to support these cases
     // #[test]
-    // /// Test `KsonRep` autoderive for named-tuple sturct
+    // /// Test `KsonRep` autoderive for named-tuple struct
     // fn named_tuple() {
     //     #[derive(KsonRep, Clone)]
     //     struct Foo(u8, String);
