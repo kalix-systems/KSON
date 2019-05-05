@@ -178,6 +178,8 @@ impl Kson {
     /// ```
     pub fn from_static(bytes: &'static [u8]) -> Kson { Byt(Bytes::from_static(bytes)) }
 
+    pub fn from_static_str(s: &'static str) -> Kson { Kson::from_static(s.as_bytes()) }
+
     /// Indicates whether a value is `Null`.
     /// # Example
     ///
