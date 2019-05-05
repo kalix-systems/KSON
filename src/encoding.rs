@@ -56,10 +56,15 @@ use LenOrDigs::*;
 #[derive(Clone, Debug)]
 /// Tagged `Kson`.
 pub enum KMeta<'a> {
+    /// Constants
     KMCon(u8),
+    /// Tagged integers
     KMInt(bool, LenOrDigs, Vec<u8>),
+    /// Tagged bytestrings
     KMByt(LenOrDigs, &'a Bytes),
+    /// Tagged arrays
     KMArr(LenOrDigs, &'a Vec<Kson>),
+    /// Tagged maps
     KMMap(LenOrDigs, &'a VecMap<Bytes, Kson>),
 }
 
