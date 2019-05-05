@@ -591,3 +591,136 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonNotNull
 impl KsonNotNull for () {}
 impl<A: KsonRep, B: KsonRep> KsonNotNull for (A, B) {}
 impl<A: KsonRep, B: KsonRep, C: KsonRep> KsonNotNull for (A, B, C) {}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::kson_macro::*;
+
+    #[test]
+    // Test `KsonRep` autoderive for unit-like struct
+    fn unit_struct() {
+        #[derive(KsonRep, Clone)]
+        struct UnitStruct;
+
+        // to_kson
+        match UnitStruct::from_kson(UnitStruct.to_kson()) {
+            Some(UnitStruct) => (),
+            None => panic!("Couldn't retrieve unit struct"),
+        }
+
+        // into_kson
+        match UnitStruct::from_kson(UnitStruct.into_kson()) {
+            Some(UnitStruct) => (),
+            None => panic!("Couldn't retrieve unit struct"),
+        }
+    }
+
+    #[test]
+    // Test `KsonRep` autoderive for C-style struct
+    fn c_struct() {
+        #[derive(KsonRep, Clone)]
+        struct CStruct {
+            foo: u8,
+        };
+
+        let c_struct = CStruct { foo: 1 };
+
+        // to_kson
+        match CStruct::from_kson(c_struct.to_kson()) {
+            Some(CStruct { foo }) => assert_eq!(foo, 1),
+            None => panic!("Couldn't retrieve c-type struct"),
+        }
+
+        // into_kson
+        match CStruct::from_kson(c_struct.into_kson()) {
+            Some(CStruct { foo }) => assert_eq!(foo, 1),
+            None => panic!("Couldn't retrieve c-type struct"),
+        }
+    }
+
+    #[test]
+    // Test `KsonRep` autoderive for enum of named-tuple structs
+    fn named_tuple_enum() {
+        #[derive(KsonRep, Clone, Debug)]
+        enum Named {
+            Foo(u8, String),
+            Bar(u8),
+        }
+
+        use Named::*;
+
+        let foo = Foo(1, "hello".to_string());
+
+        // to_kson
+        match Named::from_kson(foo.to_kson()) {
+            Some(Foo(num, string)) => {
+                assert_eq!(num, 1);
+                assert_eq!(&string, "hello");
+            }
+            _ => panic!("Couldn't retrieve tuple variant"),
+        }
+
+        // into_kson
+        match Named::from_kson(foo.into_kson()) {
+            Some(Foo(num, string)) => {
+                assert_eq!(num, 1);
+                assert_eq!(&string, "hello");
+            }
+            _ => panic!("Couldn't retrieve tuple variant"),
+        }
+    }
+
+    // TODO extend macro to support these cases
+    // #[test]
+    // /// Test `KsonRep` autoderive for named-tuple sturct
+    // fn named_tuple() {
+    //     #[derive(KsonRep, Clone)]
+    //     struct Foo(u8, String);
+    // }
+
+    // #[test]
+    // // Test `KsonRep` autoderive for enum of unit-like structs
+    // fn unit_enum() {
+    //    #[derive(KsonRep, Clone, Debug)]
+    //    enum UnitEnum {
+    //        Foo,
+    //        Bar(u8),
+    //    }
+    //}
+
+    // // Test `KsonRep` autoderive for enum of named-tuple structs
+    // fn c_type_enum() {
+    //    #[derive(KsonRep, Clone, Debug)]
+    //    enum CType {
+    //        Foo { num: u8, string: String },
+    //        Bar,
+    //    }
+
+    //    use CType::*;
+
+    //    let foo = Foo {
+    //        num:    1,
+    //        string: "hello".to_string(),
+    //    };
+
+    //    // to_kson
+    //    match CType::from_kson(foo.to_kson()) {
+    //        Some(Foo(num, string)) => {
+    //            assert_eq!(num, 1);
+    //            assert_eq!(&string, "hello");
+    //        }
+    //        _ => panic!("Couldn't retrieve tuple variant"),
+    //    }
+
+    //    // into_kson
+    //    match Named::from_kson(foo.into_kson()) {
+    //        Some(Foo(num, string)) => {
+    //            assert_eq!(num, 1);
+    //            assert_eq!(&string, "hello");
+    //        }
+    //        _ => panic!("Couldn't retrieve tuple variant"),
+    //    }
+    // }
+
+}
