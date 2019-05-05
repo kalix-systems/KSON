@@ -217,14 +217,15 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
 /// # Arguments
 ///
 /// * `ks` - A reference to the `Kson` value to be encoded.
-/// * `out` - A mutable reference to a vector where the encoder output will be stored.
+/// * `out` - A mutable reference to `Bytes` where the encoder output will be stored.
 ///
 /// # Example
 ///
 /// ```
+/// use bytes::Bytes;
 /// use kson::{encoding::*, Kson::Null};
 ///
-/// let out = &mut Vec::new();
+/// let out = &mut Bytes::new();
 /// let ks = Null;
 ///
 /// encode(&ks, out);
@@ -386,6 +387,7 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
 /// # Example
 ///
 /// ```
+/// use bytes::Bytes;
 /// use kson::{encoding::*, Kson::Null};
 ///
 /// let ks = Null;
