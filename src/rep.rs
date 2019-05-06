@@ -1,4 +1,5 @@
-use crate::{util::*, vecmap::*, *};
+pub use crate::util::str_to_bs;
+use crate::*;
 use bytes::Bytes;
 use hashbrown::HashMap;
 use std::{
@@ -6,6 +7,7 @@ use std::{
     net::{Ipv4Addr, SocketAddrV4},
     vec::{IntoIter, Vec},
 };
+pub use vecmap::VecMap;
 
 /// A value representable as `Kson`.
 pub trait KsonRep: Clone + Sized {
@@ -14,7 +16,7 @@ pub trait KsonRep: Clone + Sized {
     /// # Example
     ///
     /// ```
-    /// use kson::rep::*;
+    /// use kson::prelude::*;
     ///
     /// let k_num = 1.to_kson();
     /// ```
@@ -25,7 +27,7 @@ pub trait KsonRep: Clone + Sized {
     /// # Example
     ///
     /// ```
-    /// use kson::rep::*;
+    /// use kson::prelude::*;
     ///
     /// let k_num = 1.into_kson();
     /// ```
@@ -40,7 +42,7 @@ pub trait KsonRep: Clone + Sized {
     /// # Example
     ///
     /// ```
-    /// use kson::rep::*;
+    /// use kson::prelude::*;
     ///
     /// let k_num = "foo".to_string().into_kson();
     ///
@@ -315,7 +317,7 @@ impl KsonRep for SocketAddrV4 {
 /// An example using `#[derive(KsonRep)]`.
 ///
 /// ```
-/// use kson::{kson_macro::*, rep::*, Kson};
+/// use kson::prelude::*;
 ///
 /// #[derive(KsonRep, Clone)]
 /// /// This is a silly struct.
@@ -340,7 +342,7 @@ impl KsonRep for SocketAddrV4 {
 /// An example of how this might be done manually.
 ///
 /// ```
-/// use kson::{rep::*, Kson};
+/// use kson::prelude::*;
 ///
 /// #[derive(Clone)]
 /// /// This is, again, a silly struct.
@@ -437,7 +439,7 @@ pub fn struct_from_kson_helper(ks: Kson, names: &[&str]) -> Option<Vec<Kson>> {
 /// An example using `#[derive(KsonRep)]`.
 ///
 /// ```
-/// use kson::{kson_macro::*, rep::*, Kson};
+/// use kson::prelude::*;
 ///
 /// // Note: You need to derive `Clone` and `Debug` for the auto-derive to work.
 /// #[derive(Clone, KsonRep, Debug)]
@@ -469,7 +471,7 @@ pub fn struct_from_kson_helper(ks: Kson, names: &[&str]) -> Option<Vec<Kson>> {
 /// An example example of how this might be done manually.
 ///
 /// ```
-/// use kson::{rep::*, Kson};
+/// use kson::prelude::*;
 /// use std::vec::IntoIter;
 ///
 /// #[derive(Clone, Debug)]
@@ -559,7 +561,7 @@ pub fn enum_from_kson_helper<T: Debug>(
 /// # Example
 ///
 /// ```
-/// use kson::{rep::*, Kson};
+/// use kson::prelude::*;
 ///
 /// let ks_values = vec![1, 2, 3].into_kson().into_vec().unwrap();
 ///
@@ -694,7 +696,6 @@ mod tests {
         }
     }
 
-    // TODO extend macro to support these cases
     #[test]
     /// Test `KsonRep` autoderive for named-tuple struct
     fn named_tuple() {
@@ -710,6 +711,7 @@ mod tests {
         }
     }
 
+    // TODO extend macro to support this case
     // // Test `KsonRep` autoderive for enum of named-tuple structs
     // fn c_type_enum() {
     //    #[derive(KsonRep, Clone, Debug)]

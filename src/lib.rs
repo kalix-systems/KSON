@@ -14,6 +14,8 @@ pub extern crate kson_macro;
 pub mod encoding;
 /// Integer variants.
 pub mod inum;
+/// Prelude
+pub mod prelude;
 /// Python support.
 pub mod python;
 /// Types representable as `Kson`.
@@ -23,7 +25,7 @@ pub mod util;
 /// A map wrapper around a sorted vector of pairs.
 pub mod vecmap;
 
-pub use bytes::Bytes;
+pub use bytes::{buf::FromBuf, Bytes, IntoBuf};
 pub use hashbrown::HashMap;
 use inum::*;
 use num_bigint::BigInt;
@@ -178,8 +180,6 @@ impl Kson {
     /// ```
     pub fn from_static(bytes: &'static [u8]) -> Kson { Byt(Bytes::from_static(bytes)) }
 
-    pub fn from_static_str(s: &'static str) -> Kson { Kson::from_static(s.as_bytes()) }
-
     /// Indicates whether a value is `Null`.
     /// # Example
     ///
@@ -250,6 +250,15 @@ impl Kson {
             Byt(s) => Some(s),
             _ => None,
         }
+    }
+}
+
+impl FromBuf for Kson {
+    fn from_buf<T>(buf: T) -> Self
+    where
+        T: IntoBuf,
+    {
+        Byt(Bytes::from_buf(buf.into_buf()))
     }
 }
 

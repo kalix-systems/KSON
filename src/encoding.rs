@@ -4,7 +4,7 @@ use crate::{
     Inum::{self, *},
     Kson::{self, *},
 };
-use bytes::{buf::IntoBuf, Buf, Bytes};
+use bytes::{Buf, Bytes, IntoBuf};
 use num_bigint::{BigInt, Sign::*};
 use num_traits::*;
 use std::convert::TryInto;
