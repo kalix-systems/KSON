@@ -695,12 +695,20 @@ mod tests {
     }
 
     // TODO extend macro to support these cases
-    // #[test]
-    // /// Test `KsonRep` autoderive for named-tuple struct
-    // fn named_tuple() {
-    //     #[derive(KsonRep, Clone)]
-    //     struct Foo(u8, String);
-    // }
+    #[test]
+    /// Test `KsonRep` autoderive for named-tuple struct
+    fn named_tuple() {
+        #[derive(KsonRep, Clone, Debug)]
+        struct Foo(u8, String);
+
+        match Foo::from_kson(Foo(1, "hello".to_string()).to_kson()) {
+            Some(Foo(num, s)) => {
+                assert_eq!(num, 1);
+                assert_eq!(s, "hello".to_string());
+            }
+            _ => panic!("No Foo"),
+        }
+    }
 
     // // Test `KsonRep` autoderive for enum of named-tuple structs
     // fn c_type_enum() {
