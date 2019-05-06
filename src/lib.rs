@@ -23,8 +23,8 @@ pub mod util;
 /// A map wrapper around a sorted vector of pairs.
 pub mod vecmap;
 
-use bytes::Bytes;
-use hashbrown::HashMap;
+pub use bytes::Bytes;
+pub use hashbrown::HashMap;
 use inum::*;
 use num_bigint::BigInt;
 use rep::KsonRep;

@@ -539,10 +539,7 @@ pub fn enum_from_kson_helper<T: Debug>(
     fns: Vec<(&str, Box<FnMut(IntoIter<Kson>) -> Option<T>>)>,
 ) -> Option<T> {
     let mut fields = ks.into_vec()?.into_iter();
-    vec![
-        "word", "word", "word", "word", "word", "word", "word", "word", "word", "word", "word",
-        "word", "word", "word",
-    ];
+
     let constructor: Bytes = fields.next()?.try_into().ok()?;
     for (name, mut f) in fns {
         if constructor == str_to_bs(name) {
@@ -658,7 +655,7 @@ mod tests {
         match Named::from_kson(foo.to_kson()) {
             Some(Foo(num, string)) => {
                 assert_eq!(num, 1);
-                assert_eq!(&string, "hello");
+                assert_eq!(string, "hello".to_string());
             }
             _ => panic!("Couldn't retrieve tuple variant"),
         }
