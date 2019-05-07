@@ -1,9 +1,4 @@
-//#![allow(dead_code)]
-//#![allow(unused_variables)]
-//#![allow(unused_imports)]
 #![allow(clippy::cast_lossless)]
-// TODO figure out if dereferencing is still slower than cloning
-#![allow(clippy::clone_on_copy)]
 #![feature(is_sorted)]
 #![feature(result_map_or_else)]
 
