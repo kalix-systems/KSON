@@ -373,20 +373,20 @@ mod tests {
     fn c_struct() {
         #[derive(KsonRep, Clone)]
         struct CStruct {
-            foo: u8,
+            fu: u8,
         };
 
-        let c_struct = CStruct { foo: 1 };
+        let c_struct = CStruct { fu: 1 };
 
         // to_kson
         match CStruct::from_kson(c_struct.to_kson()) {
-            Some(CStruct { foo }) => assert_eq!(foo, 1),
+            Some(CStruct { fu }) => assert_eq!(fu, 1),
             None => panic!("Couldn't retrieve c-type struct"),
         }
 
         // into_kson
         match CStruct::from_kson(c_struct.into_kson()) {
-            Some(CStruct { foo }) => assert_eq!(foo, 1),
+            Some(CStruct { fu }) => assert_eq!(fu, 1),
             None => panic!("Couldn't retrieve c-type struct"),
         }
     }
@@ -402,10 +402,10 @@ mod tests {
 
         use Named::*;
 
-        let foo = Foo(1, "hello".to_string());
+        let fu = Foo(1, "hello".to_string());
 
         // to_kson
-        match Named::from_kson(foo.to_kson()) {
+        match Named::from_kson(fu.to_kson()) {
             Some(Foo(num, string)) => {
                 assert_eq!(num, 1);
                 assert_eq!(string, "hello".to_string());
@@ -414,7 +414,7 @@ mod tests {
         }
 
         // into_kson
-        match Named::from_kson(foo.into_kson()) {
+        match Named::from_kson(fu.into_kson()) {
             Some(Foo(num, string)) => {
                 assert_eq!(num, 1);
                 assert_eq!(&string, "hello");
@@ -473,13 +473,13 @@ mod tests {
 
         use CStyle::*;
 
-        let foo = Foo {
+        let fu = Foo {
             num:    1,
             string: "hello".to_string(),
         };
 
         // to_kson
-        match CStyle::from_kson(foo.to_kson()) {
+        match CStyle::from_kson(fu.to_kson()) {
             Some(Foo { num, string }) => {
                 assert_eq!(num, 1);
                 assert_eq!(&string, "hello");
@@ -488,7 +488,7 @@ mod tests {
         }
 
         // into_kson
-        match CStyle::from_kson(foo.into_kson()) {
+        match CStyle::from_kson(fu.into_kson()) {
             Some(Foo { num, string }) => {
                 assert_eq!(num, 1);
                 assert_eq!(&string, "hello");

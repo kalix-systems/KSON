@@ -1,3 +1,4 @@
+#![allow(clippy::inconsistent_digit_grouping)]
 use crate::{
     util::*,
     vecmap::VecMap,
@@ -604,7 +605,7 @@ mod tests {
         // length
         assert_eq!(out[1], 140 - BIG_BIT);
         // bytes
-        assert_eq!(out[2..].to_vec(), vec![b'w' as u8; 140]);
+        assert_eq!(out[2..].to_vec(), vec![b'w'; 140]);
     }
 
     #[test]
@@ -657,7 +658,7 @@ mod tests {
         // element tags
         assert_eq!(vec![out[1], out[3]], vec![0b010_0_0001, 0b010_0_0001]);
         // check that the values are right
-        assert_eq!(vec![out[2], out[4]], vec![b'a' as u8, b'b' as u8]);
+        assert_eq!(vec![out[2], out[4]], vec![b'a', b'b']);
     }
 
     #[test]

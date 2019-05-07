@@ -29,10 +29,7 @@ fn big_k() -> Kson {
     let m: VecMap<Bytes, Kson> = (0..N_MAP)
         .map(|i| (u64_to_bytes_le(i as u64), Kson::from(v0.clone())))
         .collect();
-    let v: Vec<Kson> = std::iter::repeat(m)
-        .map(|m| Kson::from(m))
-        .take(N_ARR)
-        .collect();
+    let v: Vec<Kson> = std::iter::repeat(m).map(Kson::from).take(N_ARR).collect();
     Kson::from(v)
 }
 
@@ -68,7 +65,7 @@ fn bench_enc(c: &mut Criterion) {
 
 fn bench_dec(c: &mut Criterion) {
     let big_k = big_k();
-    let enc = Bytes::from(encode_full(&big_k));
+    let enc = encode_full(&big_k);
     c.bench_function(
         &format!("Decoding a Kson object, input size of {} bytes", enc.len()),
         move |b| b.iter(|| decode_full(black_box(&enc)).unwrap()),
@@ -86,7 +83,7 @@ fn bench_enc_flat(c: &mut Criterion) {
 
 fn bench_dec_flat(c: &mut Criterion) {
     let big_arr = big_arr();
-    let enc = Bytes::from(encode_full(&big_arr));
+    let enc = encode_full(&big_arr);
     c.bench_function(
         &format!("Decoding a Kson vector of length {}", enc.len()),
         move |b| b.iter(|| decode_full(black_box(&enc)).unwrap()),
