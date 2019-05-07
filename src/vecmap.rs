@@ -17,6 +17,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// ```
     /// use kson::prelude::*;
     ///
+    /// // create `VecMap`
     /// let vmap = VecMap::from_sorted(vec![(1, "foo"), (2, "bar"), (3, "baz")]);
     /// ```
     ///
@@ -36,8 +37,10 @@ impl<K: Ord, V> VecMap<K, V> {
     /// ```
     /// use kson::prelude::*;
     ///
+    /// // create `VecMap`
     /// let vmap = VecMap::from_sorted(vec![("foo", "bar")]);
     ///
+    /// // should have one element
     /// assert_eq!(vmap.len(), 1);
     /// ```
     pub fn len(&self) -> usize { self.0.len() }
@@ -49,8 +52,10 @@ impl<K: Ord, V> VecMap<K, V> {
     /// ```
     /// use kson::prelude::*;
     ///
+    /// // create empty VecMap
     /// let vmap = VecMap::from_sorted(Vec::<(u8, u8)>::new());
     ///
+    /// // should return `true`
     /// assert!(vmap.is_empty());
     /// ```
     pub fn is_empty(&self) -> bool { self.0.is_empty() }
@@ -62,9 +67,14 @@ impl<K: Ord, V> VecMap<K, V> {
     /// ```
     /// use kson::prelude::*;
     ///
+    /// // create `VecMap`
     /// let vmap = VecMap::from_sorted(vec![(1, "foo"), (2, "bar"), (3, "baz")]);
     ///
+    /// // get first element
     /// let (k, v) = vmap.iter().next().unwrap();
+    ///
+    /// // should be equal
+    /// assert_eq!((k, v), (&1, &"foo"))
     /// ```
     pub fn iter(&self) -> Iter<(K, V)> { self.0.iter() }
 }
@@ -78,8 +88,10 @@ impl<K: Ord + Hash, V> VecMap<K, V> {
     /// use hashbrown::HashMap;
     /// use kson::prelude::*;
     ///
+    /// // create `VecMap`
     /// let vmap = VecMap::from_sorted(vec![(1, "foo"), (2, "bar"), (3, "baz")]);
     ///
+    /// // convert to `HashMap`
     /// let hmap: HashMap<u8, &str> = vmap.into_hashmap();
     /// ```
     pub fn into_hashmap<S: BuildHasher + Default>(self) -> HashMap<K, V, S> {

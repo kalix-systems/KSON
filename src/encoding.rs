@@ -217,7 +217,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
     }
 }
 
-/// Encode `Kson`, storing output in `out`.
+/// Encode `Kson` into its binary representation, storing output in `out`.
 ///
 /// # Arguments
 ///
@@ -229,9 +229,12 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
 /// ```
 /// use kson::prelude::*;
 ///
+/// // output buffer
 /// let out = &mut Bytes::new();
+/// // value to encode
 /// let ks = Kson::Null;
 ///
+/// // encode value
 /// encode(&ks, out);
 /// ```
 pub fn encode(ks: &Kson, out: &mut Bytes) { encode_meta(kson_to_meta(ks), out) }
@@ -352,7 +355,11 @@ fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Option<usize> {
 /// ```
 /// use kson::prelude::*;
 ///
-/// let k_null = encode_full(&Kson::Null);
+/// // encoded value
+/// let k_null = &mut encode_full(&Kson::Null).into_buf();
+///
+/// // should be equal
+/// assert_eq!(decode(k_null).unwrap(), Kson::Null);
 /// ```
 pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
     let tag = read_tag(data)?;
@@ -402,7 +409,10 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
 /// ```
 /// use kson::prelude::*;
 ///
+/// // value to encode
 /// let ks = Kson::Null;
+///
+/// // encoded value
 /// let enc: Bytes = encode_full(&ks);
 /// ```
 pub fn encode_full(ks: &Kson) -> Bytes {
@@ -417,11 +427,15 @@ pub fn encode_full(ks: &Kson) -> Bytes {
 ///
 /// * `bs` - A buffer containing the bytestring to be decoded.
 ///
+/// # Example
+///
 /// ```
 /// use kson::{prelude::*, Kson::Null};
 ///
+/// // encoded value
 /// let bs = encode_full(&Null);
 ///
+/// // decode value
 /// let dec = decode_full(bs);
 /// ```
 pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> { decode(&mut bs.into_buf()) }

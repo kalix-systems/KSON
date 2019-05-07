@@ -5,10 +5,7 @@ authors = ["theseriousadult <jack@gallabytes.com>"]
 edition = "2018"
 
 [dependencies]
-maplit = "1.0"
-mdo = "0.3"
 pyo3 = "0.6.0"
-mdo-future = "0.2"
 hashbrown = "0.2"
 num-traits = "0.2"
 num-bigint = "0.2"
@@ -17,9 +14,6 @@ kson_macro = {path = "../kson_macro"}
 
 [dev-dependencies]
 proptest = "0.9"
-tempfile = "3.0"
-quickcheck = "0.8"
-quickcheck_macros = "0.8"
 criterion = "0.2"
 common_utils = {path = "../common_utils"}
 

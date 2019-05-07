@@ -45,6 +45,7 @@ pub trait KsonRep: Clone + Sized {
     ///
     /// let k_num = "foo".to_string().into_kson();
     ///
+    /// // should be equal
     /// assert_eq!(String::from_kson(k_num).unwrap(), "foo");
     /// ```
     fn from_kson(ks: Kson) -> Option<Self>;
@@ -314,9 +315,12 @@ impl KsonRep for SocketAddrV4 {
 /// ```
 /// use kson::prelude::*;
 ///
+/// // vector of `Kson` values
 /// let ks_values = vec![1, 2, 3].into_kson().into_vec().unwrap();
 ///
+/// // get first value
 /// let first: u8 = pop_kson(&mut ks_values.into_iter()).unwrap();
+/// // should be 1
 /// assert_eq!(first, 1);
 /// ```
 pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Option<T> {
