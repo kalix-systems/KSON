@@ -646,7 +646,7 @@ mod tests {
         #[derive(KsonRep, Clone, Debug)]
         enum Named {
             Foo(u8, String),
-            Bar(u8),
+            Bar(Option<u8>),
         }
 
         use Named::*;
@@ -698,7 +698,7 @@ mod tests {
 
     #[test]
     /// Test `KsonRep` autoderive for named-tuple struct
-    fn named_tuple() {
+    fn tuple() {
         #[derive(KsonRep, Clone, Debug)]
         struct Foo(u8, String);
 
@@ -711,39 +711,39 @@ mod tests {
         }
     }
 
-    // TODO extend macro to support this case
-    // // Test `KsonRep` autoderive for enum of named-tuple structs
-    // fn c_type_enum() {
-    //    #[derive(KsonRep, Clone, Debug)]
-    //    enum CType {
-    //        Foo { num: u8, string: String },
-    //        Bar,
-    //    }
+    // Test `KsonRep` autoderive for enum of C-style structs
+    #[test]
+    fn c_style_enum() {
+        #[derive(KsonRep, Clone, Debug)]
+        enum CStyle {
+            Foo { num: u8, string: String },
+            Bar,
+        }
 
-    //    use CType::*;
+        use CStyle::*;
 
-    //    let foo = Foo {
-    //        num:    1,
-    //        string: "hello".to_string(),
-    //    };
+        let foo = Foo {
+            num:    1,
+            string: "hello".to_string(),
+        };
 
-    //    // to_kson
-    //    match CType::from_kson(foo.to_kson()) {
-    //        Some(Foo(num, string)) => {
-    //            assert_eq!(num, 1);
-    //            assert_eq!(&string, "hello");
-    //        }
-    //        _ => panic!("Couldn't retrieve tuple variant"),
-    //    }
+        // to_kson
+        match CStyle::from_kson(foo.to_kson()) {
+            Some(Foo { num, string }) => {
+                assert_eq!(num, 1);
+                assert_eq!(&string, "hello");
+            }
+            _ => panic!("Couldn't retrieve tuple variant"),
+        }
 
-    //    // into_kson
-    //    match Named::from_kson(foo.into_kson()) {
-    //        Some(Foo(num, string)) => {
-    //            assert_eq!(num, 1);
-    //            assert_eq!(&string, "hello");
-    //        }
-    //        _ => panic!("Couldn't retrieve tuple variant"),
-    //    }
-    // }
+        // into_kson
+        match CStyle::from_kson(foo.into_kson()) {
+            Some(Foo { num, string }) => {
+                assert_eq!(num, 1);
+                assert_eq!(&string, "hello");
+            }
+            _ => panic!("Couldn't retrieve tuple variant"),
+        }
+    }
 
 }
