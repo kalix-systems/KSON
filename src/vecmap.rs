@@ -15,7 +15,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// # Example
     ///
     /// ```
-    /// use kson::vecmap::*;
+    /// use kson::prelude::*;
     ///
     /// let vmap = VecMap::from_sorted(vec![(1, "foo"), (2, "bar"), (3, "baz")]);
     /// ```
@@ -34,7 +34,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// # Example
     ///
     /// ```
-    /// use kson::vecmap::*;
+    /// use kson::prelude::*;
     ///
     /// let vmap = VecMap::from_sorted(vec![("foo", "bar")]);
     ///
@@ -47,7 +47,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// # Example
     ///
     /// ```
-    /// use kson::vecmap::*;
+    /// use kson::prelude::*;
     ///
     /// let vmap = VecMap::from_sorted(Vec::<(u8, u8)>::new());
     ///
@@ -60,7 +60,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// # Example
     ///
     /// ```
-    /// use kson::vecmap::*;
+    /// use kson::prelude::*;
     ///
     /// let vmap = VecMap::from_sorted(vec![(1, "foo"), (2, "bar"), (3, "baz")]);
     ///
@@ -76,7 +76,7 @@ impl<K: Ord + Hash, V> VecMap<K, V> {
     ///
     /// ```
     /// use hashbrown::HashMap;
-    /// use kson::vecmap::*;
+    /// use kson::prelude::*;
     ///
     /// let vmap = VecMap::from_sorted(vec![(1, "foo"), (2, "bar"), (3, "baz")]);
     ///

@@ -136,6 +136,10 @@ macro_rules! len_or_digs {
 }
 
 /// Converts `Kson` to tagged `Kson`.
+///
+/// # Arguments
+///
+/// * `ks: &Kson` - A reference to the value to be converted.
 fn kson_to_meta(ks: &Kson) -> KMeta {
     match ks {
         Null => KMCon(CON_NULL),
@@ -222,17 +226,21 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
 /// # Example
 ///
 /// ```
-/// use bytes::Bytes;
-/// use kson::{encoding::*, Kson::Null};
+/// use kson::prelude::*;
 ///
 /// let out = &mut Bytes::new();
-/// let ks = Null;
+/// let ks = Kson::Null;
 ///
 /// encode(&ks, out);
 /// ```
 pub fn encode(ks: &Kson, out: &mut Bytes) { encode_meta(kson_to_meta(ks), out) }
 
 /// Read a specific number of bytes from a buffer.
+///
+/// # Arguments
+///
+/// * `data: &mut B` - A mutable reference to the buffer that will be read from.
+/// * `num_bytes` - The number of bytes to read from the buffer.
 fn read_bytes<B: Buf>(data: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
     if data.remaining() >= num_bytes {
         let mut bts = vec![0; num_bytes];
@@ -267,6 +275,10 @@ macro_rules! big_and_len {
 }
 
 /// Try to read tag byte from buffer.
+///
+/// # Arguments
+///
+/// * `input: &mut Buf` - A mutable reference to the buffer to be read from.
 fn read_tag(input: &mut Buf) -> Option<KTag> {
     if input.has_remaining() {
         let byte = input.get_u8();
@@ -337,9 +349,9 @@ fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Option<usize> {
 /// # Example
 ///
 /// ```
-/// use kson::{encoding::*, Kson::Null};
+/// use kson::prelude::*;
 ///
-/// let k_null = encode_full(&Null);
+/// let k_null = encode_full(&Kson::Null);
 /// ```
 pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
     let tag = read_tag(data)?;
@@ -387,10 +399,9 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
 /// # Example
 ///
 /// ```
-/// use bytes::Bytes;
-/// use kson::{encoding::*, Kson::Null};
+/// use kson::prelude::*;
 ///
-/// let ks = Null;
+/// let ks = Kson::Null;
 /// let enc: Bytes = encode_full(&ks);
 /// ```
 pub fn encode_full(ks: &Kson) -> Bytes {
@@ -406,7 +417,7 @@ pub fn encode_full(ks: &Kson) -> Bytes {
 /// * `bs` - A buffer containing the bytestring to be decoded.
 ///
 /// ```
-/// use kson::{encoding::*, Kson::Null};
+/// use kson::{prelude::*, Kson::Null};
 ///
 /// let bs = encode_full(&Null);
 ///

@@ -54,7 +54,7 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
     /// let numbers = vec![1, 2, 3];
     ///
@@ -75,7 +75,7 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
     /// let numbers = vec![1, 2, 3];
     ///
@@ -91,9 +91,8 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use bytes::Bytes;
     /// use hashbrown::HashMap;
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
     /// let mut simple_map = HashMap::new();
     /// simple_map.insert(Bytes::from("foo"), 1);
@@ -115,9 +114,8 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use bytes::Bytes;
     /// use hashbrown::HashMap;
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
     /// let mut simple_map = HashMap::new();
     /// simple_map.insert(Bytes::from("foo"), 1);
@@ -134,9 +132,8 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use bytes::Bytes;
     /// use hashbrown::HashMap;
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
     /// let mut simple_map = HashMap::new();
     /// simple_map.insert(Bytes::from("foo"), 1);
@@ -154,7 +151,7 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::{rep::*, Kson::Null};
+    /// use kson::prelude::*;
     ///
     /// let ks_num = 1.to_kson();
     ///
@@ -167,7 +164,7 @@ impl Kson {
     ///
     /// # Example
     /// ```
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
     /// let foo = b"this is an example";
     ///
@@ -198,7 +195,7 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::rep::*;
+    /// use kson::prelude::*;
     ///
     /// let ks_num = 1.into_kson();
     /// ```
@@ -215,7 +212,7 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::rep::*;
+    /// use kson::prelude::*;
     ///
     /// let b = true.into_kson();
     ///
