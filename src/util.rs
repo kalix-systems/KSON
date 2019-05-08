@@ -1,8 +1,5 @@
 use bytes::Bytes;
 
-/// Converts a `u64` to an 8-byte `Bytes` in little endian order
-pub fn u64_to_bytes_le(x: u64) -> Bytes { Bytes::from(u64::to_le_bytes(x).to_vec()) }
-
 /// Converts a `u64` to the smallest possible vec of digits, little-endian
 pub fn u64_to_digits(val: u64) -> Vec<u8> {
     let len = 8 - u64::leading_zeros(val) / 8;
