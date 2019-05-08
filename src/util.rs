@@ -1,26 +1,7 @@
 use bytes::{buf::FromBuf, Bytes};
 
-/// Converts a `u64` to an 8-byte `Bytes` value in little endian order
-///
-/// # Arguments
-///
-/// * `x: u64` - The integer to be converted.
-///
-/// # Example
-///
-/// ```
-/// use kson::util::u64_to_bytes_le;
-///
-/// let num = 4u64;
-///
-/// let some_bytes = u64_to_bytes_le(num);
-///
-/// // first byte should be 4
-/// assert_eq!(some_bytes[0], 4);
-/// // the rest should be 0
-/// assert_eq!(some_bytes[1..8], [0; 7]);
-/// ```
-pub fn u64_to_bytes_le(num: u64) -> Bytes { Bytes::from(u64::to_le_bytes(num).to_vec()) }
+/// Converts a `u64` to an 8-byte `Bytes` in little endian order
+pub fn u64_to_bytes_le(x: u64) -> Bytes { Bytes::from(u64::to_le_bytes(x).to_vec()) }
 
 /// Converts a `u64` to the smallest possible vec of digits in little-endian order.
 ///

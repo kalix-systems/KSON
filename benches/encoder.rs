@@ -10,9 +10,10 @@ use criterion::{black_box, Criterion};
 use kson::{
     encoding::{decode_full, encode_full},
     vecmap::*,
-    *,
+    Kson,
 };
-use util::*;
+
+pub fn u64_to_bytes_le(x: u64) -> Bytes { Bytes::from(u64::to_le_bytes(x).to_vec()) }
 
 const N_BIG_ARR: usize = 2000;
 
