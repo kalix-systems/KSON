@@ -7,12 +7,14 @@ pub extern crate kson_macro;
 
 /// KSON binary encoder and decoder.
 pub mod encoding;
+/// Floating-point numbers
+pub mod float;
 /// Integer variants.
 pub mod inum;
 /// Prelude
 pub mod prelude;
 /// Python support.
-pub mod python;
+// pub mod python;
 /// Types representable as `Kson`.
 pub mod rep;
 /// Helper functions.
@@ -21,6 +23,7 @@ pub mod util;
 pub mod vecmap;
 
 pub use bytes::{buf::FromBuf, Bytes, IntoBuf};
+use float::*;
 pub use hashbrown::HashMap;
 use inum::*;
 use num_bigint::BigInt;
@@ -43,6 +46,8 @@ pub enum Kson {
     Array(Vec<Kson>),
     /// Map type.
     Map(VecMap<Bytes, Kson>),
+    /// Floating point number type,
+    KFloat(Float),
 }
 
 use Kson::*;

@@ -2,6 +2,7 @@
 use crate::{
     util::*,
     vecmap::VecMap,
+    Float::{self, *},
     Inum::{self, *},
     Kson::{self, *},
 };
@@ -30,6 +31,17 @@ const BIG_BIT: u8 = 0b0001_0000;
 /// Integer sign bit, 0x0f
 const INT_POSITIVE: u8 = 0b0000_1000;
 
+/// Float type bits
+const TYPE_FLOAT: u8 = 0b101_00_000;
+/// Half-precision tag
+const HALF: u8 = TYPE_FLOAT;
+/// Single-precision tag
+const SINGLE: u8 = TYPE_FLOAT + 16;
+/// Double-precision tag
+const DOUBLE: u8 = TYPE_FLOAT + 32;
+/// Arbitrary-precision float tag
+const BIG_FLOAT: u8 = TYPE_FLOAT + 48;
+
 /// `Null` constant.
 const CON_NULL: u8 = 0b0000_0000;
 /// `True` constant.
@@ -44,9 +56,9 @@ const BIGINT_MIN_LEN: u64 = MASK_INT_LEN_BITS as u64 + 2;
 const BIGCON_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
 
 #[derive(Clone, Debug)]
-/// The second element in a tagged KSON integer.
-/// It is either a length (in the case of large integers)
-/// or digits (in the case of small integers).
+/// The second element in a tagged KSON integer, bytestring, array, or map.
+/// It is either a length (in the case of large versions)
+/// or digits (in the case of small versions).
 pub enum LenOrDigs {
     Len(u8),
     Digs(Vec<u8>),
@@ -67,6 +79,8 @@ pub enum KMeta<'a> {
     KMArr(LenOrDigs, &'a Vec<Kson>),
     /// Tagged maps
     KMMap(LenOrDigs, &'a VecMap<Bytes, Kson>),
+    /// Tagged floats
+    KMFloat(&'a Float),
 }
 
 use KMeta::*;
@@ -119,7 +133,7 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
                             digs,
                         )
                     }
-                    NoSign => unreachable!("0 encoded as BigInt"),
+                    NoSign => unreachable!("0 should not be encoded as BigInt"),
                 }
             }
         }
@@ -149,6 +163,7 @@ fn kson_to_meta(ks: &Kson) -> KMeta {
         Byt(bs) => KMByt(len_or_digs!(bs), bs),
         Array(a) => KMArr(len_or_digs!(a), a),
         Map(m) => KMMap(len_or_digs!(m), m),
+        KFloat(f) => KMFloat(f),
     }
 }
 
@@ -212,6 +227,28 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
             for (k, v) in m.iter() {
                 encode(&Byt(k.clone()), out);
                 encode(v, out);
+            }
+        }
+        KMFloat(f) => {
+            match f {
+                Half(n) => {
+                    out.extend_from_slice(&[HALF]);
+                    out.extend_from_slice(&u16::to_le_bytes(*n));
+                }
+                Single(n) => {
+                    out.extend_from_slice(&[SINGLE]);
+                    out.extend_from_slice(&u32::to_le_bytes(*n));
+                }
+                Double(n) => {
+                    out.extend_from_slice(&[DOUBLE]);
+                    out.extend_from_slice(&u64::to_le_bytes(*n));
+                }
+                Big(n) => {
+                    out.extend_from_slice(&[BIG_FLOAT]);
+                    let (base, exp) = n.to_pair();
+                    &encode_meta(inum_to_meta(base), out);
+                    &encode_meta(inum_to_meta(exp), out);
+                }
             }
         }
     }

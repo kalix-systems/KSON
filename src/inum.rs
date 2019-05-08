@@ -1,11 +1,10 @@
+use crate::{from_as, from_fn};
 use num_bigint::{BigInt, ParseBigIntError};
 use num_traits::*;
 use std::{
     convert::TryFrom,
     ops::{Add, Div, Mul, Neg, Rem, Sub},
 };
-
-use crate::{from_as, from_fn};
 
 /// `Inum`s are either `i64` or `BigInt`s (i.e., big integers).
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
