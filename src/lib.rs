@@ -47,7 +47,7 @@ pub enum Kson {
     /// Map type.
     Map(VecMap<Bytes, Kson>),
     /// Floating point number type,
-    KFloat(Float),
+    Kfloat(Float),
 }
 
 use Kson::*;
@@ -225,8 +225,19 @@ impl Kson {
     /// use kson::prelude::*;
     ///
     /// let ks_num = 1.into_kson();
+    ///
+    /// let n = u64::try_from(ks_num.to_inum().unwrap().clone()).unwrap();
+    ///
+    /// assert_eq!(n, 1);
     /// ```
     pub fn to_inum(&self) -> Option<&Inum> {
+        match self {
+            Kint(i) => Some(i),
+            _ => None,
+        }
+    }
+
+    pub fn into_inum(self) -> Option<Inum> {
         match self {
             Kint(i) => Some(i),
             _ => None,

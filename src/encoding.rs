@@ -1,5 +1,6 @@
 #![allow(clippy::inconsistent_digit_grouping)]
 use crate::{
+    float::LargeFloat,
     util::*,
     vecmap::VecMap,
     Float::{self, *},
@@ -163,7 +164,7 @@ fn kson_to_meta(ks: &Kson) -> KMeta {
         Byt(bs) => KMByt(len_or_digs!(bs), bs),
         Array(a) => KMArr(len_or_digs!(a), a),
         Map(m) => KMMap(len_or_digs!(m), m),
-        KFloat(f) => KMFloat(f),
+        Kfloat(f) => KMFloat(f),
     }
 }
 
@@ -300,6 +301,7 @@ pub enum KTag {
     KByt(bool, u8),
     KArr(bool, u8),
     KMap(bool, u8),
+    KFloat(u8),
 }
 
 use KTag::*;
@@ -323,6 +325,7 @@ macro_rules! big_and_len {
 fn read_tag(input: &mut Buf) -> Option<KTag> {
     if input.has_remaining() {
         let byte = input.get_u8();
+
         match byte & MASK_TYPE {
             TYPE_CON => Some(KCon(byte & MASK_META)),
             TYPE_INT => {
@@ -335,6 +338,7 @@ fn read_tag(input: &mut Buf) -> Option<KTag> {
             TYPE_BYT => big_and_len!(KByt, byte),
             TYPE_ARR => big_and_len!(KArr, byte),
             TYPE_MAP => big_and_len!(KMap, byte),
+            TYPE_FLOAT => Some(KFloat(byte)),
             _ => None,
         }
     } else {
@@ -431,6 +435,43 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
                 out.push((key, val));
             }
             Some(Map(VecMap::from(out)))
+        }
+        KFloat(b) => {
+            match b {
+                HALF => {
+                    let f = if data.remaining() >= 2 as usize {
+                        Some(data.get_u16_le())
+                    } else {
+                        None
+                    };
+
+                    Some(Kfloat(Half(f?)))
+                }
+                SINGLE => {
+                    let f = if data.remaining() >= 4 as usize {
+                        Some(data.get_u32_le())
+                    } else {
+                        None
+                    };
+
+                    Some(Kfloat(Single(f?)))
+                }
+                DOUBLE => {
+                    let f = if data.remaining() >= 4 as usize {
+                        Some(data.get_u64_le())
+                    } else {
+                        None
+                    };
+
+                    Some(Kfloat(Double(f?)))
+                }
+                BIG_FLOAT => {
+                    let (base, exp) = (decode(data)?.into_inum()?, decode(data)?.into_inum()?);
+                    let float = LargeFloat::new(base, exp);
+                    Some(Kfloat(Big(float)))
+                }
+                _ => None,
+            }
         }
     }
 }
@@ -754,6 +795,64 @@ mod tests {
             .enumerate()
             .for_each(|(i, x)| assert_eq!(*x as usize, i));
     }
+
+    #[test]
+    fn half_float() {
+        let f = half::f16::from_f32(1.0);
+        let kf = Kfloat(Float::from(f));
+        let meta = kson_to_meta(&kf);
+
+        let out = &mut Bytes::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], HALF);
+
+        // bytes
+        assert_eq!(out[1..3], [0, 0b00_1111_00]);
+
+        let f = half::f16::from_f32(-1.0);
+        let kf = Kfloat(Float::from(f));
+        let meta = kson_to_meta(&kf);
+
+        let out = &mut Bytes::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], HALF);
+
+        // bytes
+        assert_eq!(out[1..3], [0, 0b10_1111_00]);
+
+        let f = half::f16::from_f32(-0.0);
+        let kf = Kfloat(Float::from(f));
+        let meta = kson_to_meta(&kf);
+
+        let out = &mut Bytes::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], HALF);
+
+        // bytes
+        assert_eq!(out[1..3], [0, 0b1_000_0000]);
+
+        let f = half::f16::from_f32(65504.0);
+        let kf = Kfloat(Float::from(f));
+        let meta = kson_to_meta(&kf);
+
+        let out = &mut Bytes::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], HALF);
+
+        // bytes
+        assert_eq!(out[1..3], [0b1111_1111, 0b0111_1011]);
+    }
+
+    #[test]
+    fn large_floats() {}
 
     #[test]
     // for completeness
