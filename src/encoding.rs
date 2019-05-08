@@ -1,3 +1,4 @@
+#![allow(clippy::inconsistent_digit_grouping)]
 use crate::{
     util::*,
     vecmap::VecMap,
@@ -136,6 +137,10 @@ macro_rules! len_or_digs {
 }
 
 /// Converts `Kson` to tagged `Kson`.
+///
+/// # Arguments
+///
+/// * `ks: &Kson` - A reference to the value to be converted.
 fn kson_to_meta(ks: &Kson) -> KMeta {
     match ks {
         Null => KMCon(CON_NULL),
@@ -212,7 +217,7 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
     }
 }
 
-/// Encode `Kson`, storing output in `out`.
+/// Encode `Kson` into its binary representation, storing output in `out`.
 ///
 /// # Arguments
 ///
@@ -222,17 +227,24 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
 /// # Example
 ///
 /// ```
-/// use bytes::Bytes;
-/// use kson::{encoding::*, Kson::Null};
+/// use kson::prelude::*;
 ///
+/// // output buffer
 /// let out = &mut Bytes::new();
-/// let ks = Null;
+/// // value to encode
+/// let ks = Kson::Null;
 ///
+/// // encode value
 /// encode(&ks, out);
 /// ```
 pub fn encode(ks: &Kson, out: &mut Bytes) { encode_meta(kson_to_meta(ks), out) }
 
 /// Read a specific number of bytes from a buffer.
+///
+/// # Arguments
+///
+/// * `data: &mut B` - A mutable reference to the buffer that will be read from.
+/// * `num_bytes` - The number of bytes to read from the buffer.
 fn read_bytes<B: Buf>(data: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
     if data.remaining() >= num_bytes {
         let mut bts = vec![0; num_bytes];
@@ -267,6 +279,10 @@ macro_rules! big_and_len {
 }
 
 /// Try to read tag byte from buffer.
+///
+/// # Arguments
+///
+/// * `input: &mut Buf` - A mutable reference to the buffer to be read from.
 fn read_tag(input: &mut Buf) -> Option<KTag> {
     if input.has_remaining() {
         let byte = input.get_u8();
@@ -337,9 +353,13 @@ fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Option<usize> {
 /// # Example
 ///
 /// ```
-/// use kson::{encoding::*, Kson::Null};
+/// use kson::prelude::*;
 ///
-/// let k_null = encode_full(&Null);
+/// // encoded value
+/// let k_null = &mut encode_full(&Kson::Null).into_buf();
+///
+/// // should be equal
+/// assert_eq!(decode(k_null).unwrap(), Kson::Null);
 /// ```
 pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
     let tag = read_tag(data)?;
@@ -387,10 +407,12 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
 /// # Example
 ///
 /// ```
-/// use bytes::Bytes;
-/// use kson::{encoding::*, Kson::Null};
+/// use kson::prelude::*;
 ///
-/// let ks = Null;
+/// // value to encode
+/// let ks = Kson::Null;
+///
+/// // encoded value
 /// let enc: Bytes = encode_full(&ks);
 /// ```
 pub fn encode_full(ks: &Kson) -> Bytes {
@@ -405,11 +427,15 @@ pub fn encode_full(ks: &Kson) -> Bytes {
 ///
 /// * `bs` - A buffer containing the bytestring to be decoded.
 ///
-/// ```
-/// use kson::{encoding::*, Kson::Null};
+/// # Example
 ///
+/// ```
+/// use kson::{prelude::*, Kson::Null};
+///
+/// // encoded value
 /// let bs = encode_full(&Null);
 ///
+/// // decode value
 /// let dec = decode_full(bs);
 /// ```
 pub fn decode_full<B: IntoBuf>(bs: B) -> Option<Kson> { decode(&mut bs.into_buf()) }
@@ -593,7 +619,7 @@ mod tests {
         // length
         assert_eq!(out[1], 140 - BIG_BIT);
         // bytes
-        assert_eq!(out[2..].to_vec(), vec![b'w' as u8; 140]);
+        assert_eq!(out[2..].to_vec(), vec![b'w'; 140]);
     }
 
     #[test]
@@ -646,7 +672,7 @@ mod tests {
         // element tags
         assert_eq!(vec![out[1], out[3]], vec![0b010_0_0001, 0b010_0_0001]);
         // check that the values are right
-        assert_eq!(vec![out[2], out[4]], vec![b'a' as u8, b'b' as u8]);
+        assert_eq!(vec![out[2], out[4]], vec![b'a', b'b']);
     }
 
     #[test]

@@ -1,9 +1,4 @@
-//#![allow(dead_code)]
-//#![allow(unused_variables)]
-//#![allow(unused_imports)]
 #![allow(clippy::cast_lossless)]
-// TODO figure out if dereferencing is still slower than cloning
-#![allow(clippy::clone_on_copy)]
 #![feature(is_sorted)]
 #![feature(result_map_or_else)]
 
@@ -59,12 +54,15 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
+    /// // a vector of numbers
     /// let numbers = vec![1, 2, 3];
     ///
+    /// // convert into `Kson`
     /// let ks = numbers.into_kson();
     ///
+    /// // get a vec of `Kson` values
     /// let k_numbers = ks.to_vec().unwrap();
     /// ```
     pub fn to_vec(&self) -> Option<&Vec<Kson>> {
@@ -80,12 +78,15 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
+    /// // a vector of numbers
     /// let numbers = vec![1, 2, 3];
     ///
+    /// // convert into `Kson`
     /// let ks = numbers.into_kson();
     ///
+    /// // get a vec of `Kson` values
     /// let k_numbers = ks.into_vec().unwrap();
     /// ```
     pub fn into_vec(self) -> Option<Vec<Kson>> { self.try_into().ok() }
@@ -96,15 +97,17 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use bytes::Bytes;
     /// use hashbrown::HashMap;
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
+    /// // intialize `HashMap` and insert one key-value pair
     /// let mut simple_map = HashMap::new();
     /// simple_map.insert(Bytes::from("foo"), 1);
     ///
+    /// // convert map into `Kson`
     /// let k_map = simple_map.into_kson();
     ///
+    /// // convert `Kson` to `VecMap`
     /// let vmap = k_map.to_vecmap();
     /// ```
     pub fn to_vecmap(&self) -> Option<&VecMap<Bytes, Kson>> {
@@ -120,34 +123,38 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use bytes::Bytes;
     /// use hashbrown::HashMap;
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
+    /// // initialize `HashMap` and insert one key-value pair
     /// let mut simple_map = HashMap::new();
     /// simple_map.insert(Bytes::from("foo"), 1);
     ///
+    /// // convert map into `Kson`
     /// let k_map = simple_map.into_kson();
     ///
+    /// // convert `Kson` into `VecMap`.
     /// let vmap = k_map.into_vecmap();
     /// ```
     pub fn into_vecmap(self) -> Option<VecMap<Bytes, Kson>> { self.try_into().ok() }
 
-    /// Consumes a `Kson` value, converting it into a `VecMap`.
+    /// Consumes a `Kson` value, converting it into a `HashMap`.
     /// This will return `None` if the value is a not a `Kson` map.
     ///
     /// # Example
     ///
     /// ```
-    /// use bytes::Bytes;
     /// use hashbrown::HashMap;
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
+    /// // intialize `HashMap` and insert one key-value pair
     /// let mut simple_map = HashMap::new();
     /// simple_map.insert(Bytes::from("foo"), 1);
     ///
+    /// // convert map into `Kson`
     /// let k_map = simple_map.into_kson();
     ///
+    /// // convert `Kson` into `HashMap`
     /// let vmap = k_map.into_map();
     /// ```
     pub fn into_map(self) -> Option<HashMap<Bytes, Kson>> {
@@ -159,11 +166,15 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::{rep::*, Kson::Null};
+    /// use kson::prelude::*;
     ///
+    /// // number as `Kson`
     /// let ks_num = 1.to_kson();
     ///
+    /// // convert `Kson` into u8
     /// let num: u8 = ks_num.into_rep().unwrap();
+    ///
+    /// // should be equal
     /// assert_eq!(num, 1);
     /// ```
     pub fn into_rep<T: KsonRep>(self) -> Option<T> { T::from_kson(self) }
@@ -172,15 +183,18 @@ impl Kson {
     ///
     /// # Example
     /// ```
-    /// use kson::{rep::*, Kson};
+    /// use kson::prelude::*;
     ///
+    /// // bytesting literal
     /// let foo = b"this is an example";
     ///
+    /// // convert to `Kson`
     /// let ks_foo = Kson::from_static(foo);
     /// ```
     pub fn from_static(bytes: &'static [u8]) -> Kson { Byt(Bytes::from_static(bytes)) }
 
     /// Indicates whether a value is `Null`.
+    ///
     /// # Example
     ///
     /// ```
@@ -203,7 +217,7 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::rep::*;
+    /// use kson::prelude::*;
     ///
     /// let ks_num = 1.into_kson();
     /// ```
@@ -220,10 +234,11 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use kson::rep::*;
+    /// use kson::prelude::*;
     ///
     /// let b = true.into_kson();
     ///
+    /// // should be `true`
     /// assert!(b.to_bool().unwrap());
     /// ```
     pub fn to_bool(&self) -> Option<bool> {

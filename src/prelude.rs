@@ -1,1 +1,6 @@
-pub use crate::{kson_macro::*, rep::*, Bytes, FromBuf, Kson};
+pub use crate::{
+    encoding::{decode, decode_full, encode, encode_full},
+    kson_macro::*,
+    rep::*,
+    Bytes, FromBuf, IntoBuf, Kson,
+};

@@ -3,7 +3,6 @@ use crate::*;
 use bytes::Bytes;
 use hashbrown::HashMap;
 use std::{
-    fmt::Debug,
     net::{Ipv4Addr, SocketAddrV4},
     vec::{IntoIter, Vec},
 };
@@ -46,6 +45,7 @@ pub trait KsonRep: Clone + Sized {
     ///
     /// let k_num = "foo".to_string().into_kson();
     ///
+    /// // should be equal
     /// assert_eq!(String::from_kson(k_num).unwrap(), "foo");
     /// ```
     fn from_kson(ks: Kson) -> Option<Self>;
@@ -303,254 +303,6 @@ impl KsonRep for SocketAddrV4 {
     }
 }
 
-/// Manually specify how the fields of a struct should be converted to `Kson`. Usually,
-/// you should just add `#[derive(KsonRep)]` to your struct definition instead of doing it
-/// manually.
-///
-/// # Arguments
-///
-/// * `entries: Vec<&str, Kson>` - A veconstructor of pairs containing the name of the
-///   field and the value.
-///
-/// # Examples
-///
-/// An example using `#[derive(KsonRep)]`.
-///
-/// ```
-/// use kson::prelude::*;
-///
-/// #[derive(KsonRep, Clone)]
-/// /// This is a silly struct.
-/// struct SillyStruct {
-///     foo: String,
-///     bar: u8,
-/// }
-///
-/// /// This is an example using a silly struct.
-/// let example = SillyStruct {
-///     foo: "hello world".to_string(),
-///     bar: 0,
-/// };
-///
-/// /// Here, in the spirit of the silly struct, we convert it to and from `Kson`.
-/// let extracted = SillyStruct::from_kson(example.to_kson()).unwrap();
-///
-/// assert_eq!(extracted.foo, example.foo);
-/// assert_eq!(extracted.bar, example.bar);
-/// ```
-///
-/// An example of how this might be done manually.
-///
-/// ```
-/// use kson::prelude::*;
-///
-/// #[derive(Clone)]
-/// /// This is, again, a silly struct.
-/// struct SillyStruct {
-///     foo: String,
-///     bar: u8,
-/// }
-///
-/// // Implement `KsonRep`.
-/// impl KsonRep for SillyStruct {
-///     fn to_kson(&self) -> Kson {
-///         struct_to_kson_helper(vec![
-///             ("foo", self.foo.to_kson()),
-///             ("bar", self.bar.to_kson()),
-///         ])
-///     }
-///
-///     fn from_kson(ks: Kson) -> Option<SillyStruct> {
-///         // did `struct_from_kson_helper` return `None`?
-///         match struct_from_kson_helper(ks, &["foo", "bar"]) {
-///             Some(vec) => {
-///                 Some(SillyStruct {
-///                     // did this `from_kson` return `None`?
-///                     foo: match String::from_kson(vec[0].clone()) {
-///                         Some(val) => val,
-///                         None => return None,
-///                     },
-///                     // what about this one?
-///                     bar: match u8::from_kson(vec[1].clone()) {
-///                         Some(val) => val,
-///                         None => return None,
-///                     },
-///                 })
-///             }
-///             // all is lost
-///             None => None,
-///         }
-///     }
-/// }
-///
-/// let example = SillyStruct {
-///     foo: "hello world".to_string(),
-///     bar: 0,
-/// };
-///
-/// // this example is even more in the spirit of the silly struct
-/// let extracted = SillyStruct::from_kson(example.to_kson()).unwrap();
-///
-/// assert_eq!(extracted.foo, example.foo);
-/// assert_eq!(extracted.bar, example.bar);
-/// ```
-///
-/// If you find this tedious and repetitive (we do), please see the previous example.
-pub fn struct_to_kson_helper(entries: Vec<(&str, Kson)>) -> Kson {
-    let vm: VecMap<Bytes, Kson> = entries
-        .into_iter()
-        .map(|(k, v)| (str_to_bs(k), v))
-        .collect();
-    Kson::from(vm)
-}
-
-/// Manually specify how the fields a struct should be read from `Kson`. Usually, you
-/// should just add `#[derive(KsonRep)]` to your struct definition instead of doing it
-/// manually. See `struct_to_kson_helper` for an example of usage.
-///
-/// # Arguments
-///
-/// * `ks: Kson` - The `Kson` value containg the struct data.
-/// * `names: &[&str]` - The names of the fields in the order they are to be extracted.
-pub fn struct_from_kson_helper(ks: Kson, names: &[&str]) -> Option<Vec<Kson>> {
-    let m = ks.into_map()?;
-    let outs: Vec<Kson> = names
-        .iter()
-        .filter_map(|n| m.get(&str_to_bs(n)).cloned())
-        .collect();
-    if outs.len() == names.len() && outs.len() == m.len() {
-        Some(outs)
-    } else {
-        None
-    }
-}
-
-/// Helper function to manually specify how the variants an enum should be converted to
-/// `Kson`. Usually, you should just add `#[derive(KsonRep)]` to your enum definition
-/// instead of doing it manually.
-///
-/// # Arguments
-///
-/// * `name: &str` - The name of the enum variant.
-/// * `fields: Vec<Kson>` - The corresponding values.
-///
-/// # Examples
-///
-/// An example using `#[derive(KsonRep)]`.
-///
-/// ```
-/// use kson::prelude::*;
-///
-/// // Note: You need to derive `Clone` and `Debug` for the auto-derive to work.
-/// #[derive(Clone, KsonRep, Debug)]
-/// /// This is a silly enum. It has no purpose in life beyond being used for an example.
-/// enum SillyEnum {
-///     Foo(String),
-///     Bar(String, u8),
-/// }
-///
-/// use SillyEnum::*;
-///
-/// let foo = Foo("hello".to_string());
-/// let bar = Bar("world".to_string(), 1);
-///
-/// /// Returns the `String` inside `Foo` if the value is
-/// /// indeed a `Foo`, otherwise returns `None`.
-/// fn foo_or_none(maybe_foo: SillyEnum) -> Option<String> {
-///     match maybe_foo {
-///         Foo(s) => Some(s), // Great! We got some `Foo`. It's what I always wanted.
-///         Bar(_, _) => None, // It's not a `Foo`! All is lost. I must rethink my life.
-///     }
-/// }
-///
-/// let extract_foo = SillyEnum::from_kson(foo.to_kson()).unwrap();
-///
-/// assert_eq!(foo_or_none(extract_foo).unwrap(), "hello".to_string());
-/// ```
-///
-/// An example example of how this might be done manually.
-///
-/// ```
-/// use kson::prelude::*;
-/// use std::vec::IntoIter;
-///
-/// #[derive(Clone, Debug)]
-/// /// This, again, a silly enum.
-/// enum SillyEnum {
-///     Foo(String),
-///     Bar(String, u8),
-/// }
-///
-/// use SillyEnum::*;
-///
-/// // Implement `KsonRep`.
-/// impl KsonRep for SillyEnum {
-///     fn to_kson(&self) -> Kson {
-///         match self {
-///             Foo(string) => enum_to_kson_helper("Foo", vec![string.to_kson()]),
-///             Bar(string, num) => {
-///                 enum_to_kson_helper("Bar", vec![string.to_kson(), num.to_kson()])
-///             }
-///         }
-///     }
-///
-///     fn from_kson(ks: Kson) -> Option<SillyEnum> {
-///         let fns: Vec<(&str, Box<FnMut(IntoIter<Kson>) -> Option<SillyEnum>>)> = vec![
-///             (
-///                 "Foo",
-///                 Box::new(|mut iter: IntoIter<Kson>| -> Option<SillyEnum> {
-///                     let string = pop_kson(&mut iter)?;
-///                     if iter.next().is_none() {
-///                         Some(Foo(string))
-///                     } else {
-///                         None
-///                     }
-///                 }),
-///             ),
-///             (
-///                 "Bar",
-///                 Box::new(|mut iter: IntoIter<Kson>| -> Option<SillyEnum> {
-///                     let string = pop_kson(&mut iter)?;
-///                     let num = pop_kson(&mut iter)?;
-///                     if iter.next().is_none() {
-///                         Some(Bar(string, num))
-///                     } else {
-///                         None
-///                     }
-///                 }),
-///             ),
-///         ];
-///
-///         match enum_from_kson_helper(ks, fns) {
-///             Some(value) => Some(value),
-///             None => None,
-///         }
-///     }
-/// }
-/// ```
-pub fn enum_to_kson_helper(name: &str, mut fields: Vec<Kson>) -> Kson {
-    fields.insert(0, Kson::from(str_to_bs(name)));
-    Array(fields)
-}
-
-/// Manually specify how the variants an enum should be read from `Kson`. Usually, you
-/// should just add `#[derive(KsonRep)]` to your enum definition instead of doing it
-/// manually.
-pub fn enum_from_kson_helper<T: Debug>(
-    ks: Kson,
-    fns: Vec<(&str, Box<FnMut(IntoIter<Kson>) -> Option<T>>)>,
-) -> Option<T> {
-    let mut fields = ks.into_vec()?.into_iter();
-
-    let constructor: Bytes = fields.next()?.try_into().ok()?;
-    for (name, mut f) in fns {
-        if constructor == str_to_bs(name) {
-            return f(fields);
-        }
-    }
-    None
-}
-
 /// Gets the next element from an iterator of `Kson` values as `T`.
 ///
 /// # Arguments
@@ -563,9 +315,12 @@ pub fn enum_from_kson_helper<T: Debug>(
 /// ```
 /// use kson::prelude::*;
 ///
+/// // vector of `Kson` values
 /// let ks_values = vec![1, 2, 3].into_kson().into_vec().unwrap();
 ///
+/// // get first value
 /// let first: u8 = pop_kson(&mut ks_values.into_iter()).unwrap();
+/// // should be 1
 /// assert_eq!(first, 1);
 /// ```
 pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Option<T> {
@@ -622,20 +377,20 @@ mod tests {
     fn c_struct() {
         #[derive(KsonRep, Clone)]
         struct CStruct {
-            foo: u8,
+            fu: u8,
         };
 
-        let c_struct = CStruct { foo: 1 };
+        let c_struct = CStruct { fu: 1 };
 
         // to_kson
         match CStruct::from_kson(c_struct.to_kson()) {
-            Some(CStruct { foo }) => assert_eq!(foo, 1),
+            Some(CStruct { fu }) => assert_eq!(fu, 1),
             None => panic!("Couldn't retrieve c-type struct"),
         }
 
         // into_kson
         match CStruct::from_kson(c_struct.into_kson()) {
-            Some(CStruct { foo }) => assert_eq!(foo, 1),
+            Some(CStruct { fu }) => assert_eq!(fu, 1),
             None => panic!("Couldn't retrieve c-type struct"),
         }
     }
@@ -646,15 +401,15 @@ mod tests {
         #[derive(KsonRep, Clone, Debug)]
         enum Named {
             Foo(u8, String),
-            Bar(u8),
+            Bar(Option<u8>),
         }
 
         use Named::*;
 
-        let foo = Foo(1, "hello".to_string());
+        let fu = Foo(1, "hello".to_string());
 
         // to_kson
-        match Named::from_kson(foo.to_kson()) {
+        match Named::from_kson(fu.to_kson()) {
             Some(Foo(num, string)) => {
                 assert_eq!(num, 1);
                 assert_eq!(string, "hello".to_string());
@@ -663,7 +418,7 @@ mod tests {
         }
 
         // into_kson
-        match Named::from_kson(foo.into_kson()) {
+        match Named::from_kson(fu.into_kson()) {
             Some(Foo(num, string)) => {
                 assert_eq!(num, 1);
                 assert_eq!(&string, "hello");
@@ -698,7 +453,7 @@ mod tests {
 
     #[test]
     /// Test `KsonRep` autoderive for named-tuple struct
-    fn named_tuple() {
+    fn tuple() {
         #[derive(KsonRep, Clone, Debug)]
         struct Foo(u8, String);
 
@@ -711,39 +466,39 @@ mod tests {
         }
     }
 
-    // TODO extend macro to support this case
-    // // Test `KsonRep` autoderive for enum of named-tuple structs
-    // fn c_type_enum() {
-    //    #[derive(KsonRep, Clone, Debug)]
-    //    enum CType {
-    //        Foo { num: u8, string: String },
-    //        Bar,
-    //    }
+    // Test `KsonRep` autoderive for enum of C-style structs
+    #[test]
+    fn c_style_enum() {
+        #[derive(KsonRep, Clone, Debug)]
+        enum CStyle {
+            Foo { num: u8, string: String },
+            Bar,
+        }
 
-    //    use CType::*;
+        use CStyle::*;
 
-    //    let foo = Foo {
-    //        num:    1,
-    //        string: "hello".to_string(),
-    //    };
+        let fu = Foo {
+            num:    1,
+            string: "hello".to_string(),
+        };
 
-    //    // to_kson
-    //    match CType::from_kson(foo.to_kson()) {
-    //        Some(Foo(num, string)) => {
-    //            assert_eq!(num, 1);
-    //            assert_eq!(&string, "hello");
-    //        }
-    //        _ => panic!("Couldn't retrieve tuple variant"),
-    //    }
+        // to_kson
+        match CStyle::from_kson(fu.to_kson()) {
+            Some(Foo { num, string }) => {
+                assert_eq!(num, 1);
+                assert_eq!(&string, "hello");
+            }
+            _ => panic!("Couldn't retrieve tuple variant"),
+        }
 
-    //    // into_kson
-    //    match Named::from_kson(foo.into_kson()) {
-    //        Some(Foo(num, string)) => {
-    //            assert_eq!(num, 1);
-    //            assert_eq!(&string, "hello");
-    //        }
-    //        _ => panic!("Couldn't retrieve tuple variant"),
-    //    }
-    // }
+        // into_kson
+        match CStyle::from_kson(fu.into_kson()) {
+            Some(Foo { num, string }) => {
+                assert_eq!(num, 1);
+                assert_eq!(&string, "hello");
+            }
+            _ => panic!("Couldn't retrieve tuple variant"),
+        }
+    }
 
 }

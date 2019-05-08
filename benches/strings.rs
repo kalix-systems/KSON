@@ -6,7 +6,6 @@ extern crate kson;
 
 use bytes::Bytes;
 use criterion::{black_box, Criterion};
-
 use kson::{
     encoding::{decode_full, encode_full},
     *,
@@ -35,7 +34,7 @@ fn bench_enc(c: &mut Criterion) {
 
 fn bench_dec(c: &mut Criterion) {
     let big_arr = big_arr();
-    let enc = Bytes::from(encode_full(&big_arr));
+    let enc = encode_full(&big_arr);
     c.bench_function(
         &format!(
             "Decoding a Kson array of {} {}-character strings",

@@ -55,6 +55,15 @@ impl<'source> FromPyObject<'source> for Kson {
     }
 }
 
+/// Converts reference to `PyAny` into `Bytes`.
+///
+/// # Arguments
+///
+/// * `obj: &PyAny` - The python object to be converted.
+///
+/// # Errors
+///
+/// This function will return an error if the object cannot be converted into bytes.
 pub fn bytes_from_any(obj: &PyAny) -> PyResult<Bytes> {
     let bytes: &PyBytes = obj.try_into_exact()?;
     Ok(Bytes::from(bytes.as_bytes()))
