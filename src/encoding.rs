@@ -37,11 +37,11 @@ const TYPE_FLOAT: u8 = 0b101_00_000;
 /// Half-precision tag
 const HALF: u8 = TYPE_FLOAT;
 /// Single-precision tag
-const SINGLE: u8 = TYPE_FLOAT + 16;
+const SINGLE: u8 = TYPE_FLOAT | 0b000_01_000;
 /// Double-precision tag
-const DOUBLE: u8 = TYPE_FLOAT + 32;
+const DOUBLE: u8 = TYPE_FLOAT | 0b000_10_000;
 /// Arbitrary-precision float tag
-const BIG_FLOAT: u8 = TYPE_FLOAT + 48;
+const BIG_FLOAT: u8 = TYPE_FLOAT | 0b000_11_000;
 
 /// `Null` constant.
 const CON_NULL: u8 = 0b0000_0000;
@@ -339,7 +339,10 @@ fn read_tag(input: &mut Buf) -> Option<KTag> {
             TYPE_ARR => big_and_len!(KArr, byte),
             TYPE_MAP => big_and_len!(KMap, byte),
             TYPE_FLOAT => Some(KFloat(byte)),
-            _ => None,
+            _ => {
+                println!("no tag {:b}", byte);
+                None
+            }
         }
     } else {
         None
@@ -457,12 +460,14 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
                     Some(Kfloat(Single(f?)))
                 }
                 DOUBLE => {
-                    let f = if data.remaining() >= 4 as usize {
+                    println!("decoding this float");
+                    let f = if data.remaining() >= 8 as usize {
                         Some(data.get_u64_le())
                     } else {
                         None
                     };
 
+                    println!("this case");
                     Some(Kfloat(Double(f?)))
                 }
                 BIG_FLOAT => {
@@ -470,7 +475,10 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
                     let float = LargeFloat::new(base, exp);
                     Some(Kfloat(Big(float)))
                 }
-                _ => None,
+                _ => {
+                    println!("not caught");
+                    None
+                }
             }
         }
     }

@@ -24,6 +24,7 @@ pub mod vecmap;
 
 pub use bytes::{buf::FromBuf, Bytes, IntoBuf};
 use float::*;
+use half::f16;
 pub use hashbrown::HashMap;
 use inum::*;
 use num_bigint::BigInt;
@@ -320,10 +321,15 @@ macro_rules! try_from_ctor {
 
 from_fn!(Kson, bool, Bool);
 try_from_ctor!(Kson, bool, Bool);
+
 from_fn!(Kson, Inum, Kint);
 try_from_ctor!(Kson, Inum, Kint);
+
 from_fn!(Kson, Bytes, Byt);
 try_from_ctor!(Kson, Bytes, Byt);
+
+from_fn!(Kson, Float, Kfloat);
+try_from_ctor!(Kson, Float, Kfloat);
 
 try_from_ctor!(Kson, Vec<Kson>, Array);
 try_from_ctor!(Kson, VecMap<Bytes, Kson>, Map);
@@ -331,6 +337,10 @@ try_from_ctor!(Kson, VecMap<Bytes, Kson>, Map);
 compose_from!(Kson, Inum, BigInt);
 compose_from!(Kson, Inum, i64);
 compose_from!(Kson, Inum, u64);
+
+compose_from!(Kson, Float, f32);
+compose_from!(Kson, Float, f64);
+compose_from!(Kson, Float, f16);
 
 from_prims!(Kson);
 
