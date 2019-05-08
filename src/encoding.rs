@@ -852,7 +852,62 @@ mod tests {
     }
 
     #[test]
-    fn large_floats() {}
+    fn single_floats() {
+        let f = 1f32;
+        let kf = Kfloat(Float::from(f));
+        let meta = kson_to_meta(&kf);
+
+        let out = &mut Bytes::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], SINGLE);
+
+        // bytes
+        assert_eq!(out[1..5], [0, 0, 0b1000_0000, 0b0011_1111]);
+
+        let f = -1f32;
+        let kf = Kfloat(Float::from(f));
+        let meta = kson_to_meta(&kf);
+
+        let out = &mut Bytes::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], SINGLE);
+
+        // bytes
+        assert_eq!(out[1..5], [0, 0, 0b1000_0000, 0b1011_1111]);
+
+        let f = -0f32;
+        let kf = Kfloat(Float::from(f));
+        let meta = kson_to_meta(&kf);
+
+        let out = &mut Bytes::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], SINGLE);
+
+        // bytes
+        assert_eq!(out[1..5], [0, 0, 0, 0b1_000_0000]);
+    }
+
+    #[test]
+    fn double_floats() {
+        let f = 1f64;
+        let kf = Kfloat(Float::from(f));
+        let meta = kson_to_meta(&kf);
+
+        let out = &mut Bytes::new();
+        encode_meta(meta, out);
+
+        // tag
+        assert_eq!(out[0], DOUBLE);
+
+        // bytes
+        assert_eq!(out[1..9], [0, 0, 0, 0, 0, 0, 0b1111_0000, 0b00111111]);
+    }
 
     #[test]
     // for completeness
