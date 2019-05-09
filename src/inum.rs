@@ -29,7 +29,10 @@ from_fn!(Inum, u64, |u| {
 });
 
 from_fn!(Inum, BigInt, |i: BigInt| {
-    i.to_i64().map_or_else(|| Int(i), I64)
+    match i.to_i64() {
+        Some(j) => I64(j),
+        None => Int(i),
+    }
 });
 
 from_fn!(BigInt, Inum, |i: Inum| {
@@ -109,8 +112,10 @@ macro_rules! checked_impl {
             fn $op_suff(self, other: $arg) -> Inum {
                 match (self, other) {
                     (I64(i), I64(j)) => {
-                        i.$op_checked(j)
-                            .map_or_else(|| Int(BigInt::from(i).$op_suff(BigInt::from(j))), I64)
+                        match i.$op_checked(j) {
+                            Some(k) => I64(k),
+                            None => Int(BigInt::from(i).$op_suff(BigInt::from(j))),
+                        }
                     }
                     (I64(i), Int(j)) => Inum::from(BigInt::from(i).$op_suff(j)),
                     (Int(i), I64(j)) => Inum::from(i.$op_suff(BigInt::from(j))),
@@ -126,8 +131,10 @@ macro_rules! checked_impl {
             fn $op_suff(self) -> Inum {
                 match self {
                     I64(i) => {
-                        i.$op_checked()
-                            .map_or_else(|| Int(BigInt::from(i).$op_suff()), I64)
+                        match i.$op_checked() {
+                            Some(j) => I64(j),
+                            None => Int(BigInt::from(i).$op_suff()),
+                        }
                     }
                     Int(i) => Inum::from(i.$op_suff()),
                 }
@@ -156,10 +163,10 @@ impl Num for Inum {
     type FromStrRadixErr = ParseBigIntError;
 
     fn from_str_radix(n_str: &str, radix: u32) -> Result<Self, ParseBigIntError> {
-        i64::from_str_radix(n_str, radix).map_or_else(
-            |_| BigInt::from_str_radix(n_str, radix).map(Int),
-            |i| Ok(I64(i)),
-        )
+        match i64::from_str_radix(n_str, radix) {
+            Err(_) => BigInt::from_str_radix(n_str, radix).map(Int),
+            Ok(i) => Ok(I64(i)),
+        }
     }
 }
 

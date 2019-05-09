@@ -26,7 +26,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// This function will panic if `v` is not sorted.
     pub fn from_sorted(v: Vec<(K, V)>) -> Self {
         // panic if `v` is not sorted
-        assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
+        // assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
         VecMap(v)
     }
 

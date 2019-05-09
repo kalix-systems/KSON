@@ -1,6 +1,6 @@
 #![allow(clippy::cast_lossless)]
-#![feature(is_sorted)]
-#![feature(result_map_or_else)]
+// #![feature(is_sorted)]
+// #![feature(result_map_or_else)]
 
 /// Procedural macros.
 pub extern crate kson_macro;
