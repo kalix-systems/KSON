@@ -1,8 +1,3 @@
-use bytes::{buf::FromBuf, Bytes};
-
-/// Converts a `u64` to an 8-byte `Bytes` in little endian order
-pub fn u64_to_bytes_le(x: u64) -> Bytes { Bytes::from(u64::to_le_bytes(x).to_vec()) }
-
 /// Converts a `u64` to the smallest possible vec of digits in little-endian order.
 ///
 /// # Arguments
@@ -33,25 +28,6 @@ pub fn u64_to_digits(num: u64) -> Vec<u8> {
         out
     }
 }
-
-/// Converts `&str` to `Bytes`.
-///
-/// # Arguments
-///
-/// * `s: &str` - The `&str` to be converted.
-///
-/// # Example
-///
-/// ```
-/// use kson::prelude::*;
-///
-/// let s = "hello world";
-///
-/// let some_bytes = str_to_bs(s);
-///
-/// assert_eq!(*s.as_bytes(), *some_bytes);
-/// ```
-pub fn str_to_bs(s: &str) -> Bytes { Bytes::from_buf(s) }
 
 #[macro_export]
 /// Helper macro to compose `From` implementations.

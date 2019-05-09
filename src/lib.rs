@@ -51,21 +51,102 @@ use std::convert::{TryFrom, TryInto};
 use vecmap::*;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
-/// KSON types.
+/// KSON variants.
+///
+/// # Example
+///
+/// ```
+/// use kson::prelude::*;
+///
+/// let b = Kson::Bool(true);
+///
+/// let val = match b {
+///     Kson::Bool(b) => true,
+///     _ => panic!(),
+/// };
+///
+/// assert!(val);
+/// ```
 pub enum Kson {
-    /// Null type. Equivalent to `None`.
+    /// Null. Corresponds to `None`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let k_null = Kson::Null;
+    /// ```
     Null,
-    /// Boolean type.
+    /// Boolean.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Bool, *};
+    ///
+    /// let k_bool = Bool(true);
+    /// ```
     Bool(bool),
-    /// Integer type.
+    /// Integer.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Kint, *};
+    ///
+    /// // small integer
+    /// let num = Inum::I64(1);
+    ///
+    /// // as `Kson`
+    /// let k_num = Kint(num);
+    /// ```
     Kint(Inum),
     /// Bytestring type.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Byt, *};
+    ///
+    /// let bytes = Bytes::from_static(b"hello world");
+    ///
+    /// let k_bytes = Byt(bytes);
+    /// ```
     Byt(Bytes),
     /// Array type.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Array, *};
+    ///
+    /// let k_array = Array(
+    ///     vec![1, 2, 3, 4]
+    ///         .into_iter()
+    ///         .map(|n| n.into_kson())
+    ///         .collect(),
+    /// );
+    /// ```
     Array(Vec<Kson>),
     /// Map type.
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Map, *};
+    ///
+    /// let vmap = VecMap::from(vec![(Bytes::from_static(b"hello world"), 1.into_kson())]);
+    ///
+    /// let kmap = Map(vmap);
+    /// ```
     Map(VecMap<Bytes, Kson>),
-    /// Floating point number type,
+    /// Floating point number type.
+    /// ```
+    /// use kson::prelude::{Kson::Kfloat, *};
+    ///
+    /// let f = Float::Single(1f32.to_bits());
+    ///
+    /// let k_float = Kfloat(f);
+    /// ```
     Kfloat(Float),
 }
 

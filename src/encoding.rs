@@ -58,7 +58,7 @@ const BIGCON_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
 /// The second element in a tagged KSON integer, bytestring, array, or map.
 /// It is either a length (in the case of large versions)
 /// or digits (in the case of small versions).
-pub enum LenOrDigs {
+enum LenOrDigs {
     /// Length variant
     Len(u8),
     /// Digits variant
@@ -69,7 +69,7 @@ use LenOrDigs::*;
 
 #[derive(Clone, Debug)]
 /// `Kson` with encoding metadata.
-pub enum KMeta<'a> {
+enum KMeta<'a> {
     /// Constants
     KMCon(u8),
     /// Tagged integer
