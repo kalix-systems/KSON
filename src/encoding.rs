@@ -70,7 +70,7 @@ pub enum LenOrDigs {
 use LenOrDigs::*;
 
 #[derive(Clone, Debug)]
-/// Tagged `Kson`.
+/// `Kson` with encoding metadata.
 pub enum KMeta<'a> {
     /// Constants
     KMCon(u8),
