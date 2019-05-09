@@ -62,6 +62,7 @@ macro_rules! chain_try_from {
 }
 
 #[macro_export]
+/// Helper macro for implementing `TryFrom` for `Kson`.
 macro_rules! try_from_kson {
     ($t: ty) => {
         impl TryFrom<Kson> for $t {
@@ -280,16 +281,17 @@ impl<T: KsonRep> KsonRep for Option<T> {
 
 impl KsonRep for Ipv4Addr {
     fn into_kson(self) -> Kson {
-        let octs = self.octets();
-        Bytes::from(&[octs[0], octs[1], octs[2], octs[3]] as &[u8]).into_kson()
+        let octs: &[u8] = &self.octets();
+
+        Bytes::from(octs).into_kson()
     }
 
     fn from_kson(ks: Kson) -> Option<Self> {
         let bs: Bytes = KsonRep::from_kson(ks)?;
-        if bs.len() != 4 {
-            None
+        if bs.len() == 4 {
+            Some(Self::new(bs[0], bs[1], bs[2], bs[3]))
         } else {
-            Some(Ipv4Addr::new(bs[0], bs[1], bs[2], bs[3]))
+            None
         }
     }
 }
@@ -299,7 +301,7 @@ impl KsonRep for SocketAddrV4 {
 
     fn from_kson(ks: Kson) -> Option<Self> {
         let (ip, port) = KsonRep::from_kson(ks)?;
-        Some(SocketAddrV4::new(ip, port))
+        Some(Self::new(ip, port))
     }
 }
 

@@ -171,6 +171,7 @@ impl Num for Inum {
 }
 
 #[macro_export]
+/// Const
 macro_rules! from_prims {
     ($to:tt) => {
         from_as!($to, i32, i64);

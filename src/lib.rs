@@ -1,3 +1,21 @@
+//! KSON is a JSON-like serialization format.
+
+#![warn(
+    missing_docs,
+    deprecated_in_future,
+    unsafe_code,
+    unused_labels,
+    keyword_idents,
+    missing_doc_code_examples,
+    missing_copy_implementations,
+    missing_debug_implementations,
+    macro_use_extern_crate,
+    unreachable_pub,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_extern_crates,
+    unused_import_braces
+)]
 #![allow(clippy::cast_lossless)]
 // #![feature(is_sorted)]
 // #![feature(result_map_or_else)]
@@ -22,10 +40,10 @@ pub mod util;
 /// A map wrapper around a sorted vector of pairs.
 pub mod vecmap;
 
-pub use bytes::{buf::FromBuf, Bytes, IntoBuf};
+use bytes::{buf::FromBuf, Bytes, IntoBuf};
 use float::*;
 use half::f16;
-pub use hashbrown::HashMap;
+use hashbrown::HashMap;
 use inum::*;
 use num_bigint::BigInt;
 use rep::KsonRep;
@@ -217,7 +235,7 @@ impl Kson {
         }
     }
 
-    /// Tries to convet value to an `Inum`.
+    /// Tries to convert value to an `Inum`.
     /// This will return `None` if the value is not an `Inum`.
     ///
     /// # Example
@@ -238,6 +256,8 @@ impl Kson {
         }
     }
 
+    /// Consumes the value, converting it to an `Inum`.
+    /// This will return `None` if the value is not an `Inum`.
     pub fn into_inum(self) -> Option<Inum> {
         match self {
             Kint(i) => Some(i),
