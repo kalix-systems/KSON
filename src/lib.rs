@@ -361,7 +361,7 @@ compose_from!(Kson, Inum, u64);
 compose_from!(Kson, Float, f32);
 compose_from!(Kson, Float, f64);
 compose_from!(Kson, Float, f16);
-compose_from!(Kson, Float, LargeFloat);
+compose_from!(Kson, Float, BigFloat);
 
 from_prims!(Kson);
 

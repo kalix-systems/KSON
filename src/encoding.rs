@@ -1,6 +1,6 @@
 #![allow(clippy::inconsistent_digit_grouping)]
 use crate::{
-    float::LargeFloat,
+    float::BigFloat,
     util::*,
     vecmap::VecMap,
     Float::{self, *},
@@ -246,11 +246,15 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
                     out.extend_from_slice(&[DOUBLE]);
                     out.extend_from_slice(&u64::to_le_bytes(*n));
                 }
-                Big(n) => {
+                Big(f) => {
                     out.extend_from_slice(&[BIG_FLOAT]);
-                    let (base, exp) = n.to_pair();
-                    &encode_meta(inum_to_meta(base), out);
-                    &encode_meta(inum_to_meta(exp), out);
+                    let prec = f.prec;
+                    let value = kson_to_meta(&Byt(f.value));
+
+                    // encode precision
+                    out.extend_from_slice(&u32::to_le_bytes(prec));
+                    // encode values
+                    &encode_meta(value, out);
                 }
             }
         }
@@ -473,7 +477,14 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
                     Some(Kfloat(Double(f?)))
                 }
                 BIG_FLOAT => {
-                    let (base, exp) = (decode(data)?.into_inum()?, decode(data)?.into_inum()?);
+                    let prec = if data.remaining() >= 4 {
+                        Some(data.get_u32_le())
+                    } else {
+                        None
+                    }?;
+
+                    let value = Bytes::from_kson(decode(data)?)?;
+                    //, decode(data)?.into_inum()?);
                     let float = LargeFloat::new(base, exp);
                     Some(Kfloat(Big(float)))
                 }
