@@ -1,6 +1,6 @@
 pub use crate::{
     encoding::{decode, decode_full, encode, encode_full},
-    float::{Float, LargeFloat},
+    float::Float,
     inum::Inum,
     kson_macro::*,
     rep::*,

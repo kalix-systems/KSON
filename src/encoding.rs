@@ -1,6 +1,5 @@
 #![allow(clippy::inconsistent_digit_grouping)]
 use crate::{
-    float::BigFloat,
     util::*,
     vecmap::VecMap,
     Float::{self, *},
@@ -40,8 +39,6 @@ const HALF: u8 = TYPE_FLOAT;
 const SINGLE: u8 = TYPE_FLOAT | 0b000_01_000;
 /// Double-precision tag
 const DOUBLE: u8 = TYPE_FLOAT | 0b000_10_000;
-/// Arbitrary-precision float tag
-const BIG_FLOAT: u8 = TYPE_FLOAT | 0b000_11_000;
 
 /// `Null` constant.
 const CON_NULL: u8 = 0b0000_0000;
@@ -246,16 +243,6 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Bytes) {
                     out.extend_from_slice(&[DOUBLE]);
                     out.extend_from_slice(&u64::to_le_bytes(*n));
                 }
-                Big(f) => {
-                    out.extend_from_slice(&[BIG_FLOAT]);
-                    let prec = f.prec;
-                    let value = kson_to_meta(&Byt(f.value));
-
-                    // encode precision
-                    out.extend_from_slice(&u32::to_le_bytes(prec));
-                    // encode values
-                    &encode_meta(value, out);
-                }
             }
         }
     }
@@ -345,10 +332,7 @@ fn read_tag(input: &mut Buf) -> Option<KTag> {
             TYPE_ARR => big_and_len!(KArr, byte),
             TYPE_MAP => big_and_len!(KMap, byte),
             TYPE_FLOAT => Some(KFloat(byte)),
-            _ => {
-                println!("no tag {:b}", byte);
-                None
-            }
+            _ => None,
         }
     } else {
         None
@@ -466,32 +450,15 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
                     Some(Kfloat(Single(f?)))
                 }
                 DOUBLE => {
-                    println!("decoding this float");
                     let f = if data.remaining() >= 8 {
                         Some(data.get_u64_le())
                     } else {
                         None
                     };
 
-                    println!("this case");
                     Some(Kfloat(Double(f?)))
                 }
-                BIG_FLOAT => {
-                    let prec = if data.remaining() >= 4 {
-                        Some(data.get_u32_le())
-                    } else {
-                        None
-                    }?;
-
-                    let value = Bytes::from_kson(decode(data)?)?;
-                    //, decode(data)?.into_inum()?);
-                    let float = LargeFloat::new(base, exp);
-                    Some(Kfloat(Big(float)))
-                }
-                _ => {
-                    println!("not caught");
-                    None
-                }
+                _ => None,
             }
         }
     }
