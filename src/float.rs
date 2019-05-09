@@ -82,7 +82,7 @@ impl LargeFloat {
     /// ```
     /// use kson::prelude::*;
     ///
-    /// let large = LargeFloat::new(Inum::from(1), Inum::from(30));
+    /// let large = LargeFloat::new(Inum::from(2), Inum::from(30));
     ///
     /// assert_eq!(large.base(), Inum::from(1));
     /// ```
@@ -96,7 +96,7 @@ impl LargeFloat {
     ///
     /// let large = LargeFloat::new(Inum::from(1), Inum::from(30));
     ///
-    /// assert_eq!(large.base(), Inum::from(1));
+    /// assert_eq!(large.into_pair(), Inum::from(1));
     /// ```
     pub fn into_pair(self) -> (Inum, Inum) { (self.0, self.1) }
 
