@@ -10,6 +10,7 @@ use bytes::{Buf, Bytes, IntoBuf};
 use num_bigint::{BigInt, Sign::*};
 use num_traits::*;
 use std::convert::TryInto;
+
 // TODO: replace len vecs w/heapless vec of size at most 8
 
 /// 0xe0
@@ -71,15 +72,15 @@ use LenOrDigs::*;
 pub enum KMeta<'a> {
     /// Constants
     KMCon(u8),
-    /// Tagged integers
+    /// Tagged integer
     KMInt(bool, LenOrDigs, Vec<u8>),
-    /// Tagged bytestrings
+    /// Tagged bytestring
     KMByt(LenOrDigs, &'a Bytes),
-    /// Tagged arrays
+    /// Tagged array
     KMArr(LenOrDigs, &'a Vec<Kson>),
-    /// Tagged maps
+    /// Tagged map
     KMMap(LenOrDigs, &'a VecMap<Bytes, Kson>),
-    /// Tagged floats
+    /// Tagged float
     KMFloat(&'a Float),
 }
 
