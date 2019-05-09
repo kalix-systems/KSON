@@ -25,24 +25,91 @@ use Float::*;
 
 impl LargeFloat {
     /// Creates a new `LargeFloat`
+    ///
+    /// # Arguments
+    ///
+    /// * `base: Inum` - The base of the float.
+    /// * `exp: Inum` - The exponent of the float.
+    ///
+    /// # Examples
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let large = LargeFloat::new(Inum::from(2), Inum::from(89));
+    /// ```
     pub fn new(base: Inum, exp: Inum) -> Self { LargeFloat(base, exp) }
 
     /// Gets the base
+    ///
+    /// # Example
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let large = LargeFloat::new(Inum::from(2), Inum::from(89));
+    ///
+    /// assert_eq!(large.base(), Inum::from(2));
+    /// ```
     pub fn base(&self) -> Inum { self.0.clone() }
 
     /// Gets the exponent
+    ///
+    /// # Example
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let large = LargeFloat::new(Inum::from(2), Inum::from(89));
+    ///
+    /// assert_eq!(large.exp(), Inum::from(89));
+    /// ```
     pub fn exp(&self) -> Inum { self.1.clone() }
 
     /// Gets a reference to the base
+    ///
+    /// # Example
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let large = LargeFloat::new(Inum::from(2), Inum::from(89));
+    ///
+    /// assert_eq!(large.base_ref(), &Inum::from(2));
+    /// ```
     pub fn base_ref(&self) -> &Inum { &self.0 }
 
     /// Gets a reference to the exponent
+    ///
+    /// # Example
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let large = LargeFloat::new(Inum::from(1), Inum::from(30));
+    ///
+    /// assert_eq!(large.base(), Inum::from(1));
+    /// ```
     pub fn exp_ref(&self) -> &Inum { &self.1 }
 
     /// Consumes the value, returning a tuple containing the base and exponent.
+    ///
+    /// # Example
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let large = LargeFloat::new(Inum::from(1), Inum::from(30));
+    ///
+    /// assert_eq!(large.base(), Inum::from(1));
+    /// ```
     pub fn into_pair(self) -> (Inum, Inum) { (self.0, self.1) }
 
     /// Returns a tuple of references to the base and exponent.
+    ///
+    /// # Example
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let large = LargeFloat::new(Inum::from(1), Inum::from(30));
+    ///
+    /// assert_eq!(large.base(), Inum::from(1));
+    /// ```
     pub fn to_pair(&self) -> (&Inum, &Inum) { (&self.0, &self.1) }
 }
 
