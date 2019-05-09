@@ -54,15 +54,17 @@ pub fn u64_to_digits(num: u64) -> Vec<u8> {
 pub fn str_to_bs(s: &str) -> Bytes { Bytes::from_buf(s) }
 
 #[macro_export]
+/// Helper macro to compose `From` implementations.
 macro_rules! compose_from {
     ($to:tt, $mid:tt, $from:ty) => {
         impl From<$from> for $to {
-            fn from(f: $from) -> $to { $to::from($mid::from(f)) }
+            fn from(f: $from) -> Self { Self::from($mid::from(f)) }
         }
     };
 }
 
 #[macro_export]
+/// Helper macro to make implementing `From` easier.
 macro_rules! from_fn {
     ($to:ty, $from:ty, $fn:expr) => {
         impl From<$from> for $to {
@@ -72,6 +74,7 @@ macro_rules! from_fn {
 }
 
 #[macro_export]
+/// Helper macro to make implementing `From` easier.
 macro_rules! from_as {
     ($to:tt, $from:ty, $as:ty) => {
         impl From<$from> for $to {

@@ -61,7 +61,9 @@ const BIGCON_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
 /// It is either a length (in the case of large versions)
 /// or digits (in the case of small versions).
 pub enum LenOrDigs {
+    /// Length variant
     Len(u8),
+    /// Digits variant
     Digs(Vec<u8>),
 }
 
@@ -293,9 +295,9 @@ fn read_bytes<B: Buf>(data: &mut B, num_bytes: usize) -> Option<Vec<u8>> {
     }
 }
 
-#[derive(Clone, Debug)]
+#[derive(Copy, Clone, Debug)]
 /// KSON tags.
-pub enum KTag {
+enum KTag {
     KCon(u8),
     KInt(bool, bool, u8),
     KByt(bool, u8),
@@ -442,7 +444,7 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
         KFloat(b) => {
             match b {
                 HALF => {
-                    let f = if data.remaining() >= 2 as usize {
+                    let f = if data.remaining() >= 2 {
                         Some(data.get_u16_le())
                     } else {
                         None
@@ -451,7 +453,7 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
                     Some(Kfloat(Half(f?)))
                 }
                 SINGLE => {
-                    let f = if data.remaining() >= 4 as usize {
+                    let f = if data.remaining() >= 4 {
                         Some(data.get_u32_le())
                     } else {
                         None
@@ -461,7 +463,7 @@ pub fn decode<B: Buf>(data: &mut B) -> Option<Kson> {
                 }
                 DOUBLE => {
                     println!("decoding this float");
-                    let f = if data.remaining() >= 8 as usize {
+                    let f = if data.remaining() >= 8 {
                         Some(data.get_u64_le())
                     } else {
                         None
