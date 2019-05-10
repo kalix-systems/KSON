@@ -25,7 +25,10 @@
 //! let silly_example = SillyEnum::Bar(1, "hello".to_string()).to_kson();
 //!
 //! // encode
-//! let encoded = encode_full(&silly_example);
+//! let encoded = &mut encode_full(&silly_example).into_buf();
+//!
+//! // and then immediately decode, because this is a silly exaple
+//! let decoded = decode(encoded);
 //! ```
 //!
 //! If the auto-derive fails or you would like to represent the data in a particular way,
@@ -69,6 +72,13 @@
 //! numbers.
 //!
 //! ```
+//! use kson::prelude::*;
+//!
+//! let half = f16::from_f32(1.0).into_kson();
+//!
+//! let single = 1f32.into_kson();
+//!
+//! let double = 1f64.into_kson();
 //! ```
 //!
 //! Arbitrary precision floating point is not a core part of the format, but we intend to
@@ -78,14 +88,135 @@
 //!
 //! ## Bytestrings
 //!
+//! KSON supports bytestrings up to $2^128$ bytes long.
+//!
+//! ```
+//! use kson::prelude::*;
+//!
+//! let a_str = Kson::from("hello world");
+//!
+//! let literal = Kson::from_static(b"this is a bytestring literal");
+//!
+//! let a_string = "This is a string".to_string().into_kson();
+//! ```
 //!
 //! ## Arrays
 //!
+//! ```
+//! use kson::prelude::*;
+//!
+//! let some_numbers = vec![1, 2, 3, 4, 5].into_kson();
+//! ```
+//!
 //! ## Maps
+//!
+//! ```
+//! use hashbrown::HashMap;
+//! use kson::prelude::*;
+//!
+//! let mut a_map = HashMap::new();
+//!
+//! a_map.insert(Bytes::from_static(b"key"), 250);
+//!
+//! let k_map = a_map.into_kson();
+//! ```
+//!
+//! See `VecMap`.
 //!
 //! # Implementing the `KsonRep` trait
 //!
+//! ```
+//! use kson::prelude::*;
+//! use hashbrown::HashMap;
 //!
+//! #[derive(Clone)]
+//! enum SillyEnum {
+//!     Foo,
+//!     Bar(u8, String),
+//!     Baz { x: i32, y: f32 },
+//! }
+//!
+//! impl KsonRep for SillyEnum {
+//!     fn into_kson(self) -> Kson {
+//!         match self {
+//!             SillyEnum::Foo => vec![Kson::from("Foo")].into_kson(), // just the name for unit-like structs
+//!             SillyEnum::Bar(n, s) => {
+//!                 vec![
+//!                     Kson::from("Bar"), // name
+//!                     n.into_kson(),     // first field
+//!                     s.into_kson(),     // second field
+//!                 ]
+//!                 .into_kson() // convert the vector into a `Kson` array
+//!             }
+//!             SillyEnum::Baz { x, y } => {
+//!                 vec![
+//!                     Kson::from("Baz"), // name
+//!                     VecMap::from_sorted(
+//!                         // construct map
+//!                         vec![
+//!                             (Bytes::from("x"), x.into_kson()), // first field
+//!                             (Bytes::from("y"), y.into_kson()), // second field
+//!                         ],
+//!                     )
+//!                     .into_kson(), // into a KSON map
+//!                 ]
+//!                 .into_kson() // convert the vector into `Kson`
+//!             }
+//!         }
+//!     }
+//!
+//!     fn from_kson(ks: Kson) -> Option<SillyEnum> {
+//!         let ks_iter = &mut ks.into_vec()?.into_iter();
+//!         
+//!         let name: String = pop_kson(ks_iter)?;
+//!
+//!         match name.as_str() {
+//!             "Foo" => {
+//!                 // it shouldn't have any fields
+//!                 if ks_iter.len() == 0 {
+//!                     Some(SillyEnum::Foo)
+//!                 } else {
+//!                     // if it /does/, presumably something went wrong
+//!                     None
+//!                 }
+//!             }
+//!             "Bar" => {
+//!                 // get the fields
+//!                 let n = pop_kson(ks_iter)?;
+//!                 let s = pop_kson(ks_iter)?;
+//!
+//!                 if ks_iter.len() == 0 {
+//!                     Some(SillyEnum::Bar(n, s))
+//!                 } else {
+//!                     None
+//!                 }
+//!             }
+//!             "Baz" => {
+//!                 let mut fields: HashMap<Bytes, Kson> = pop_kson(ks_iter)?;
+//!                 
+//!                 // there should be exactly two fields
+//!                 if fields.len() != 2 {
+//!                     return None
+//!                 }
+//!                 
+//!                 // and ks_iter should be exhausted
+//!                 if ks_iter.len() > 0 {
+//!                     return None
+//!                 }
+//!
+//!                 // get the fields
+//!                 let x = i32::from_kson(fields.remove(&Bytes::from("x"))?)?;
+//!                 let y = f32::from_kson(fields.remove(&Bytes::from("y"))?)?;
+//!
+//!                 Some(SillyEnum::Baz { x, y})                 
+//!             }
+//!             _ => None // catch-all
+//!         }
+//!     }
+//! }
+//! ```
+//!
+//!  
 //! # Benchmarks
 //!
 //! # Specification
@@ -113,7 +244,7 @@
 )]
 #![allow(clippy::cast_lossless)]
 
-/// Procedural macros.
+/// Procedural macros for autoderiving `KsonRep`.
 pub extern crate kson_macro;
 
 /// KSON binary encoder and decoder.
@@ -123,10 +254,6 @@ pub mod float;
 /// Integer variants.
 pub mod inum;
 /// Things you probably want in scope when working with `Kson`.
-///
-/// ```
-/// use kson::prelude::*;
-/// ```
 pub mod prelude;
 // /// Python support.
 // pub mod python;
@@ -148,7 +275,7 @@ use std::convert::{TryFrom, TryInto};
 use vecmap::*;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
-/// KSON variants.
+/// `Kson` and its variants.
 ///
 /// # Example
 ///
@@ -494,6 +621,10 @@ impl FromBuf for Kson {
 
 impl From<String> for Kson {
     fn from(s: String) -> Kson { s.into_kson() }
+}
+
+impl From<&str> for Kson {
+    fn from(s: &str) -> Kson { s.to_string().into_kson() }
 }
 
 impl From<char> for Kson {
