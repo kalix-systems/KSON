@@ -37,11 +37,11 @@
 //! # An overview of KSON types
 //!
 //! This section contains a brief overview of the core KSON datatypes. For details
-//! about how they are encoded, see [Specification].
+//! about how they are encoded, see [Specification](#specification).
 //!
 //! ## Integers
 //!
-//! KSON includes signed 64-bit integers (`I64`) and BigInts (`Int`) up to $`2^{64}`$
+//! KSON includes signed 64-bit integers (`I64`) and BigInts (`Int`) up to 2^64
 //! bytes in length. All other integer types will be converted to one of these integer
 //! types.
 //!
@@ -89,7 +89,7 @@
 //!
 //! ## Bytestrings
 //!
-//! KSON supports bytestrings up to $`2^{128}`$ bytes long.
+//! KSON supports bytestrings up to 2^128 bytes long.
 //!
 //! ```
 //! use kson::prelude::*;
@@ -229,7 +229,7 @@
 //! ## Constants
 //!
 //! Constants are values that fit into a tag byte. Their type is `000`. While KSON can
-//! support up to $`2^6-1 = 63`$ constants, we currently use only three. These are
+//! support up to 2^6-1 = 63 constants, we currently use only three. These are
 //! summarized in the table below.
 //!
 //! | Metadata | Semantics |
@@ -240,7 +240,7 @@
 //!
 //! ## Integers
 //!
-//! Integers are whole numbers with length in bytes up to $`2^{64}`$.
+//! Integers are whole numbers with length in bytes up to 2^64.
 //! Their tag byte is constructed as follows:
 //!
 //! | 001  | x                      | x        | xxx             |
@@ -257,7 +257,7 @@
 //!
 //! ## Bytestrings
 //!
-//! Bytestrings are sequences of bytes with length up to $`2^{128}`$.
+//! Bytestrings are sequences of bytes with length up to 2^128.
 //! Their tag byte is constructed as follows:
 //!
 //! | 010  | x              | xxxx            |
@@ -270,7 +270,7 @@
 //!
 //! ## Arrays
 //!
-//! Arrays are sequences of Kson items with length up to $2^{128}$.
+//! Arrays are sequences of Kson items with length up to 2^128
 //! Their tag byte is constructed as follows:
 //!
 //! | 011  | x              | xxxx            |
@@ -284,7 +284,7 @@
 //! ## Maps
 //!
 //! Maps are sequences of `(key, value)` pairs where keys are tagged strings and values
-//! are Kson items with length up to $`2^{128}`$. Their tag byte is constructed as
+//! are Kson items with length up to 2^128. Their tag byte is constructed as
 //! follows:
 //!
 //! | 100  | x              | xxxx            |
@@ -349,7 +349,7 @@ use rep::KsonRep;
 use std::convert::{TryFrom, TryInto};
 use vecmap::*;
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Display, Debug)]
 /// `Kson` and its variants.
 ///
 /// # Example
