@@ -105,6 +105,7 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
             let (sign, mut digs) = i.to_bytes_le();
             debug_assert!(digs.len() >= 8);
             if sign == Minus {
+                // subtract 1 directly on the digits
                 for dig in digs.iter_mut() {
                     *dig = dig.wrapping_sub(1);
                     if *dig != 255 {

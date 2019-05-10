@@ -25,3 +25,11 @@ harness=false
 [[bench]]
 name="strings"
 harness=false
+
+[[bench]]
+name="encoder_profile"
+harness=false
+
+[[bench]]
+name="decoder_profile"
+harness=false

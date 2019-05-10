@@ -7,13 +7,16 @@
 pub(crate) fn u64_to_digits(num: u64) -> Vec<u8> {
     let len = 8 - u64::leading_zeros(num) / 8;
     if len == 0 {
-        vec![0]
+        coldvec()
     } else {
         let mut out = u64::to_le_bytes(num).to_vec();
         out.truncate(len as usize);
         out
     }
 }
+
+#[cold]
+fn coldvec() -> Vec<u8> { vec![0] }
 
 #[macro_export]
 /// Helper macro to compose `From` implementations.
