@@ -1,6 +1,25 @@
+//! # KSON
+//!
+//! KSON is a JSON-like serialization format designed to be efficient, easy to implement,
+//! and complete.
+
+#![warn(
+    missing_docs,
+    deprecated_in_future,
+    unsafe_code,
+    unused_labels,
+    keyword_idents,
+    missing_doc_code_examples,
+    missing_copy_implementations,
+    missing_debug_implementations,
+    macro_use_extern_crate,
+    unreachable_pub,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_extern_crates,
+    unused_import_braces
+)]
 #![allow(clippy::cast_lossless)]
-// #![feature(is_sorted)]
-// #![feature(result_map_or_else)]
 
 /// Procedural macros.
 pub extern crate kson_macro;
@@ -11,21 +30,25 @@ pub mod encoding;
 pub mod float;
 /// Integer variants.
 pub mod inum;
-/// Prelude
+/// Things you probably want in scope when working with `Kson`.
+///
+/// ```
+/// use kson::prelude::*;
+/// ```
 pub mod prelude;
-/// Python support.
+// /// Python support.
 // pub mod python;
 /// Types representable as `Kson`.
 pub mod rep;
 /// Helper functions.
-pub mod util;
-/// A map wrapper around a sorted vector of pairs.
+mod util;
+/// A wrapper around a sorted vector of pairs.
 pub mod vecmap;
 
-pub use bytes::{buf::FromBuf, Bytes, IntoBuf};
+use bytes::{buf::FromBuf, Bytes, IntoBuf};
 use float::*;
 use half::f16;
-pub use hashbrown::HashMap;
+use hashbrown::HashMap;
 use inum::*;
 use num_bigint::BigInt;
 use rep::KsonRep;
@@ -33,21 +56,102 @@ use std::convert::{TryFrom, TryInto};
 use vecmap::*;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
-/// KSON types.
+/// KSON variants.
+///
+/// # Example
+///
+/// ```
+/// use kson::prelude::*;
+///
+/// let b = Kson::Bool(true);
+///
+/// let val = match b {
+///     Kson::Bool(b) => true,
+///     _ => panic!(),
+/// };
+///
+/// assert!(val);
+/// ```
 pub enum Kson {
-    /// Null type. Equivalent to `None`.
+    /// Null. Corresponds to `None`.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let k_null = Kson::Null;
+    /// ```
     Null,
-    /// Boolean type.
+    /// Boolean.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Bool, *};
+    ///
+    /// let k_bool = Bool(true);
+    /// ```
     Bool(bool),
-    /// Integer type.
+    /// Integer.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Kint, *};
+    ///
+    /// // small integer
+    /// let num = Inum::I64(1);
+    ///
+    /// // as `Kson`
+    /// let k_num = Kint(num);
+    /// ```
     Kint(Inum),
     /// Bytestring type.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Byt, *};
+    ///
+    /// let bytes = Bytes::from_static(b"hello world");
+    ///
+    /// let k_bytes = Byt(bytes);
+    /// ```
     Byt(Bytes),
     /// Array type.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Array, *};
+    ///
+    /// let k_array = Array(
+    ///     vec![1, 2, 3, 4]
+    ///         .into_iter()
+    ///         .map(|n| n.into_kson())
+    ///         .collect(),
+    /// );
+    /// ```
     Array(Vec<Kson>),
     /// Map type.
+    ///
+    /// ```
+    /// use kson::prelude::{Kson::Map, *};
+    ///
+    /// let vmap = VecMap::from(vec![(Bytes::from_static(b"hello world"), 1.into_kson())]);
+    ///
+    /// let kmap = Map(vmap);
+    /// ```
     Map(VecMap<Bytes, Kson>),
-    /// Floating point number type,
+    /// Floating point number type.
+    /// ```
+    /// use kson::prelude::{Kson::Kfloat, *};
+    ///
+    /// let f = Float::Single(1f32.to_bits());
+    ///
+    /// let k_float = Kfloat(f);
+    /// ```
     Kfloat(Float),
 }
 
@@ -217,7 +321,7 @@ impl Kson {
         }
     }
 
-    /// Tries to convet value to an `Inum`.
+    /// Tries to convert value to an `Inum`.
     /// This will return `None` if the value is not an `Inum`.
     ///
     /// # Example
@@ -238,6 +342,8 @@ impl Kson {
         }
     }
 
+    /// Consumes the value, converting it to an `Inum`.
+    /// This will return `None` if the value is not an `Inum`.
     pub fn into_inum(self) -> Option<Inum> {
         match self {
             Kint(i) => Some(i),
@@ -283,6 +389,14 @@ impl Kson {
             _ => None,
         }
     }
+}
+
+impl From<String> for Kson {
+    fn from(s: String) -> Kson { Kson::from_buf(s) }
+}
+
+impl From<char> for Kson {
+    fn from(c: char) -> Kson { c.into_kson() }
 }
 
 impl FromBuf for Kson {
@@ -335,13 +449,16 @@ try_from_ctor!(Kson, Vec<Kson>, Array);
 try_from_ctor!(Kson, VecMap<Bytes, Kson>, Map);
 
 compose_from!(Kson, Inum, BigInt);
+compose_from!(Kson, Inum, isize);
+compose_from!(Kson, Inum, usize);
 compose_from!(Kson, Inum, i64);
 compose_from!(Kson, Inum, u64);
+compose_from!(Kson, Inum, i128);
+compose_from!(Kson, Inum, u128);
 
 compose_from!(Kson, Float, f32);
 compose_from!(Kson, Float, f64);
 compose_from!(Kson, Float, f16);
-compose_from!(Kson, Float, LargeFloat);
 
 from_prims!(Kson);
 

@@ -17,8 +17,10 @@ pub enum Inum {
 
 use Inum::*;
 
+// i64 -> Inum
 from_fn!(Inum, i64, I64);
 
+// u64 -> Inum
 from_fn!(Inum, u64, |u| {
     let i = u as i64;
     if i >= 0 {
@@ -28,6 +30,7 @@ from_fn!(Inum, u64, |u| {
     }
 });
 
+// BigInt -> Inum
 from_fn!(Inum, BigInt, |i: BigInt| {
     match i.to_i64() {
         Some(j) => I64(j),
@@ -35,12 +38,75 @@ from_fn!(Inum, BigInt, |i: BigInt| {
     }
 });
 
+// Inum -> BigInt
 from_fn!(BigInt, Inum, |i: Inum| {
     match i {
         Inum::I64(i) => BigInt::from(i),
         Inum::Int(i) => i,
     }
 });
+
+// i128 -> Inum
+from_fn!(Inum, i128, |i| {
+    if i <= i64::max_value() as i128 && i >= i64::min_value() as i128 {
+        I64(i as i64)
+    } else {
+        Int(BigInt::from(i))
+    }
+});
+
+// u128 -> Inum
+from_fn!(Inum, u128, |i| {
+    if i <= i64::max_value() as u128 {
+        I64(i as i64)
+    } else {
+        Int(BigInt::from(i))
+    }
+});
+
+// usize -> Inum
+from_fn!(Inum, usize, |i| { Inum::from(i as u64) });
+
+// isize -> Inum
+from_fn!(Inum, isize, |i| { Inum::from(i as i64) });
+
+impl TryFrom<Inum> for i32 {
+    type Error = Inum;
+
+    fn try_from(i: Inum) -> Result<Self, Inum> {
+        let n = i64::try_from(i);
+
+        match n {
+            Ok(v) => {
+                if v >= i32::min_value() as i64 && v <= i32::max_value() as i64 {
+                    Ok(v as i32)
+                } else {
+                    Err(Inum::from(v))
+                }
+            }
+            Err(e) => Err(Int(e)),
+        }
+    }
+}
+
+impl TryFrom<Inum> for u32 {
+    type Error = Inum;
+
+    fn try_from(i: Inum) -> Result<Self, Inum> {
+        let n = u64::try_from(i);
+
+        match n {
+            Ok(v) => {
+                if v <= u32::max_value() as u64 {
+                    Ok(v as u32)
+                } else {
+                    Err(Inum::from(v))
+                }
+            }
+            Err(e) => Err(e),
+        }
+    }
+}
 
 impl TryFrom<Inum> for i64 {
     type Error = BigInt;
@@ -72,6 +138,70 @@ impl TryFrom<Inum> for u64 {
                     Err(n)
                 }
             }
+        }
+    }
+}
+
+impl TryFrom<Inum> for u128 {
+    type Error = Inum;
+
+    fn try_from(n: Inum) -> Result<Self, Inum> {
+        match &n {
+            Inum::I64(i) => {
+                if *i >= 0 {
+                    Ok(*i as u128)
+                } else {
+                    Err(n)
+                }
+            }
+            Inum::Int(i) => {
+                if let Some(u) = i.to_u128() {
+                    Ok(u)
+                } else {
+                    Err(n)
+                }
+            }
+        }
+    }
+}
+
+impl TryFrom<Inum> for i128 {
+    type Error = Inum;
+
+    fn try_from(n: Inum) -> Result<Self, Inum> {
+        match &n {
+            Inum::I64(i) => Ok(*i as i128),
+            Inum::Int(i) => {
+                if let Some(u) = i.to_i128() {
+                    Ok(u)
+                } else {
+                    Err(n)
+                }
+            }
+        }
+    }
+}
+
+impl TryFrom<Inum> for usize {
+    type Error = Inum;
+
+    fn try_from(n: Inum) -> Result<Self, Inum> {
+        if std::mem::size_of::<usize>() == 8 {
+            Ok(u64::try_from(n)? as usize)
+        } else {
+            Ok(u32::try_from(n)? as usize)
+        }
+    }
+}
+
+impl TryFrom<Inum> for isize {
+    type Error = Inum;
+
+    fn try_from(n: Inum) -> Result<Self, Inum> {
+        if std::mem::size_of::<usize>() == 8 {
+            Ok(i64::try_from(n)? as isize)
+        } else {
+            Ok(i32::try_from(n)? as isize)
         }
     }
 }
@@ -171,6 +301,7 @@ impl Num for Inum {
 }
 
 #[macro_export]
+/// Helper macro.
 macro_rules! from_prims {
     ($to:tt) => {
         from_as!($to, i32, i64);
