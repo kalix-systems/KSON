@@ -3,22 +3,8 @@
 /// # Arguments
 ///
 /// * `num: u64` - The integer to be converted.
-///
-/// # Example
-///
 /// ```
-/// use kson::util::u64_to_digits;
-///
-/// let num = 4u64;
-///
-/// let some_vec = u64_to_digits(4);
-///
-/// // first byte should be 4
-/// assert_eq!(some_vec[0], 4);
-/// // there should only be one element
-/// assert_eq!(some_vec.len(), 1);
-/// ```
-pub fn u64_to_digits(num: u64) -> Vec<u8> {
+pub(crate) fn u64_to_digits(num: u64) -> Vec<u8> {
     let len = 8 - u64::leading_zeros(num) / 8;
     if len == 0 {
         vec![0]

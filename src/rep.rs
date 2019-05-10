@@ -1,4 +1,3 @@
-// pub use crate::util::str_to_bs;
 use crate::*;
 use bytes::Bytes;
 use hashbrown::HashMap;
@@ -82,15 +81,29 @@ macro_rules! try_from_kson {
     };
 }
 
+// sizes
+try_from_kson!(usize, Inum);
+try_from_kson!(isize, Inum);
+
+// 8-bit integers
+try_from_kson!(u8, Inum, i64);
+try_from_kson!(i8, Inum, i64);
+
+// 16-bit integers
+try_from_kson!(u16, Inum, i64);
+try_from_kson!(i16, Inum, i64);
+
+// 32-bit integers
+try_from_kson!(u32, Inum, i64);
+try_from_kson!(i32, Inum, i64);
+
+// 64-bit integers
 try_from_kson!(i64, Inum);
 try_from_kson!(u64, Inum);
 
-try_from_kson!(u8, Inum, i64);
-try_from_kson!(u16, Inum, i64);
-try_from_kson!(u32, Inum, i64);
-try_from_kson!(i8, Inum, i64);
-try_from_kson!(i16, Inum, i64);
-try_from_kson!(i32, Inum, i64);
+// 128-bit integers
+try_from_kson!(i128, Inum);
+try_from_kson!(u128, Inum);
 
 macro_rules! try_from_kson_rep {
     ($t:ty) => {
@@ -102,26 +115,63 @@ macro_rules! try_from_kson_rep {
     };
 }
 
+// Kson
 try_from_kson_rep!(Kson);
+
+// bool
 try_from_kson_rep!(bool);
+
+try_from_kson_rep!(usize);
+try_from_kson_rep!(isize);
+
+// 8-bit integers
 try_from_kson_rep!(u8);
-try_from_kson_rep!(u16);
-try_from_kson_rep!(u32);
-try_from_kson_rep!(u64);
 try_from_kson_rep!(i8);
+
+// 16-bit integers
+try_from_kson_rep!(u16);
 try_from_kson_rep!(i16);
+
+// 32-bit integers
+try_from_kson_rep!(u32);
 try_from_kson_rep!(i32);
+
+// 64-bit integers
+try_from_kson_rep!(u64);
 try_from_kson_rep!(i64);
+
+// 128-bit integers
+try_from_kson_rep!(i128);
+try_from_kson_rep!(u128);
+
+// Inum
 try_from_kson_rep!(Inum);
+
+// Bytes
 try_from_kson_rep!(Bytes);
 
 impl KsonRep for String {
-    fn into_kson(self) -> Kson { Byt(Bytes::from(self.into_bytes())) }
+    fn into_kson(self) -> Kson { Byt(Bytes::from(self)) }
 
     fn to_kson(&self) -> Kson { Byt(Bytes::from(self.as_bytes())) }
 
     fn from_kson(ks: Kson) -> Option<Self> {
         String::from_utf8(Bytes::from_kson(ks)?.to_vec()).ok()
+    }
+}
+
+impl KsonRep for char {
+    fn into_kson(self) -> Kson { Byt(Bytes::from(self.to_string())) }
+
+    fn to_kson(&self) -> Kson { Byt(Bytes::from(self.to_string())) }
+
+    fn from_kson(ks: Kson) -> Option<Self> {
+        let mut s = String::from_kson(ks)?;
+        if s.len() == 1 {
+            s.pop()
+        } else {
+            None
+        }
     }
 }
 

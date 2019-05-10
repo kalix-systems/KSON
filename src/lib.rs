@@ -1,4 +1,7 @@
-//! KSON is a JSON-like serialization format.
+//! # KSON
+//!
+//! KSON is a JSON-like serialization format designed to be efficient, easy to implement,
+//! and complete.
 
 #![warn(
     missing_docs,
@@ -17,8 +20,6 @@
     unused_import_braces
 )]
 #![allow(clippy::cast_lossless)]
-// #![feature(is_sorted)]
-// #![feature(result_map_or_else)]
 
 /// Procedural macros.
 pub extern crate kson_macro;
@@ -29,15 +30,19 @@ pub mod encoding;
 pub mod float;
 /// Integer variants.
 pub mod inum;
-/// Prelude
+/// Things you probably want in scope when working with `Kson`.
+///
+/// ```
+/// use kson::prelude::*;
+/// ```
 pub mod prelude;
-/// Python support.
+// /// Python support.
 // pub mod python;
 /// Types representable as `Kson`.
 pub mod rep;
 /// Helper functions.
-pub mod util;
-/// A map wrapper around a sorted vector of pairs.
+mod util;
+/// A wrapper around a sorted vector of pairs.
 pub mod vecmap;
 
 use bytes::{buf::FromBuf, Bytes, IntoBuf};
@@ -386,6 +391,14 @@ impl Kson {
     }
 }
 
+impl From<String> for Kson {
+    fn from(s: String) -> Kson { Kson::from_buf(s) }
+}
+
+impl From<char> for Kson {
+    fn from(c: char) -> Kson { c.into_kson() }
+}
+
 impl FromBuf for Kson {
     fn from_buf<T>(buf: T) -> Self
     where
@@ -436,8 +449,12 @@ try_from_ctor!(Kson, Vec<Kson>, Array);
 try_from_ctor!(Kson, VecMap<Bytes, Kson>, Map);
 
 compose_from!(Kson, Inum, BigInt);
+compose_from!(Kson, Inum, isize);
+compose_from!(Kson, Inum, usize);
 compose_from!(Kson, Inum, i64);
 compose_from!(Kson, Inum, u64);
+compose_from!(Kson, Inum, i128);
+compose_from!(Kson, Inum, u128);
 
 compose_from!(Kson, Float, f32);
 compose_from!(Kson, Float, f64);
