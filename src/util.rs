@@ -47,3 +47,65 @@ macro_rules! from_as {
         }
     };
 }
+
+#[macro_export]
+/// Try from constructor
+macro_rules! try_from_ctor {
+    ($from:ty, $to:ty, $ctor:tt) => {
+        impl TryFrom<$from> for $to {
+            type Error = $from;
+
+            fn try_from(from: $from) -> Result<$to, $from> {
+                match from {
+                    $ctor(a) => Ok(a),
+                    f => Err(f),
+                }
+            }
+        }
+    };
+}
+
+#[macro_export]
+/// Try TryFrom impls together.
+macro_rules! chain_try_from {
+    ($e: expr) => { $e.and_then(|x| x.try_into().map_err(|_| ())) };
+    ($e: expr, $i: tt) => {
+        chain_try_from!($e.and_then(|x| $i::try_from(x).map_err(|_| ())))
+    };
+    ($e: expr, $i: tt, $($is:tt)*) => {
+        chain_try_from!($e.and_then(|x| $i::try_from(x).map_err(|_| ())), $($is)*)
+    };
+}
+
+#[macro_export]
+/// Helper macro for implementing `TryFrom` for `Kson`.
+macro_rules! try_from_kson {
+    ($t: ty) => {
+        impl TryFrom<Kson> for $t {
+            type Error = ();
+            fn try_from(ks: Kson) -> Result<$t, ()> {
+                ks.try_into().map_err(|_| ())
+            }
+        }
+    };
+    ($t: ty, $($is:tt)*) => {
+        impl TryFrom<Kson> for $t {
+            type Error = ();
+            fn try_from(ks: Kson) -> Result<$t, ()> {
+                chain_try_from!(Ok(ks), $($is)*)
+            }
+        }
+    };
+}
+
+#[macro_export]
+/// KsonRep given TryFrom<Kson>
+macro_rules! try_from_kson_rep {
+    ($t:ty) => {
+        impl KsonRep for $t {
+            fn into_kson(self) -> Kson { self.into() }
+
+            fn from_kson(ks: Kson) -> Option<Self> { ks.try_into().ok() }
+        }
+    };
+}

@@ -50,36 +50,7 @@ pub trait KsonRep: Clone + Sized {
     fn from_kson(ks: Kson) -> Option<Self>;
 }
 
-macro_rules! chain_try_from {
-    ($e: expr) => { $e.and_then(|x| x.try_into().map_err(|_| ())) };
-    ($e: expr, $i: tt) => {
-        chain_try_from!($e.and_then(|x| $i::try_from(x).map_err(|_| ())))
-    };
-    ($e: expr, $i: tt, $($is:tt)*) => {
-        chain_try_from!($e.and_then(|x| $i::try_from(x).map_err(|_| ())), $($is)*)
-    };
-}
-
-#[macro_export]
-/// Helper macro for implementing `TryFrom` for `Kson`.
-macro_rules! try_from_kson {
-    ($t: ty) => {
-        impl TryFrom<Kson> for $t {
-            type Error = ();
-            fn try_from(ks: Kson) -> Result<$t, ()> {
-                ks.try_into().map_err(|_| ())
-            }
-        }
-    };
-    ($t: ty, $($is:tt)*) => {
-        impl TryFrom<Kson> for $t {
-            type Error = ();
-            fn try_from(ks: Kson) -> Result<$t, ()> {
-                chain_try_from!(Ok(ks), $($is)*)
-            }
-        }
-    };
-}
+// TryFrom<Kson> impls
 
 // sizes
 try_from_kson!(usize, Inum);
@@ -113,15 +84,7 @@ try_from_kson!(f16, Float);
 try_from_kson!(f32, Float);
 try_from_kson!(f64, Float);
 
-macro_rules! try_from_kson_rep {
-    ($t:ty) => {
-        impl KsonRep for $t {
-            fn into_kson(self) -> Kson { self.into() }
-
-            fn from_kson(ks: Kson) -> Option<Self> { ks.try_into().ok() }
-        }
-    };
-}
+// KsonRep impls
 
 // Kson
 try_from_kson_rep!(Kson);
@@ -129,6 +92,7 @@ try_from_kson_rep!(Kson);
 // bool
 try_from_kson_rep!(bool);
 
+// sizes
 try_from_kson_rep!(usize);
 try_from_kson_rep!(isize);
 
@@ -167,19 +131,20 @@ try_from_kson_rep!(Inum);
 try_from_kson_rep!(Bytes);
 
 impl KsonRep for String {
-    fn into_kson(self) -> Kson { Byt(Bytes::from(self)) }
+    fn into_kson(self) -> Kson { Kson::from_buf(self) }
 
-    fn to_kson(&self) -> Kson { Byt(Bytes::from(self.as_bytes())) }
+    fn to_kson(&self) -> Kson { Kson::from_buf(self) }
 
+    /// Tries to convert a `Kson` value to a utf8 string.
     fn from_kson(ks: Kson) -> Option<Self> {
         String::from_utf8(Bytes::from_kson(ks)?.to_vec()).ok()
     }
 }
 
 impl KsonRep for char {
-    fn into_kson(self) -> Kson { Byt(Bytes::from(self.to_string())) }
+    fn into_kson(self) -> Kson { Kson::from_buf(self.to_string()) }
 
-    fn to_kson(&self) -> Kson { Byt(Bytes::from(self.to_string())) }
+    fn to_kson(&self) -> Kson { Kson::from_buf(self.to_string()) }
 
     fn from_kson(ks: Kson) -> Option<Self> {
         let mut s = String::from_kson(ks)?;
@@ -520,7 +485,7 @@ mod tests {
     }
 
     #[test]
-    /// Test `KsonRep` autoderive for named-tuple struct
+    // Test `KsonRep` autoderive for named-tuple struct
     fn tuple() {
         #[derive(KsonRep, Clone, Debug)]
         struct Foo(u8, String);

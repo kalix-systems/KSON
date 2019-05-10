@@ -29,7 +29,7 @@
 //! ```
 //!
 //! If the auto-derive fails or you would like to represent the data in a particular way,
-//! see [Implementing the KsonRep trait].
+//! see [Implementing the KsonRep trait](#implementing-the-ksonrep-trait).
 //!
 //! # An overview of KSON types
 //!
@@ -83,7 +83,7 @@
 //!
 //! ## Maps
 //!
-//! # Implementing the `KsonRep` trait manually
+//! # Implementing the `KsonRep` trait
 //!
 //!
 //! # Benchmarks
@@ -483,14 +483,6 @@ impl Kson {
     }
 }
 
-impl From<String> for Kson {
-    fn from(s: String) -> Kson { Kson::from_buf(s) }
-}
-
-impl From<char> for Kson {
-    fn from(c: char) -> Kson { c.into_kson() }
-}
-
 impl FromBuf for Kson {
     fn from_buf<T>(buf: T) -> Self
     where
@@ -498,6 +490,14 @@ impl FromBuf for Kson {
     {
         Byt(Bytes::from_buf(buf.into_buf()))
     }
+}
+
+impl From<String> for Kson {
+    fn from(s: String) -> Kson { s.into_kson() }
+}
+
+impl From<char> for Kson {
+    fn from(c: char) -> Kson { c.into_kson() }
 }
 
 impl<T: Into<Kson>> From<Vec<T>> for Kson {
@@ -510,36 +510,31 @@ impl<T: Into<Kson>> From<VecMap<Bytes, T>> for Kson {
     }
 }
 
-macro_rules! try_from_ctor {
-    ($from:ty, $to:ty, $ctor:tt) => {
-        impl TryFrom<$from> for $to {
-            type Error = $from;
-
-            fn try_from(from: $from) -> Result<$to, $from> {
-                match from {
-                    $ctor(a) => Ok(a),
-                    f => Err(f),
-                }
-            }
-        }
-    };
-}
-
+// bool -> Kson, From
 from_fn!(Kson, bool, Bool);
+// bool -> Kson, TryFrom
 try_from_ctor!(Kson, bool, Bool);
 
+// Inum -> Kson, From
 from_fn!(Kson, Inum, Kint);
+// Inum -> Kson, TryFrom
 try_from_ctor!(Kson, Inum, Kint);
 
+// Bytes -> Kson, From
 from_fn!(Kson, Bytes, Byt);
+// Bytes -> Kson, TryFrom
 try_from_ctor!(Kson, Bytes, Byt);
 
+// Float -> Kson, From
 from_fn!(Kson, Float, Kfloat);
+// Float -> Kson, TryFrom
 try_from_ctor!(Kson, Float, Kfloat);
 
+// Bytes -> Kson, TryFrom
 try_from_ctor!(Kson, Vec<Kson>, Array);
 try_from_ctor!(Kson, VecMap<Bytes, Kson>, Map);
 
+// Integers
 compose_from!(Kson, Inum, BigInt);
 compose_from!(Kson, Inum, isize);
 compose_from!(Kson, Inum, usize);
@@ -547,12 +542,12 @@ compose_from!(Kson, Inum, i64);
 compose_from!(Kson, Inum, u64);
 compose_from!(Kson, Inum, i128);
 compose_from!(Kson, Inum, u128);
+from_prims!(Kson);
 
+// Floats
 compose_from!(Kson, Float, f32);
 compose_from!(Kson, Float, f64);
 compose_from!(Kson, Float, f16);
-
-from_prims!(Kson);
 
 #[cfg(test)]
 mod tests {

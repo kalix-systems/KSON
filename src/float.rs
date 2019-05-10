@@ -16,6 +16,7 @@ pub enum Float {
 
 use Float::*;
 
+// From impls
 impl From<f16> for Float {
     fn from(f: f16) -> Self { Half(f.to_bits()) }
 }
@@ -28,6 +29,7 @@ impl From<f64> for Float {
     fn from(f: f64) -> Self { Double(f.to_bits()) }
 }
 
+// TryFrom impls
 impl TryFrom<Float> for f16 {
     type Error = Float;
 

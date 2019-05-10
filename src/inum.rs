@@ -17,6 +17,8 @@ pub enum Inum {
 
 use Inum::*;
 
+// From impls
+
 // i64 -> Inum
 from_fn!(Inum, i64, I64);
 
@@ -70,6 +72,7 @@ from_fn!(Inum, usize, |i| { Inum::from(i as u64) });
 // isize -> Inum
 from_fn!(Inum, isize, |i| { Inum::from(i as i64) });
 
+// TryFrom impls
 impl TryFrom<Inum> for i32 {
     type Error = Inum;
 
@@ -206,6 +209,7 @@ impl TryFrom<Inum> for isize {
     }
 }
 
+// num_traits
 impl Zero for Inum {
     fn zero() -> Self { I64(0) }
 
@@ -341,5 +345,4 @@ mod tests {
             _ => panic!("Should be `I64`"),
         }
     }
-
 }
