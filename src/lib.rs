@@ -1,7 +1,99 @@
 //! # KSON
 //!
-//! KSON is a JSON-like serialization format designed to be efficient, easy to implement,
-//! and complete.
+//! KSON (Kalix Serializable Object Notation) is a serialization format designed to be
+//! efficient, complete, concise, and easy to implement.
+//!
+//! # Usage
+//!
+//! The trait `KsonRep` is used to specify how data is converted into `Kson`.
+//!
+//! This trait can usually be autoderived, and then it's ready for serialization.
+//!
+//! For example:
+//!
+//! ```
+//! use kson::prelude::*;
+//!
+//! #[derive(Clone, Debug, KsonRep)]
+//! /// A silly enum, we shall make an example of it.
+//! enum SillyEnum {
+//!     Foo,
+//!     Bar(u8, String),
+//!     Baz { x: i32, y: f32 },
+//! }
+//!
+//! let silly_example = SillyEnum::Bar(1, "hello".to_string()).to_kson();
+//!
+//! // encode
+//! let encoded = encode_full(&silly_example);
+//! ```
+//!
+//! If the auto-derive fails or you would like to represent the data in a particular way,
+//! see [Implementing the KsonRep trait].
+//!
+//! # An overview of KSON types
+//!
+//! This section contains a brief overview of the core KSON datatypes. For details
+//! about how they are encoded, see [Specification].
+//!
+//! ## Integers
+//!
+//! KSON includes signed 64-bit integers (`I64`) and BigInts (`Int`) up to $2^64$ bytes in
+//! length. All other integer types will be converted to one of these integer types.
+//!
+//! KSON can also encode and decode `usize` and `isize` values, but this can of course
+//! lead to issues if the data is being sent between machines with different word sizes.
+//!
+//! ```
+//! use kson::prelude::*;
+//!
+//! // a small number
+//! let small = 23u8.into_kson();
+//!
+//! // an (absolutely) large number
+//! let large = (-99999999999999999999i128).into_kson();
+//!
+//! // a very large number, from a base 36
+//! let very_big = BigInt::from_str_radix("zzzzzzzzzzzzzzzzzzzzzzzzzzzz", 36)
+//!     .unwrap()
+//!     .into_kson();
+//!
+//! let len = (1 as usize).into_kson();
+//! ```
+//!
+//! See [`Inum`] for more details.
+//!
+//! ## Floats
+//!
+//! The KSON specification includes half, single, and double precision floating point
+//! numbers.
+//!
+//! ```
+//! ```
+//!
+//! Arbitrary precision floating point is not a core part of the format, but we intend to
+//! add support for `Mpfr` through a separate crate in the near future.
+//!
+//! See `Float` for more details.
+//!
+//! ## Bytestrings
+//!
+//!
+//! ## Arrays
+//!
+//! ## Maps
+//!
+//! # Implementing the `KsonRep` trait manually
+//!
+//!
+//! # Benchmarks
+//!
+//! # Specification
+//!
+//!
+//! ## Constants
+//!
+//! The KSON specification include
 
 #![warn(
     missing_docs,
