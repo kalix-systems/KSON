@@ -105,6 +105,14 @@ try_from_kson!(u64, Inum);
 try_from_kson!(i128, Inum);
 try_from_kson!(u128, Inum);
 
+// BigInt
+try_from_kson!(BigInt, Inum);
+
+// Floating point numbers
+try_from_kson!(f16, Float);
+try_from_kson!(f32, Float);
+try_from_kson!(f64, Float);
+
 macro_rules! try_from_kson_rep {
     ($t:ty) => {
         impl KsonRep for $t {
@@ -143,6 +151,14 @@ try_from_kson_rep!(i64);
 // 128-bit integers
 try_from_kson_rep!(i128);
 try_from_kson_rep!(u128);
+
+// BigInt
+try_from_kson_rep!(BigInt);
+
+// Floating point numbers
+try_from_kson_rep!(f16);
+try_from_kson_rep!(f32);
+try_from_kson_rep!(f64);
 
 // Inum
 try_from_kson_rep!(Inum);
