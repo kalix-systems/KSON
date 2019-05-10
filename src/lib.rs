@@ -41,8 +41,9 @@
 //!
 //! ## Integers
 //!
-//! KSON includes signed 64-bit integers (`I64`) and BigInts (`Int`) up to $2^64$ bytes in
-//! length. All other integer types will be converted to one of these integer types.
+//! KSON includes signed 64-bit integers (`I64`) and BigInts (`Int`) up to $`2^{64}`$
+//! bytes in length. All other integer types will be converted to one of these integer
+//! types.
 //!
 //! KSON can also encode and decode `usize` and `isize` values, but this can of course
 //! lead to issues if the data is being sent between machines with different word sizes.
@@ -88,7 +89,7 @@
 //!
 //! ## Bytestrings
 //!
-//! KSON supports bytestrings up to $2^128$ bytes long.
+//! KSON supports bytestrings up to $`2^{128}`$ bytes long.
 //!
 //! ```
 //! use kson::prelude::*;
@@ -215,16 +216,90 @@
 //!     }
 //! }
 //! ```
-//!
 //!  
 //! # Benchmarks
 //!
 //! # Specification
 //!
+//! ## Tags
+//!
+//! The first byte of every Kson object is called the *tag*. The first 3 bits of the tag
+//! are called the *type*, with the remaining 5 bits being *metadata*.
 //!
 //! ## Constants
 //!
-//! The KSON specification include
+//! Constants are values that fit into a tag byte. Their type is `000`. While KSON can
+//! support up to $`2^6-1 = 63`$ constants, we currently use only three. These are
+//! summarized in the table below.
+//!
+//! | Metadata | Semantics |
+//! | ---      | ---       |
+//! | `00000`  | `null`    |
+//! | `00001`  | `true`    |
+//! | `00010`  | `false`   |
+//!
+//! ## Integers
+//!
+//! Integers are whole numbers with length in bytes up to $`2^{64}`$.
+//! Their tag byte is constructed as follows:
+//!
+//! | 001  | x                      | x        | xxx             |
+//! | ---  | --                     | ---      | --              |
+//! | Type | Small (0) or large (1) | Sign bit | Length in bytes |
+//!
+//! For small integers, the length bits encode the length of the integer itself, starting
+//! at 1. For large integers, the length bits encode the length of the length of the
+//! integer, starting at 9.
+//!
+//! The digits of the integer are encoded in little endian order as a sequence
+//! of bytes. When the sign bit is negative, the digits are encoded as $-(n + 1)$, where
+//! the magnitude is $n$.
+//!
+//! ## Bytestrings
+//!
+//! Bytestrings are sequences of bytes with length up to $`2^{128}`$.
+//! Their tag byte is constructed as follows:
+//!
+//! | 010  | x              | xxxx            |
+//! | ---  | --             | --              |
+//! | Type | Small or large | Length in bytes |
+//!
+//! For small strings, the length bits correspond to the length in bytes of the string
+//! itself, starting at 0. For large strings, the length bits correspond to the length in
+//! bytes of the length of the string in bytes, starting at 16.
+//!
+//! ## Arrays
+//!
+//! Arrays are sequences of Kson items with length up to $2^{128}$.
+//! Their tag byte is constructed as follows:
+//!
+//! | 011  | x              | xxxx            |
+//! | ---  | --             | --              |
+//! | Type | Small or large | Length in items |
+//!
+//! For small arrays, the length bits correspond to the length in items of the array
+//! itself, starting at 0. For large arrays, the length bits correspond to the length in
+//! bytes of the length of the array in items, starting at 16.
+//!
+//! ## Maps
+//!
+//! Maps are sequences of `(key, value)` pairs where keys are tagged strings and values
+//! are Kson items with length up to $`2^{128}`$. Their tag byte is constructed as
+//! follows:
+//!
+//! | 100  | x              | xxxx            |
+//! | ---  | --             | --              |
+//! | Type | Small or large | Length in pairs |
+//!
+//! For small maps, the length bits correspond to the length in pairs of the map itself,
+//! starting at 0. For large maps, the length bits correspond to the length in bytes of
+//! the length of the map in pairs, starting at 16.
+//!
+//! ## Floats
+//!
+//! | 101  | xx                                  | xxx              |
+//! | ---  | ---                                 | ---              |
+//! | Type | Half (00), Single (01), Double (10) | Currently Unused |
 
 #![warn(
     missing_docs,
