@@ -2,7 +2,7 @@
 //!
 //! KSON supports half, single, and double precision floating point numbers.
 //!
-//! We intend to implement arithmetic for our wrapper types.
+//! Our wrapper types current do not support arithmetic.
 //!
 //! # Variants
 //!
@@ -162,39 +162,12 @@
 //! // they are the same
 //! assert_eq!(double, double2);
 //! ```
-//!
-//! # Reading a specific precision from `Kson`
-//!
-//! You can specify as specific precision. This only works if the requested precision is
-//! greater than or equal to the precision the value is encoded at (i.e., the conversion
-//! can be performed losslessly).
-//!
-//! For example, this will work:
-//!
-//! ```
-//! // use kson::prelude::*;
-//!
-//! // let ks = Kson::from(1f32);
-//!
-//! // // returns an f64
-//! // let double = f64::from_kson(ks).unwrap();
-//! ```
-//!
-//! but this will panic:
-//!
-//! ```should_panic
-//! use kson::prelude::*;
-//!
-//! let ks = Kson::from(1f64);
-//!
-//! // returns an error, and we're cavalierly unwrapping it!
-//! let double = f32::from_kson(ks).unwrap();
-//! ```
 
 use half::f16;
 use std::convert::TryFrom;
 
 // TODO arithmetic
+// TODO make from_kson work for specific precisions, when possible
 
 #[derive(Eq, Copy, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 /// Floating point number variants
