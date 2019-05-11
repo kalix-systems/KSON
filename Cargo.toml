@@ -1,7 +1,7 @@
 [package]
 name = "kson"
 version = "0.1.0"
-authors = ["theseriousadult <jack@gallabytes.com>"]
+authors = ["Jack Gallagher <jack@gallabytes.com>", "Baeo Maltinsky <baeo@kalix.io>"]
 edition = "2018"
 
 [dependencies]
@@ -11,6 +11,7 @@ half = "1.3"
 num-traits = "0.2"
 num-bigint = "0.2"
 bytes = "0.4"
+error-chain = "0.12"
 kson_macro = {path = "../kson_macro"}
 
 [dev-dependencies]
