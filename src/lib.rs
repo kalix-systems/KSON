@@ -5,7 +5,7 @@
 //!
 //! # Usage
 //!
-//! The trait `KsonRep` is used to specify how data is converted into `Kson`.
+//! The trait [`KsonRep`] is used to specify how data is converted into [`Kson`].
 //!
 //! This trait can usually be autoderived, and then it's ready for serialization.
 //!
@@ -14,7 +14,7 @@
 //! ```
 //! use kson::prelude::*;
 //!
-//! #[derive(Clone, Debug, KsonRep)]
+//! #[derive(Clone, Debug, KsonRep, PartialEq)]
 //! /// A silly enum, we shall make an example of it.
 //! enum SillyEnum {
 //!     Foo,
@@ -22,13 +22,15 @@
 //!     Baz { x: i32, y: f32 },
 //! }
 //!
-//! let silly_example = SillyEnum::Bar(1, "hello".to_string()).to_kson();
+//! let silly_example = SillyEnum::Bar(1, "hello".to_string());
 //!
 //! // encode
-//! let encoded = &mut encode_full(&silly_example).into_buf();
+//! let encoded = &mut encode_full(&silly_example.to_kson()).into_buf();
 //!
 //! // and then immediately decode, because this is a silly exaple
-//! let decoded = decode(encoded);
+//! let decoded = SillyEnum::from_kson(decode(encoded).unwrap()).unwrap();
+//!
+//! assert_eq!(silly_example, decoded);
 //! ```
 //!
 //! If the auto-derive fails or you would like to represent the data in a particular way,
@@ -41,11 +43,11 @@
 //!
 //! ## Integers
 //!
-//! KSON includes signed 64-bit integers (`I64`) and BigInts (`Int`) up to 2^64
-//! bytes in length. All other integer types will be converted to one of these integer
-//! types.
+//! KSON includes signed 64-bit integers ([`Inum::I64`]) and BigInts ([`Inum::Int`]) up to
+//! `2^64` bytes in length. All other integer types will be converted to one of these
+//! integer types.
 //!
-//! KSON can also encode and decode `usize` and `isize` values, but this can of course
+//! KSON can also encode and decode [`usize`] and [`isize`] values, but this can of course
 //! lead to issues if the data is being sent between machines with different word sizes.
 //!
 //! ```
@@ -65,7 +67,7 @@
 //! let len = (1 as usize).into_kson();
 //! ```
 //!
-//! See [`Inum`] for more details.
+//! See also: [`Inum`] and [the integer specification](#integers-1).
 //!
 //! ## Floats
 //!
@@ -83,13 +85,12 @@
 //! ```
 //!
 //! Arbitrary precision floating point is not a core part of the format, but we intend to
-//! add support for `Mpfr` through a separate crate in the near future.
+//! add support for [MPFR](https://en.wikipedia.org/wiki/GNU_MPFR) arbitrary precision floating
+//! points through a separate crate in the near future.
 //!
-//! See `Float` for more details.
+//! See also [`Float`] and the [float specification](#float-1).
 //!
 //! ## Bytestrings
-//!
-//! KSON supports bytestrings up to 2^128 bytes long.
 //!
 //! ```
 //! use kson::prelude::*;
@@ -101,7 +102,11 @@
 //! let a_string = "This is a string".to_string().into_kson();
 //! ```
 //!
+//! See also: [`Bytes`] and the [bytestring specification](#bytestrings-1).
+//!
 //! ## Arrays
+//!
+//! Arrays are sequences of KSON objects.
 //!
 //! ```
 //! use kson::prelude::*;
@@ -109,7 +114,12 @@
 //! let some_numbers = vec![1, 2, 3, 4, 5].into_kson();
 //! ```
 //!
+//! See also: the [array specification](#arrays-1).
+//!
 //! ## Maps
+//!
+//! Maps are mappings from keys to values, serialized based on their [`VecMap`]
+//! representation.
 //!
 //! ```
 //! use hashbrown::HashMap;
@@ -122,15 +132,19 @@
 //! let k_map = a_map.into_kson();
 //! ```
 //!
-//! See `VecMap`.
+//! See also: [`VecMap`] and the [map specification](#maps-1).
 //!
 //! # Implementing the `KsonRep` trait
+//!
+//! While autoderiving [`KsonRep`] is [usually a better idea](#usage), it is fairly
+//! straightforward, if not a bit tedious, to implement by hand. An example:
 //!
 //! ```
 //! use kson::prelude::*;
 //! use hashbrown::HashMap;
 //!
 //! #[derive(Clone)]
+//! /// This is, again, a silly enum.
 //! enum SillyEnum {
 //!     Foo,
 //!     Bar(u8, String),
@@ -216,10 +230,14 @@
 //!     }
 //! }
 //! ```
-//!  
+//!
+//! If this example makes you sad (it has that effect on us), see [Usage](#usage).
+//!
 //! # Benchmarks
 //!
 //! # Specification
+//!
+//! This section describes the KSON binary format.
 //!
 //! ## Tags
 //!
@@ -229,7 +247,7 @@
 //! ## Constants
 //!
 //! Constants are values that fit into a tag byte. Their type is `000`. While KSON can
-//! support up to 2^6-1 = 63 constants, we currently use only three. These are
+//! support up to `2^6-1 = 63` constants, we currently use only three. These are
 //! summarized in the table below.
 //!
 //! | Metadata | Semantics |
@@ -240,7 +258,7 @@
 //!
 //! ## Integers
 //!
-//! Integers are whole numbers with length in bytes up to 2^64.
+//! Integers are whole numbers with length in bytes up to `2^64`.
 //! Their tag byte is constructed as follows:
 //!
 //! | 001  | x                      | x        | xxx             |
@@ -252,12 +270,12 @@
 //! integer, starting at 9.
 //!
 //! The digits of the integer are encoded in little endian order as a sequence
-//! of bytes. When the sign bit is negative, the digits are encoded as $-(n + 1)$, where
-//! the magnitude is $n$.
+//! of bytes. When the sign bit is negative, the digits are encoded as `-(n + 1)`, where
+//! the magnitude is `n`.
 //!
 //! ## Bytestrings
 //!
-//! Bytestrings are sequences of bytes with length up to 2^128.
+//! Bytestrings are sequences of bytes with length up to `2^128`.
 //! Their tag byte is constructed as follows:
 //!
 //! | 010  | x              | xxxx            |
@@ -270,7 +288,7 @@
 //!
 //! ## Arrays
 //!
-//! Arrays are sequences of Kson items with length up to 2^128
+//! Arrays are sequences of KSON items with length up to `2^128`.
 //! Their tag byte is constructed as follows:
 //!
 //! | 011  | x              | xxxx            |
@@ -283,8 +301,8 @@
 //!
 //! ## Maps
 //!
-//! Maps are sequences of `(key, value)` pairs where keys are tagged strings and values
-//! are Kson items with length up to 2^128. Their tag byte is constructed as
+//! Maps are sequences of `(key, value)` pairs where keys are tagged bytestrings and
+//! values are KSON items with length up to `2^128`. Their tag byte is constructed as
 //! follows:
 //!
 //! | 100  | x              | xxxx            |
@@ -296,6 +314,10 @@
 //! the length of the map in pairs, starting at 16.
 //!
 //! ## Floats
+//!
+//! Floats are encoded according to [IEEE 754](https://en.wikipedia.org/wiki/IEEE_754).
+//!
+//! Their tag byte is constructed as follows:
 //!
 //! | 101  | xx                                  | xxx              |
 //! | ---  | ---                                 | ---              |
@@ -349,7 +371,7 @@ use rep::KsonRep;
 use std::convert::{TryFrom, TryInto};
 use vecmap::*;
 
-#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Display, Debug)]
+#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 /// `Kson` and its variants.
 ///
 /// # Example
