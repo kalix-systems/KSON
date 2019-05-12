@@ -105,7 +105,16 @@ macro_rules! try_from_kson_rep {
         impl KsonRep for $t {
             fn into_kson(self) -> Kson { self.into() }
 
-            fn from_kson(ks: Kson) -> Option<Self> { ks.try_into().ok() }
+            fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+                match ks.try_into() {
+                    Ok(v) => Ok(v),
+                    Err(_) => {
+                        Err(KsonConversionError::new(&format!(
+                            "Conversion was not possible"
+                        )))
+                    }
+                }
+            }
         }
     };
 }

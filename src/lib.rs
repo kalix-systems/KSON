@@ -1,3 +1,5 @@
+// TODO update docstrings to reflect better error handling
+
 //! # KSON
 //!
 //! KSON (Kalix Serializable Object Notation) is a serialization format designed to be
@@ -354,6 +356,7 @@ pub mod inum;
 pub mod prelude;
 // /// Python support.
 // pub mod python;
+pub mod errors;
 /// Types representable as `Kson`.
 pub mod rep;
 /// Helper functions.
@@ -362,6 +365,7 @@ mod util;
 pub mod vecmap;
 
 use bytes::{buf::FromBuf, Bytes, IntoBuf};
+use errors::KsonConversionError;
 use float::*;
 use half::f16;
 use hashbrown::HashMap;
@@ -491,10 +495,10 @@ impl Kson {
     /// // get a vec of `Kson` values
     /// let k_numbers = ks.to_vec().unwrap();
     /// ```
-    pub fn to_vec(&self) -> Option<&Vec<Kson>> {
+    pub fn to_vec(&self) -> Result<&Vec<Kson>, KsonConversionError> {
         match self {
-            Array(a) => Some(a),
-            _ => None,
+            Array(a) => Ok(a),
+            _ => Err(KsonConversionError::new("This value is not an `Array`")),
         }
     }
 
@@ -515,7 +519,11 @@ impl Kson {
     /// // get a vec of `Kson` values
     /// let k_numbers = ks.into_vec().unwrap();
     /// ```
-    pub fn into_vec(self) -> Option<Vec<Kson>> { self.try_into().ok() }
+    pub fn into_vec(self) -> Result<Vec<Kson>, KsonConversionError> {
+        // TODO return a sane error message
+        self.try_into()
+            .map_err(|_| KsonConversionError::new("This value is not an `Array`"))
+    }
 
     /// Converts a `Kson` value to a `VecMap`.
     /// This will return `None` if the value is a not a `Kson` map.
@@ -536,10 +544,10 @@ impl Kson {
     /// // convert `Kson` to `VecMap`
     /// let vmap = k_map.to_vecmap();
     /// ```
-    pub fn to_vecmap(&self) -> Option<&VecMap<Bytes, Kson>> {
+    pub fn to_vecmap(&self) -> Result<&VecMap<Bytes, Kson>, KsonConversionError> {
         match self {
-            Map(vmap) => Some(vmap),
-            _ => None,
+            Map(vmap) => Ok(vmap),
+            _ => Err(KsonConversionError::new("This value is not a `Map`")),
         }
     }
 
@@ -562,7 +570,11 @@ impl Kson {
     /// // convert `Kson` into `VecMap`.
     /// let vmap = k_map.into_vecmap();
     /// ```
-    pub fn into_vecmap(self) -> Option<VecMap<Bytes, Kson>> { self.try_into().ok() }
+    pub fn into_vecmap(self) -> Result<VecMap<Bytes, Kson>, KsonConversionError> {
+        // TODO error message
+        self.try_into()
+            .map_err(|_| errors::KsonConversionError::new("This value is not a `Map`"))
+    }
 
     /// Consumes a `Kson` value, converting it into a `HashMap`.
     /// This will return `None` if the value is a not a `Kson` map.
@@ -583,8 +595,8 @@ impl Kson {
     /// // convert `Kson` into `HashMap`
     /// let vmap = k_map.into_map();
     /// ```
-    pub fn into_map(self) -> Option<HashMap<Bytes, Kson>> {
-        Some(self.into_vecmap()?.into_hashmap())
+    pub fn into_map(self) -> Result<HashMap<Bytes, Kson>, errors::KsonConversionError> {
+        Ok(self.into_vecmap()?.into_hashmap())
     }
 
     /// Consumes a `Kson` value, converting it to a value of type `T`.
@@ -603,7 +615,7 @@ impl Kson {
     /// // should be equal
     /// assert_eq!(num, 1);
     /// ```
-    pub fn into_rep<T: KsonRep>(self) -> Option<T> { T::from_kson(self) }
+    pub fn into_rep<T: KsonRep>(self) -> Result<T, KsonConversionError> { T::from_kson(self) }
 
     /// Converts a bytestring literal to `Kson`.
     ///
@@ -651,19 +663,27 @@ impl Kson {
     ///
     /// assert_eq!(n, 1);
     /// ```
-    pub fn to_inum(&self) -> Option<&Inum> {
+    pub fn to_inum(&self) -> Result<&Inum, KsonConversionError> {
         match self {
-            Kint(i) => Some(i),
-            _ => None,
+            Kint(i) => Ok(i),
+            _ => {
+                Err(KsonConversionError::new(
+                    "Value is not `Kint`, cannot convert to `Inum`",
+                ))
+            }
         }
     }
 
     /// Consumes the value, converting it to an `Inum`.
     /// This will return `None` if the value is not an `Inum`.
-    pub fn into_inum(self) -> Option<Inum> {
+    pub fn into_inum(self) -> Result<Inum, KsonConversionError> {
         match self {
-            Kint(i) => Some(i),
-            _ => None,
+            Kint(i) => Ok(i),
+            _ => {
+                Err(KsonConversionError::new(
+                    "Value is not `Kint`, cannot convert to `Inum`",
+                ))
+            }
         }
     }
 
@@ -680,10 +700,10 @@ impl Kson {
     /// // should be `true`
     /// assert!(b.to_bool().unwrap());
     /// ```
-    pub fn to_bool(&self) -> Option<bool> {
+    pub fn to_bool(&self) -> Result<bool, KsonConversionError> {
         match self {
-            Bool(b) => Some(*b),
-            _ => None,
+            Bool(b) => Ok(*b),
+            _ => Err(KsonConversionError::new("Value is not `Bool`")),
         }
     }
 
@@ -699,10 +719,10 @@ impl Kson {
     ///
     /// let foo_bytes = foo.to_bytes().unwrap();
     /// ```
-    pub fn to_bytes(&self) -> Option<&Bytes> {
+    pub fn to_bytes(&self) -> Result<&Bytes, KsonConversionError> {
         match self {
-            Byt(s) => Some(s),
-            _ => None,
+            Byt(s) => Ok(s),
+            _ => Err(KsonConversionError::new("Value is not a bytestring")),
         }
     }
 }
