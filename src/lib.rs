@@ -805,7 +805,7 @@ mod tests {
     fn trivial_tests() {
         assert!(Null.is_null());
 
-        assert!(5.to_kson().to_inum().is_some());
+        assert!(5.to_kson().to_inum().is_ok());
 
         assert!(true.to_kson().to_bool().unwrap());
 
@@ -817,8 +817,8 @@ mod tests {
 
     #[test]
     fn from_vec() {
-        let v = vec![0, 1, 2, 3, 4];
-        let k_val = Kson::from(v.clone());
-        assert_eq!(k_val.into_rep(), Some(v));
+        let v: Vec<u8> = vec![0, 1, 2, 3, 4];
+        let val: Vec<u8> = Kson::from(v.clone()).into_rep().unwrap();
+        assert_eq!(val, v);
     }
 }

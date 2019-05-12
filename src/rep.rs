@@ -383,34 +383,32 @@ impl KsonRep for SocketAddrV4 {
     }
 }
 
-///// Gets the next element from an iterator of `Kson` values as `T`.
-/////
-///// # Arguments
-/////
-///// * `iter: &mut IntoIter<Kson>` - An interator of `Kson` values to be converted into
-/////   `T`.
-/////
-///// # Example
-/////
-///// ```
-///// use kson::prelude::*;
-/////
-///// // vector of `Kson` values
-///// let ks_values = vec![1, 2, 3].into_kson().into_vec().unwrap();
-/////
-///// // get first value
-///// let first: u8 = pop_kson(&mut ks_values.into_iter()).unwrap();
-///// // should be 1
-///// assert_eq!(first, 1);
-///// ```
-// pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Result<T,
-// KsonConversionError> {    match iter.next() {
-//        None =>
-//    }
-//
-//
-//    KsonRep::from_kson(iter.next()?)
-//}
+/// Gets the next element from an iterator of `Kson` values as `T`.
+///
+/// # Arguments
+///
+/// * `iter: &mut IntoIter<Kson>` - An interator of `Kson` values to be converted into
+///   `T`.
+///
+/// # Example
+///
+/// ```
+/// use kson::prelude::*;
+///
+/// // vector of `Kson` values
+/// let ks_values = vec![1, 2, 3].into_kson().into_vec().unwrap();
+///
+/// // get first value
+/// let first: u8 = pop_kson(&mut ks_values.into_iter()).unwrap();
+/// // should be 1
+/// assert_eq!(first, 1);
+/// ```
+pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Result<T, KsonConversionError> {
+    match iter.next() {
+        None => Err(KsonConversionError::new("Iterator is empty or exhausted")),
+        Some(v) => T::from_kson(v),
+    }
+}
 
 /// Values whose KSON representation is never `Null`.
 pub trait KsonNotNull: KsonRep {}
@@ -446,14 +444,29 @@ mod tests {
 
         // to_kson
         match UnitStruct::from_kson(UnitStruct.to_kson()) {
-            Some(UnitStruct) => (),
-            None => panic!("Couldn't retrieve unit struct"),
+            Ok(UnitStruct) => {}
+            Err(_e) => panic!("Couldn't retrieve unit struct"),
         }
 
         // into_kson
         match UnitStruct::from_kson(UnitStruct.into_kson()) {
-            Some(UnitStruct) => (),
-            None => panic!("Couldn't retrieve unit struct"),
+            Ok(UnitStruct) => (),
+            Err(_e) => panic!("Couldn't retrieve unit struct"),
+        }
+    }
+
+    #[test]
+    // Test `KsonRep` autoderive for named-tuple struct
+    fn tuple() {
+        #[derive(KsonRep, Clone, Debug)]
+        struct Foo(u8, String);
+
+        match Foo::from_kson(Foo(1, "hello".to_string()).to_kson()) {
+            Ok(Foo(num, s)) => {
+                assert_eq!(num, 1);
+                assert_eq!(s, "hello".to_string());
+            }
+            _ => panic!("No Foo"),
         }
     }
 
@@ -469,14 +482,14 @@ mod tests {
 
         // to_kson
         match CStruct::from_kson(c_struct.to_kson()) {
-            Some(CStruct { fu }) => assert_eq!(fu, 1),
-            None => panic!("Couldn't retrieve c-type struct"),
+            Ok(CStruct { fu }) => assert_eq!(fu, 1),
+            Err(_e) => panic!("Couldn't retrieve c-type struct"),
         }
 
         // into_kson
         match CStruct::from_kson(c_struct.into_kson()) {
-            Some(CStruct { fu }) => assert_eq!(fu, 1),
-            None => panic!("Couldn't retrieve c-type struct"),
+            Ok(CStruct { fu }) => assert_eq!(fu, 1),
+            Err(_e) => panic!("Couldn't retrieve c-type struct"),
         }
     }
 
@@ -495,7 +508,7 @@ mod tests {
 
         // to_kson
         match Named::from_kson(fu.to_kson()) {
-            Some(Foo(num, string)) => {
+            Ok(Foo(num, string)) => {
                 assert_eq!(num, 1);
                 assert_eq!(string, "hello".to_string());
             }
@@ -504,7 +517,7 @@ mod tests {
 
         // into_kson
         match Named::from_kson(fu.into_kson()) {
-            Some(Foo(num, string)) => {
+            Ok(Foo(num, string)) => {
                 assert_eq!(num, 1);
                 assert_eq!(&string, "hello");
             }
@@ -525,36 +538,20 @@ mod tests {
 
         // to_kson
         match UnitEnum::from_kson(Foo.to_kson()) {
-            Some(Foo) => (),
+            Ok(Foo) => (),
             _ => panic!("Failed to retrieve unit-like struct"),
         }
 
         // into_kson
         match UnitEnum::from_kson(Foo.into_kson()) {
-            Some(Foo) => (),
+            Ok(Foo) => (),
             _ => panic!("Failed to retrieve unit-like struct"),
-        }
-    }
-
-    #[test]
-    // Test `KsonRep` autoderive for named-tuple struct
-    fn tuple() {
-        #[derive(KsonRep, Clone, Debug)]
-        struct Foo(u8, String);
-
-        match Foo::from_kson(Foo(1, "hello".to_string()).to_kson()) {
-            Some(Foo(num, s)) => {
-                assert_eq!(num, 1);
-                assert_eq!(s, "hello".to_string());
-            }
-            _ => panic!("No Foo"),
         }
     }
 
     // Test `KsonRep` autoderive for enum of C-style structs
     #[test]
     fn c_style_enum() {
-        #[derive(KsonRep, Clone, Debug)]
         enum CStyle {
             Foo { num: u8, string: String },
             Bar,
@@ -569,7 +566,7 @@ mod tests {
 
         // to_kson
         match CStyle::from_kson(fu.to_kson()) {
-            Some(Foo { num, string }) => {
+            Ok(Foo { num, string }) => {
                 assert_eq!(num, 1);
                 assert_eq!(&string, "hello");
             }
@@ -578,7 +575,7 @@ mod tests {
 
         // into_kson
         match CStyle::from_kson(fu.into_kson()) {
-            Some(Foo { num, string }) => {
+            Ok(Foo { num, string }) => {
                 assert_eq!(num, 1);
                 assert_eq!(&string, "hello");
             }
