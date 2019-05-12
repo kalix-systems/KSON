@@ -224,96 +224,101 @@ impl KsonRep for () {
             Ok(())
         } else {
             Err(KsonConversionError::new(&format!(
-                "Value is a vector of length {}, not unit",
+                "Value is not 'nil', but rather a vector of length {}",
                 v.len()
             )))
         }
     }
 }
 
-impl<A: KsonRep, B: KsonRep> KsonRep for (A, B) {
-    fn into_kson(self) -> Kson { vec![self.0.into_kson(), self.1.into_kson()].into_kson() }
-
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
-        let exp_len = 2;
-
-        let arr = ks.into_vec()?;
-        if arr.len() == exp_len {
-            let mut k_iter = arr.into_iter();
-
-            let fields = Vec::new();
-
-            for k in k_iter {
-                fields.push(k);
+/// Helper macro for tuples
+macro_rules! tuple_kson {
+    ($len:expr, $($idx:tt : $typ:ident),*) => {
+        impl<$($typ: KsonRep),*> KsonRep for ($($typ,)*) {
+            fn into_kson(self) -> Kson  {
+                vec![ $(self.$idx.into_kson()),* ].into_kson()
             }
-            //            let k1 = iter
-            //                .next()
-            //                .ok_or(KsonConversionError::new("Tuple has wrong number of fields"))?;
-            //            let k2 = iter
-            //                .next()
-            //                .ok_or(KsonConversionError::new("Tuple has wrong number of fields"))?;
-            Ok((A::from_kson(fields[0])?, B::from_kson(fields[1])?))
-        } else {
-            Err(KsonConversionError::new(&format!(
-                "Tuple has wrong number of fields; expected {}, found {}",
-                exp_len,
-                arr.len()
-            )))
+
+            fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+                let exp_len = $len;
+                let arr = ks.into_vec()?;
+
+                if arr.len() == exp_len {
+                    let mut k_iter = arr.into_iter();
+
+                    let tuple = ($(match $typ::from_kson(k_iter.next().unwrap()) {
+                        Ok(val) => val,
+                        Err(e) => return Err(e),
+                    },)*);
+                    Ok(tuple)
+                    //Ok($(match $typ::from_kson(arr[$idx]) { Ok(val) => val,
+                    //    Err(e) => return Err(e),
+                    //},*))
+
+                } else {
+                    Err(KsonConversionError::new(&format!(
+                                "Tuple has wrong number of fields; expected {}, found {}",
+                                exp_len,
+                                arr.len()
+                    )))
+                }
+            }
         }
     }
 }
 
-impl<A: KsonRep, B: KsonRep, C: KsonRep> KsonRep for (A, B, C) {
-    fn into_kson(self) -> Kson {
-        Array(vec![
-            self.0.into_kson(),
-            self.1.into_kson(),
-            self.2.into_kson(),
-        ])
-    }
-
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
-        let arr = ks.into_vec()?;
-        if arr.len() == 3 {
-            let mut iter = arr.into_iter();
-            let k1 = iter.next().unwrap();
-            let k2 = iter.next().unwrap();
-            let k3 = iter.next().unwrap();
-            Some((A::from_kson(k1)?, B::from_kson(k2)?, C::from_kson(k3)?))
-        } else {
-            None
-        }
-    }
-}
-impl<A: KsonRep, B: KsonRep, C: KsonRep, D: KsonRep> KsonRep for (A, B, C, D) {
-    fn into_kson(self) -> Kson {
-        Array(vec![
-            self.0.into_kson(),
-            self.1.into_kson(),
-            self.2.into_kson(),
-            self.3.into_kson(),
-        ])
-    }
-
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
-        let arr = ks.into_vec()?;
-        if arr.len() == 4 {
-            let mut iter = arr.into_iter();
-            let k1 = iter.next().unwrap();
-            let k2 = iter.next().unwrap();
-            let k3 = iter.next().unwrap();
-            let k4 = iter.next().unwrap();
-            Some((
-                A::from_kson(k1)?,
-                B::from_kson(k2)?,
-                C::from_kson(k3)?,
-                D::from_kson(k4)?,
-            ))
-        } else {
-            None
-        }
-    }
-}
+// implement KsonRep for tuples up to length 12
+tuple_kson!(1, 0: A);
+tuple_kson!(2, 0: A, 1: B);
+tuple_kson!(3, 0: A, 1: B, 2: C);
+tuple_kson!(4, 0: A, 1: B, 2: C, 3: D);
+tuple_kson!(5, 0: A, 1: B, 2: C, 3: D, 4: E);
+tuple_kson!(6, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F);
+tuple_kson!(7, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G);
+tuple_kson!(8, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H);
+tuple_kson!(9, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H, 8: I);
+tuple_kson!(
+    10,
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J
+);
+tuple_kson!(
+    11,
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J,
+    10: K
+);
+tuple_kson!(
+    12,
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J,
+    10: K,
+    11: L
+);
 
 impl<T: KsonRep> KsonRep for Option<T> {
     fn into_kson(self) -> Kson {
@@ -369,14 +374,14 @@ impl KsonRep for Ipv4Addr {
     }
 }
 
-// impl KsonRep for SocketAddrV4 {
-//    fn into_kson(self) -> Kson { (*self.ip(), self.port()).into_kson() }
-//
-//    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
-//        let (ip, port) = KsonRep::from_kson(ks)?;
-//        Some(Self::new(ip, port))
-//    }
-//}
+impl KsonRep for SocketAddrV4 {
+    fn into_kson(self) -> Kson { (*self.ip(), self.port()).into_kson() }
+
+    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+        let (ip, port) = KsonRep::from_kson(ks)?;
+        Ok(Self::new(ip, port))
+    }
+}
 
 ///// Gets the next element from an iterator of `Kson` values as `T`.
 /////
