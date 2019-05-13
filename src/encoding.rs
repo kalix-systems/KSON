@@ -1,3 +1,46 @@
+//! # KSON binary encoder and decoder
+//!
+//! Encode and decode functions for KSON.
+//!
+//! # Example
+//!
+//! ```
+//! use kson::prelude::*;
+//!
+//! // a struct that will store some data
+//! #[derive(KsonRep, PartialEq, Debug, Clone)]
+//! struct SomeData {
+//!     x: usize,
+//!     y: i32,
+//! }
+//!
+//! // here it is storing some data
+//! let some_data = SomeData { x: 1, y: 2 };
+//!
+//! // and we've encoded it
+//! let enc_full = encode_full(&some_data.to_kson());
+//!
+//! // let's encode it a different way too
+//!
+//! // create a buffer
+//! let out = &mut Vec::new();
+//!
+//! // and we've encoded it a different way
+//! encode(&some_data.to_kson(), out);
+//!
+//! // but they are equivalent
+//! assert_eq!(*out, enc_full);
+//!
+//! // Note: decoding returns a `Result`
+//! let dec_full: SomeData = decode(&mut enc_full.into_buf())
+//!     .unwrap() // did the decoding succeed?
+//!     .into_rep() // convert into `SomeData`
+//!     .unwrap(); // did the conversion succeed?
+//!
+//! // success!
+//! assert_eq!(dec_full, some_data);
+//! ```
+
 #![allow(clippy::inconsistent_digit_grouping)]
 use crate::{
     errors::DecodingError,
@@ -42,7 +85,7 @@ const SINGLE: u8 = TYPE_FLOAT | 0b000_01_000;
 /// Double-precision tag
 const DOUBLE: u8 = TYPE_FLOAT | 0b000_10_000;
 
-/// `Null` constant.
+/// [`Null`] constant.
 const CON_NULL: u8 = 0b0000_0000;
 /// `True` constant.
 const CON_TRUE: u8 = 0b0000_0001;
@@ -69,7 +112,7 @@ enum LenOrDigs {
 use LenOrDigs::*;
 
 #[derive(Clone, Debug)]
-/// `Kson` with encoding metadata.
+/// KSON with encoding metadata.
 enum KMeta<'a> {
     /// Constants
     KMCon(u8),
@@ -87,11 +130,11 @@ enum KMeta<'a> {
 
 use KMeta::*;
 
-/// Converts `Inum` to tagged `Kson`.
+/// Converts [`Inum`] to tagged KSON.
 ///
 /// # Arguments
 ///
-/// * `i` - An `Inum` that holds the integer.
+/// * `i: Inum` - the integer to be tagged.
 fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
     match i {
         I64(i) => {
@@ -153,7 +196,7 @@ macro_rules! len_or_digs {
     };
 }
 
-/// Converts `Kson` to tagged `Kson`.
+/// Converts [`Kson`] to tagged KSON.
 ///
 /// # Arguments
 ///
@@ -251,12 +294,13 @@ fn encode_meta<'a>(km: KMeta<'a>, out: &mut Vec<u8>) {
     }
 }
 
-/// Encode `Kson` into its binary representation, storing output in `out`.
+/// Encode [`Kson`] into its binary representation, storing output in `out`.
 ///
 /// # Arguments
 ///
-/// * `ks` - A reference to the `Kson` value to be encoded.
-/// * `out` - A mutable reference to `Bytes` where the encoder output will be stored.
+/// * `ks: &Kson` - A reference to the [`Kson`] value to be encoded.
+/// * `out: &mut Vec<u8>` - A mutable reference to [`Bytes`] where the encoder output will
+///   be stored.
 ///
 /// # Example
 ///
@@ -353,7 +397,7 @@ fn read_tag(input: &mut Buf) -> Result<KTag, DecodingError> {
     }
 }
 
-/// Try to read `u64` from buffer.
+/// Try to read [`u64`] from buffer.
 fn read_u64<B: Buf>(data: &mut B, len: u8) -> Result<u64, DecodingError> {
     debug_assert!(len <= 8);
     if data.remaining() >= len as usize {
@@ -366,7 +410,7 @@ fn read_u64<B: Buf>(data: &mut B, len: u8) -> Result<u64, DecodingError> {
     }
 }
 
-/// Try to read `Inum` from buffer.
+/// Try to read [`Inum`] from buffer.
 fn read_int<B: Buf>(data: &mut B, big: bool, pos: bool, len: u8) -> Result<Inum, DecodingError> {
     debug_assert!(len - 1 <= MASK_INT_LEN_BITS);
     let u = read_u64(data, len).map_err(|e| {
@@ -406,7 +450,7 @@ fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Result<usize, DecodingE
     }
 }
 
-/// Tries to decode a buffer into `Kson`.
+/// Tries to decode a buffer into [`Kson`].
 ///
 /// # Arguments
 ///
@@ -420,8 +464,14 @@ fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Result<usize, DecodingE
 /// // encoded value
 /// let k_null = &mut encode_full(&Kson::Null).into_buf();
 ///
+/// // Did the decode work?
+/// let dec = match decode(k_null) {
+///     Ok(value) => value,
+///     Err(_e) => panic!("Oh no. Whatever will I do?"),
+/// };
+///
 /// // should be equal
-/// assert_eq!(decode(k_null).unwrap(), Kson::Null);
+/// assert_eq!(dec, Kson::Null);
 /// ```
 pub fn decode<B: Buf>(data: &mut B) -> Result<Kson, DecodingError> {
     let tag = read_tag(data)?;
@@ -457,7 +507,7 @@ pub fn decode<B: Buf>(data: &mut B) -> Result<Kson, DecodingError> {
             let mut out = Vec::with_capacity(len);
             for _ in 0..len {
                 let key: Bytes = decode(data)?.try_into().map_err(|_| {
-                    DecodingError::new("Expected bytestring, found some other `Kson` value")
+                    DecodingError::new("Expected bytestring, found some other [`Kson`] value")
                 })?;
                 let val = decode(data)?;
                 out.push((key, val));
@@ -513,11 +563,11 @@ pub fn decode<B: Buf>(data: &mut B) -> Result<Kson, DecodingError> {
     }
 }
 
-/// Encodes a `Kson` object into a vector of bytes.
+/// Encodes a [`Kson`] object into a vector of bytes.
 ///
 /// # Arguments
 ///
-/// * `ks` - A reference to the `Kson` value to be encoded.
+/// * `ks` - A reference to the [`Kson`] value to be encoded.
 ///
 /// # Example
 ///
@@ -536,7 +586,7 @@ pub fn encode_full(ks: &Kson) -> Vec<u8> {
     out
 }
 
-/// Decodes a bytestring into `Kson`, returns a [`DecodingError`] if decoding fails.
+/// Decodes a bytestring into [`Kson`], returns a [`DecodingError`] if decoding fails.
 ///
 /// # Arguments
 ///

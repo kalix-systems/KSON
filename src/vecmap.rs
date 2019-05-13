@@ -1,3 +1,5 @@
+//! A wrapper around a sorted vector of tuples that KSON uses to serialize maps.
+
 use hashbrown::HashMap;
 use std::{collections::BTreeMap, hash::*, iter::FromIterator, slice::Iter, vec::IntoIter};
 

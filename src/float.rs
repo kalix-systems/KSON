@@ -170,13 +170,37 @@ use std::convert::TryFrom;
 // TODO make from_kson work for specific precisions, when possible
 
 #[derive(Eq, Copy, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
-/// Floating point number variants
+/// Floating point numbers. See also: [`float`](`crate::float`).
 pub enum Float {
     /// Half precision float
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let half = Float::from(f16::from_f32(1f32));
+    /// ```
     Half(u16),
     /// Single precision float
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let single = Float::from(1f32);
+    /// ```
     Single(u32),
     /// Double precision float
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let double = Float::from(1f64);
+    /// ```
     Double(u64),
 }
 

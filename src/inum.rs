@@ -25,7 +25,7 @@ use std::{
     ops::{Add, Div, Mul, Neg, Rem, Sub},
 };
 
-/// `Inum`s are either `i64` or `BigInt`s (i.e., big integers).
+/// [`Inum`]s are either [`i64`]s or [`BigInt`]s (i.e., big integers).
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 pub enum Inum {
     /// Small integer type.

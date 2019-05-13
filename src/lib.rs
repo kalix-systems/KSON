@@ -342,26 +342,16 @@
 )]
 #![allow(clippy::cast_lossless)]
 
-/// Procedural macros for autoderiving `KsonRep`.
+/// Procedural macros for autoderiving [`KsonRep`].
 pub extern crate kson_macro;
 
-/// KSON binary encoder and decoder.
 pub mod encoding;
-/// Floating-point numbers
-pub mod float;
-/// Integer variants.
-pub mod inum;
-/// Things you probably want in scope when working with `Kson`.
-pub mod prelude;
-// /// Python support.
-// pub mod python;
-/// Errors that can occur when working with this library.
 pub mod errors;
-/// Types representable as `Kson`.
+pub mod float;
+pub mod inum;
+pub mod prelude;
 pub mod rep;
-/// Helper functions.
 mod util;
-/// A wrapper around a sorted vector of pairs.
 pub mod vecmap;
 
 use bytes::{buf::FromBuf, Bytes, IntoBuf};
@@ -376,7 +366,7 @@ use std::convert::{TryFrom, TryInto};
 use vecmap::*;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
-/// `Kson` and its variants.
+/// [`Kson`] and its variants.
 ///
 /// # Example
 ///
@@ -393,7 +383,7 @@ use vecmap::*;
 /// assert!(val);
 /// ```
 pub enum Kson {
-    /// Null. Corresponds to `None`.
+    /// Null. Corresponds to [`None`].
     ///
     /// # Example
     ///
@@ -427,7 +417,7 @@ pub enum Kson {
     /// let k_num = Kint(num);
     /// ```
     Kint(Inum),
-    /// Bytestring type.
+    /// Bytestring.
     ///
     /// # Example
     ///
@@ -439,7 +429,7 @@ pub enum Kson {
     /// let k_bytes = Byt(bytes);
     /// ```
     Byt(Bytes),
-    /// Array type.
+    /// Array.
     ///
     /// # Example
     ///
@@ -454,7 +444,7 @@ pub enum Kson {
     /// );
     /// ```
     Array(Vec<Kson>),
-    /// Map type.
+    /// Map.
     ///
     /// ```
     /// use kson::prelude::{Kson::Map, *};
@@ -464,7 +454,7 @@ pub enum Kson {
     /// let kmap = Map(vmap);
     /// ```
     Map(VecMap<Bytes, Kson>),
-    /// Floating point number type.
+    /// Floating point number.
     /// ```
     /// use kson::prelude::{Kson::Kfloat, *};
     ///
@@ -478,8 +468,8 @@ pub enum Kson {
 use Kson::*;
 
 impl Kson {
-    /// Converts a `Kson` value to a vector of `Kson`.
-    /// This will return a [`KsonConversionError`] if the value is not a `Kson` array.
+    /// Converts a [`Kson`] value to a vector of [`Kson`].
+    /// This will return a [`KsonConversionError`] if the value is not a [`Kson::Array`].
     ///
     /// # Example
     ///
@@ -502,8 +492,8 @@ impl Kson {
         }
     }
 
-    /// Consumes a `Kson` value, converting it into a vector of `Kson`.
-    /// This will return a [`KsonConversionError`] if the value is not a `Kson` array.
+    /// Consumes a [`Kson`] value, converting it into a vector of [`Kson`] values.
+    /// This will return a [`KsonConversionError`] if the value is not a [`Kson::Array`].
     ///
     /// # Example
     ///
@@ -525,8 +515,8 @@ impl Kson {
             .map_err(|_| KsonConversionError::new("This value is not an `Array`"))
     }
 
-    /// Converts a `Kson` value to a `VecMap`.
-    /// This will return a [`KsonConversionError`] if the value is a not a `Kson` map.
+    /// Converts a [`Kson`] value to a [`VecMap`].
+    /// This will return a [`KsonConversionError`] if the value is a not a [`Kson`] map.
     ///
     /// # Example
     ///
@@ -551,7 +541,7 @@ impl Kson {
         }
     }
 
-    /// Consumes a `Kson` value, converting it into a `HashMap`.
+    /// Consumes a [`Kson`] value, converting it into a [`HashMap`].
     /// This will return a [`KsonConversionError`] if the value is a not a `Kson` map.
     ///
     /// # Example
@@ -576,8 +566,8 @@ impl Kson {
             .map_err(|_| errors::KsonConversionError::new("This value is not a `Map`"))
     }
 
-    /// Consumes a `Kson` value, converting it into a `HashMap`.
-    /// This will return a [`KsonConversionError`] if the value is a not a `Kson` map.
+    /// Consumes a [`Kson`] value, converting it into a [`HashMap`].
+    /// This will return a [`KsonConversionError`] if the value is a not a [`Kson::Map`].
     ///
     /// # Example
     ///
@@ -599,7 +589,7 @@ impl Kson {
         Ok(self.into_vecmap()?.into_hashmap())
     }
 
-    /// Consumes a `Kson` value, converting it to a value of type `T`.
+    /// Consumes a [`Kson`] value, converting it to a value of type `T`.
     ///
     /// # Example
     ///
@@ -617,7 +607,11 @@ impl Kson {
     /// ```
     pub fn into_rep<T: KsonRep>(self) -> Result<T, KsonConversionError> { T::from_kson(self) }
 
-    /// Converts a bytestring literal to `Kson`.
+    /// Converts a bytestring literal to [`Kson`].
+    ///
+    /// # Arguments
+    ///
+    /// * `bytes: &'static [u8]` - the bytestring literal to be converted.
     ///
     /// # Example
     /// ```
@@ -631,7 +625,7 @@ impl Kson {
     /// ```
     pub fn from_static(bytes: &'static [u8]) -> Kson { Byt(Bytes::from_static(bytes)) }
 
-    /// Indicates whether a value is `Null`.
+    /// Indicates whether a value is [`Null`].
     ///
     /// # Example
     ///
@@ -649,8 +643,8 @@ impl Kson {
         }
     }
 
-    /// Tries to convert value to an `Inum`.
-    /// This will return a [`KsonConversionError`] if the value is not an `Inum`.
+    /// Tries to convert a value to an [`Inum`].
+    /// This will return a [`KsonConversionError`] if the value is not an [`Inum`].
     ///
     /// # Example
     ///
@@ -674,8 +668,8 @@ impl Kson {
         }
     }
 
-    /// Consumes the value, converting it to an `Inum`.
-    /// This will return a [`KsonConversionError`] if the value is not an `Inum`.
+    /// Consumes the value, converting it to an [`Inum`].
+    /// This will return a [`KsonConversionError`] if the value is not an [`Inum`].
     pub fn into_inum(self) -> Result<Inum, KsonConversionError> {
         match self {
             Kint(i) => Ok(i),
@@ -687,7 +681,7 @@ impl Kson {
         }
     }
 
-    /// Tries to convert value to a `bool`.
+    /// Tries to convert a value to a `bool`.
     /// This will return a [`KsonConversionError`] if the value is not a `Kson` bool.
     ///
     /// # Example
@@ -707,7 +701,7 @@ impl Kson {
         }
     }
 
-    /// Tries to convert value to `Bytes`.
+    /// Tries to convert a value to `Bytes`.
     /// This will return a [`KsonConversionError`] if the value is not a `Kson`
     /// bytestring.
     ///

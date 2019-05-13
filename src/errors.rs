@@ -1,3 +1,5 @@
+//! Errors that can be encountered when working with KSON.
+
 use std::{error::Error, fmt};
 
 #[derive(Debug, Clone, Default)]
@@ -5,7 +7,7 @@ use std::{error::Error, fmt};
 pub struct DecodingError(pub String);
 
 impl DecodingError {
-    /// Creates a new `DecodingError`
+    /// Creates a new [`DecodingError`].
     ///
     /// # Arguments
     ///
@@ -28,13 +30,13 @@ impl fmt::Display for DecodingError {
 }
 
 #[derive(Debug, Clone, Default)]
-/// An error encountered when a type-conversion from `Kson` fails.
+/// An error encountered when a type-conversion from [`Kson`](`crate::Kson`) fails.
 pub struct KsonConversionError(pub String);
 
 impl Error for KsonConversionError {}
 
 impl KsonConversionError {
-    /// Creates a new `KsonConversionError`
+    /// Creates a new [`KsonConversionError`]
     ///
     /// # Arguments
     ///

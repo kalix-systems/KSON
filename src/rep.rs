@@ -1,3 +1,5 @@
+//! # Values representable as KSON.
+
 use crate::*;
 use bytes::Bytes;
 use hashbrown::HashMap;
@@ -473,7 +475,7 @@ pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Result<T, KsonConversi
     }
 }
 
-/// Values whose KSON representation is never `Null`.
+/// Values whose KSON representation is never [`Null`].
 pub trait KsonNotNull: KsonRep {}
 impl<T: KsonRep> KsonNotNull for Vec<T> {}
 
