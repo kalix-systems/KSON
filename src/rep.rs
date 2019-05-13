@@ -20,9 +20,7 @@ pub trait KsonRep: Clone + Sized {
     ///
     /// let k_num = 1.to_kson();
     /// ```
-    fn to_kson(&self) -> Kson {
-        self.clone().into_kson()
-    }
+    fn to_kson(&self) -> Kson { self.clone().into_kson() }
 
     /// Consumes value, converting it into [`Kson`].
     ///
@@ -33,9 +31,7 @@ pub trait KsonRep: Clone + Sized {
     ///
     /// let k_num = 1.into_kson();
     /// ```
-    fn into_kson(self) -> Kson {
-        self.to_kson()
-    }
+    fn into_kson(self) -> Kson { self.to_kson() }
 
     /// Converts value from [`Kson`].
     ///
@@ -114,17 +110,17 @@ try_from_kson!(f64, Float);
 macro_rules! try_from_kson_rep {
     ($t:ty) => {
         impl KsonRep for $t {
-            fn into_kson(self) -> Kson {
-                self.into()
-            }
+            fn into_kson(self) -> Kson { self.into() }
 
             fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
                 match ks.try_into() {
                     Ok(v) => Ok(v),
-                    Err(_) => Err(KsonConversionError::new(&format!(
-                        "Could not convert `Kson` to `{}`",
-                        stringify!($t)
-                    ))),
+                    Err(_) => {
+                        Err(KsonConversionError::new(&format!(
+                            "Could not convert `Kson` to `{}`",
+                            stringify!($t)
+                        )))
+                    }
                 }
             }
         }
@@ -178,9 +174,7 @@ try_from_kson_rep!(Bytes);
 macro_rules! kson_rep_kson_from {
     ($from:tt) => {
         impl From<$from> for Kson {
-            fn from(f: $from) -> Self {
-                f.into_kson()
-            }
+            fn from(f: $from) -> Self { f.into_kson() }
         }
     };
 }
@@ -292,13 +286,9 @@ tuple_kson!(
 );
 
 impl KsonRep for String {
-    fn into_kson(self) -> Kson {
-        Kson::from_buf(self)
-    }
+    fn into_kson(self) -> Kson { Kson::from_buf(self) }
 
-    fn to_kson(&self) -> Kson {
-        Kson::from_buf(self)
-    }
+    fn to_kson(&self) -> Kson { Kson::from_buf(self) }
 
     /// Tries to convert a [`Kson`] value to a utf8 string.
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
@@ -308,21 +298,19 @@ impl KsonRep for String {
 }
 
 impl KsonRep for char {
-    fn into_kson(self) -> Kson {
-        Kson::from_buf(self.to_string())
-    }
+    fn into_kson(self) -> Kson { Kson::from_buf(self.to_string()) }
 
-    fn to_kson(&self) -> Kson {
-        Kson::from_buf(self.to_string())
-    }
+    fn to_kson(&self) -> Kson { Kson::from_buf(self.to_string()) }
 
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         let mut s = String::from_kson(ks)?;
 
         match s.pop() {
-            None => Err(KsonConversionError::new(
-                "Tried to get character from empty string",
-            )),
+            None => {
+                Err(KsonConversionError::new(
+                    "Tried to get character from empty string",
+                ))
+            }
             Some(c) => {
                 if s.is_empty() {
                     Ok(c)
@@ -335,13 +323,9 @@ impl KsonRep for char {
 }
 
 impl<T: KsonRep> KsonRep for Vec<T> {
-    fn into_kson(self) -> Kson {
-        Array(self.into_iter().map(T::into_kson).collect())
-    }
+    fn into_kson(self) -> Kson { Array(self.into_iter().map(T::into_kson).collect()) }
 
-    fn to_kson(&self) -> Kson {
-        Array(self.iter().map(T::to_kson).collect())
-    }
+    fn to_kson(&self) -> Kson { Array(self.iter().map(T::to_kson).collect()) }
 
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         ks.into_vec()?.into_iter().map(T::from_kson).collect()
@@ -355,9 +339,7 @@ impl<T: KsonRep> KsonRep for VecMap<Bytes, T> {
         ))
     }
 
-    fn to_kson(&self) -> Kson {
-        Map(self.iter().map(|(k, v)| (k.clone(), v.to_kson())).collect())
-    }
+    fn to_kson(&self) -> Kson { Map(self.iter().map(|(k, v)| (k.clone(), v.to_kson())).collect()) }
 
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         let vm = ks.into_vecmap()?;
@@ -370,13 +352,9 @@ impl<T: KsonRep> KsonRep for VecMap<Bytes, T> {
 }
 
 impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for HashMap<Bytes, T, S> {
-    fn into_kson(self) -> Kson {
-        Map(self.into_iter().map(|(k, v)| (k, v.into_kson())).collect())
-    }
+    fn into_kson(self) -> Kson { Map(self.into_iter().map(|(k, v)| (k, v.into_kson())).collect()) }
 
-    fn to_kson(&self) -> Kson {
-        Map(self.iter().map(|(k, v)| (k.clone(), v.to_kson())).collect())
-    }
+    fn to_kson(&self) -> Kson { Map(self.iter().map(|(k, v)| (k.clone(), v.to_kson())).collect()) }
 
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         let vmap = ks.into_vecmap()?;
@@ -422,9 +400,7 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for Hash
 }
 
 impl KsonRep for () {
-    fn into_kson(self) -> Kson {
-        Array(vec![])
-    }
+    fn into_kson(self) -> Kson { Array(vec![]) }
 
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         let v = ks.into_vec()?;
@@ -495,9 +471,7 @@ impl KsonRep for Ipv4Addr {
 }
 
 impl KsonRep for SocketAddrV4 {
-    fn into_kson(self) -> Kson {
-        (*self.ip(), self.port()).into_kson()
-    }
+    fn into_kson(self) -> Kson { (*self.ip(), self.port()).into_kson() }
 
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         let (ip, port) = KsonRep::from_kson(ks)?;
@@ -672,7 +646,7 @@ mod tests {
         use CStyle::*;
 
         let fu = Foo {
-            num: 1,
+            num:    1,
             string: "hello".to_string(),
         };
 
