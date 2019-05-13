@@ -19,16 +19,6 @@ pub(crate) fn u64_to_digits(num: u64) -> Vec<u8> {
 fn coldvec() -> Vec<u8> { vec![0] }
 
 #[macro_export]
-/// Helper macro to compose `From` implementations.
-macro_rules! compose_from {
-    ($to:tt, $mid:tt, $from:ty) => {
-        impl From<$from> for $to {
-            fn from(f: $from) -> Self { Self::from($mid::from(f)) }
-        }
-    };
-}
-
-#[macro_export]
 /// Helper macro to make implementing `From` easier.
 macro_rules! from_fn {
     ($to:ty, $from:ty, $fn:expr) => {
@@ -74,47 +64,5 @@ macro_rules! chain_try_from {
     };
     ($e: expr, $i: tt, $($is:tt)*) => {
         chain_try_from!($e.and_then(|x| $i::try_from(x).map_err(|_| ())), $($is)*)
-    };
-}
-
-#[macro_export]
-/// Helper macro for implementing `TryFrom` for `Kson`.
-macro_rules! try_from_kson {
-    ($t: ty) => {
-        impl TryFrom<Kson> for $t {
-            type Error = ();
-            fn try_from(ks: Kson) -> Result<$t, ()> {
-                ks.try_into().map_err(|_| ())
-            }
-        }
-    };
-    ($t: ty, $($is:tt)*) => {
-        impl TryFrom<Kson> for $t {
-            type Error = ();
-            fn try_from(ks: Kson) -> Result<$t, ()> {
-                chain_try_from!(Ok(ks), $($is)*)
-            }
-        }
-    };
-}
-
-#[macro_export]
-/// KsonRep given TryFrom<Kson>
-macro_rules! try_from_kson_rep {
-    ($t:ty) => {
-        impl KsonRep for $t {
-            fn into_kson(self) -> Kson { self.into() }
-
-            fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
-                match ks.try_into() {
-                    Ok(v) => Ok(v),
-                    Err(_) => {
-                        Err(KsonConversionError::new(&format!(
-                            "Conversion was not possible"
-                        )))
-                    }
-                }
-            }
-        }
     };
 }

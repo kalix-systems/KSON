@@ -785,6 +785,15 @@ try_from_ctor!(Kson, Float, Kfloat);
 try_from_ctor!(Kson, Vec<Kson>, Array);
 try_from_ctor!(Kson, VecMap<Bytes, Kson>, Map);
 
+/// Helper macro to compose `From` implementations.
+macro_rules! compose_from {
+    ($to:tt, $mid:tt, $from:ty) => {
+        impl From<$from> for $to {
+            fn from(f: $from) -> Self { Self::from($mid::from(f)) }
+        }
+    };
+}
+
 // Integers
 compose_from!(Kson, Inum, BigInt);
 compose_from!(Kson, Inum, isize);

@@ -51,6 +51,25 @@ pub trait KsonRep: Clone + Sized {
 }
 
 // TryFrom<Kson> impls
+/// Helper macro for implementing `TryFrom` for `Kson`.
+macro_rules! try_from_kson {
+    ($t: ty) => {
+        impl TryFrom<Kson> for $t {
+            type Error = ();
+            fn try_from(ks: Kson) -> Result<$t, ()> {
+                ks.try_into().map_err(|_| ())
+            }
+        }
+    };
+    ($t: ty, $($is:tt)*) => {
+        impl TryFrom<Kson> for $t {
+            type Error = ();
+            fn try_from(ks: Kson) -> Result<$t, ()> {
+                chain_try_from!(Ok(ks), $($is)*)
+            }
+        }
+    };
+}
 
 // sizes
 try_from_kson!(usize, Inum);
@@ -85,6 +104,25 @@ try_from_kson!(f32, Float);
 try_from_kson!(f64, Float);
 
 // KsonRep impls
+/// KsonRep given TryFrom<Kson>
+macro_rules! try_from_kson_rep {
+    ($t:ty) => {
+        impl KsonRep for $t {
+            fn into_kson(self) -> Kson { self.into() }
+
+            fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+                match ks.try_into() {
+                    Ok(v) => Ok(v),
+                    Err(_) => {
+                        Err(KsonConversionError::new(&format!(
+                            "Conversion was not possible"
+                        )))
+                    }
+                }
+            }
+        }
+    };
+}
 
 // Kson
 try_from_kson_rep!(Kson);
