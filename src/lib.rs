@@ -1,5 +1,3 @@
-// TODO update docstrings to reflect better error handling
-
 //! # KSON
 //!
 //! KSON (Kalix Serializable Object Notation) is a serialization format designed to be
@@ -739,16 +737,8 @@ impl FromBuf for Kson {
     }
 }
 
-impl From<String> for Kson {
-    fn from(s: String) -> Kson { s.into_kson() }
-}
-
 impl From<&str> for Kson {
     fn from(s: &str) -> Kson { s.to_string().into_kson() }
-}
-
-impl From<char> for Kson {
-    fn from(c: char) -> Kson { c.into_kson() }
 }
 
 impl<T: Into<Kson>> From<Vec<T>> for Kson {

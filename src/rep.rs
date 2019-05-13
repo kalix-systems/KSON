@@ -3,7 +3,7 @@ use bytes::Bytes;
 use hashbrown::HashMap;
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
-    vec::{IntoIter, Vec},
+    vec::IntoIter,
 };
 pub use vecmap::VecMap;
 
@@ -168,6 +168,114 @@ try_from_kson_rep!(Inum);
 // Bytes
 try_from_kson_rep!(Bytes);
 
+macro_rules! kson_rep_kson_from {
+    ($from:tt) => {
+        impl From<$from> for Kson {
+            fn from(f: $from) -> Self { f.into_kson() }
+        }
+    };
+}
+
+// String -> Kson
+kson_rep_kson_from!(String);
+// char -> Kson
+kson_rep_kson_from!(char);
+// () -> Kson
+kson_rep_kson_from!(());
+// Ipv4Addr -> Kson
+kson_rep_kson_from!(Ipv4Addr);
+// SocketAddrV4 -> Kson
+kson_rep_kson_from!(SocketAddrV4);
+
+/// Helper macro for tuples
+macro_rules! tuple_kson {
+    ($len:expr, $($idx:tt : $typ:ident),*) => {
+        impl<$($typ: KsonRep),*> KsonRep for ($($typ,)*) {
+            fn into_kson(self) -> Kson  {
+                vec![ $(self.$idx.into_kson()),* ].into_kson()
+            }
+
+            fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+                let exp_len = $len;
+                let arr = ks.into_vec()?;
+
+                if arr.len() == exp_len {
+                    let mut k_iter = arr.into_iter();
+
+                    let tuple = ($(match $typ::from_kson(k_iter.next().unwrap()) {
+                        Ok(val) => val,
+                        Err(e) => return Err(e),
+                    },)*);
+                    Ok(tuple)
+                    //Ok($(match $typ::from_kson(arr[$idx]) { Ok(val) => val,
+                    //    Err(e) => return Err(e),
+                    //},*))
+
+                } else {
+                    Err(KsonConversionError::new(&format!(
+                                "Tuple has wrong number of fields; expected {}, found {}",
+                                exp_len,
+                                arr.len()
+                    )))
+                }
+            }
+        }
+    }
+}
+
+// implement KsonRep for tuples up to length 12
+tuple_kson!(1, 0: A);
+tuple_kson!(2, 0: A, 1: B);
+tuple_kson!(3, 0: A, 1: B, 2: C);
+tuple_kson!(4, 0: A, 1: B, 2: C, 3: D);
+tuple_kson!(5, 0: A, 1: B, 2: C, 3: D, 4: E);
+tuple_kson!(6, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F);
+tuple_kson!(7, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G);
+tuple_kson!(8, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H);
+tuple_kson!(9, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H, 8: I);
+tuple_kson!(
+    10,
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J
+);
+tuple_kson!(
+    11,
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J,
+    10: K
+);
+tuple_kson!(
+    12,
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J,
+    10: K,
+    11: L
+);
+
 impl KsonRep for String {
     fn into_kson(self) -> Kson { Kson::from_buf(self) }
 
@@ -269,95 +377,6 @@ impl KsonRep for () {
     }
 }
 
-/// Helper macro for tuples
-macro_rules! tuple_kson {
-    ($len:expr, $($idx:tt : $typ:ident),*) => {
-        impl<$($typ: KsonRep),*> KsonRep for ($($typ,)*) {
-            fn into_kson(self) -> Kson  {
-                vec![ $(self.$idx.into_kson()),* ].into_kson()
-            }
-
-            fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
-                let exp_len = $len;
-                let arr = ks.into_vec()?;
-
-                if arr.len() == exp_len {
-                    let mut k_iter = arr.into_iter();
-
-                    let tuple = ($(match $typ::from_kson(k_iter.next().unwrap()) {
-                        Ok(val) => val,
-                        Err(e) => return Err(e),
-                    },)*);
-                    Ok(tuple)
-                    //Ok($(match $typ::from_kson(arr[$idx]) { Ok(val) => val,
-                    //    Err(e) => return Err(e),
-                    //},*))
-
-                } else {
-                    Err(KsonConversionError::new(&format!(
-                                "Tuple has wrong number of fields; expected {}, found {}",
-                                exp_len,
-                                arr.len()
-                    )))
-                }
-            }
-        }
-    }
-}
-
-// implement KsonRep for tuples up to length 12
-tuple_kson!(1, 0: A);
-tuple_kson!(2, 0: A, 1: B);
-tuple_kson!(3, 0: A, 1: B, 2: C);
-tuple_kson!(4, 0: A, 1: B, 2: C, 3: D);
-tuple_kson!(5, 0: A, 1: B, 2: C, 3: D, 4: E);
-tuple_kson!(6, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F);
-tuple_kson!(7, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G);
-tuple_kson!(8, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H);
-tuple_kson!(9, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H, 8: I);
-tuple_kson!(
-    10,
-    0: A,
-    1: B,
-    2: C,
-    3: D,
-    4: E,
-    5: F,
-    6: G,
-    7: H,
-    8: I,
-    9: J
-);
-tuple_kson!(
-    11,
-    0: A,
-    1: B,
-    2: C,
-    3: D,
-    4: E,
-    5: F,
-    6: G,
-    7: H,
-    8: I,
-    9: J,
-    10: K
-);
-tuple_kson!(
-    12,
-    0: A,
-    1: B,
-    2: C,
-    3: D,
-    4: E,
-    5: F,
-    6: G,
-    7: H,
-    8: I,
-    9: J,
-    10: K,
-    11: L
-);
-
 impl<T: KsonRep> KsonRep for Option<T> {
     fn into_kson(self) -> Kson {
         match self {
@@ -450,15 +469,6 @@ pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Result<T, KsonConversi
 
 /// Values whose KSON representation is never `Null`.
 pub trait KsonNotNull: KsonRep {}
-// impl KsonNotNull for u8 {}
-// impl KsonNotNull for u16 {}
-// impl KsonNotNull for u32 {}
-// impl KsonNotNull for u64 {}
-// impl KsonNotNull for i8 {}
-// impl KsonNotNull for i16 {}
-// impl KsonNotNull for i32 {}
-// impl KsonNotNull for i64 {}
-// impl KsonNotNull for Bytes {}
 impl<T: KsonRep> KsonNotNull for Vec<T> {}
 
 impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonNotNull
@@ -466,8 +476,6 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonNotNull
 {
 }
 impl KsonNotNull for () {}
-// impl<A: KsonRep, B: KsonRep> KsonNotNull for (A, B) {}
-// impl<A: KsonRep, B: KsonRep, C: KsonRep> KsonNotNull for (A, B, C) {}
 
 #[cfg(test)]
 mod tests {
