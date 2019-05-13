@@ -342,7 +342,7 @@ impl<T: KsonRep> KsonRep for Option<T> {
                 let mut iter = v.into_iter();
                 let val = iter
                     .next()
-                    .ok_or(KsonConversionError::new("Value is not an `Option`"))?;
+                    .ok_or_else(|| KsonConversionError::new("Value is not an `Option`"))?;
                 if iter.next().is_none() {
                     Ok(Some(T::from_kson(val)?))
                 } else {

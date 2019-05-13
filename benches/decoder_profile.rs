@@ -18,10 +18,7 @@ fn big_k() -> Kson {
             )
         })
         .collect();
-    let v: Vec<Kson> = std::iter::repeat(m)
-        .map(|m| Kson::from(m))
-        .take(N_ARR)
-        .collect();
+    let v: Vec<Kson> = std::iter::repeat(m).map(Kson::from).take(N_ARR).collect();
     Kson::from(v)
 }
 
@@ -32,7 +29,7 @@ fn main() {
     let enc = Bytes::from(encode_full(&big_k));
     for _ in 0..N_REPS {
         let dec = black_box(decode_full(black_box(&enc))).unwrap();
-        if &dec != &big_k {
+        if dec != big_k {
             panic!("this shouldn't happen!")
         }
     }

@@ -18,10 +18,7 @@ fn big_k() -> Kson {
             )
         })
         .collect();
-    let v: Vec<Kson> = std::iter::repeat(m)
-        .map(|m| Kson::from(m))
-        .take(N_ARR)
-        .collect();
+    let v: Vec<Kson> = std::iter::repeat(m).map(Kson::from).take(N_ARR).collect();
     Kson::from(v)
 }
 
