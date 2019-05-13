@@ -220,6 +220,12 @@ macro_rules! tuple_kson {
                 }
             }
         }
+
+        impl<$($typ: KsonRep),*> From<($($typ,)*)> for Kson {
+            fn from(f: ($($typ,)*)) -> Self {
+                f.into_kson()
+            }
+        }
     }
 }
 
