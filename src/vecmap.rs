@@ -112,7 +112,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// ```
     pub fn len(&self) -> usize { self.0.len() }
 
-    /// Indicates whether or not the [`VecMap`] is empty.
+    /// Indicates whether the [`VecMap`] is empty.
     ///
     /// # Example
     ///

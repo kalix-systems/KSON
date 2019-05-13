@@ -145,7 +145,7 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
             KMInt(pos, Len(digs.len() as u8), digs)
         }
         Int(i) => {
-            // TODO: do the arithmetic on bytes directly so we don't have to allocate a new BigInt
+            // TODO: do the arithmetic on bytes directly, so we don't have to allocate a new BigInt
             let (sign, mut digs) = i.to_bytes_le();
             debug_assert!(digs.len() >= 8);
             if sign == Minus {
@@ -435,7 +435,7 @@ fn read_int<B: Buf>(data: &mut B, big: bool, pos: bool, len: u8) -> Result<Inum,
     Ok(i)
 }
 
-/// Try to read length from from buffer.
+/// Try to read length from buffer.
 fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Result<usize, DecodingError> {
     if big {
         Ok(read_u64(data, len + 1).map_err(|e| {
@@ -464,7 +464,7 @@ fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Result<usize, DecodingE
 /// // encoded value
 /// let k_null = &mut encode_full(&Kson::Null).into_buf();
 ///
-/// // Did the decode work?
+/// // Did the decoding succeed?
 /// let dec = match decode(k_null) {
 ///     Ok(value) => value,
 ///     Err(_e) => panic!("Oh no. Whatever will I do?"),

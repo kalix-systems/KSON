@@ -1,6 +1,6 @@
 //! # Floating point numbers
 //!
-//! KSON supports half, single, and double precision floating point numbers.
+//! KSON supports half, single, and double precision floating-point numbers.
 //!
 //! Our wrapper types currently do not support arithmetic.
 //!
@@ -8,7 +8,7 @@
 //!
 //! ## Half-Precision
 //!
-//! Half-precision floats can be a convenient way to store floating point numbers more
+//! Half-precision floats can be a convenient way to store floating-point numbers more
 //! compactly when the additional precision is not needed. However, there are a few
 //! limitations to keep in mind.
 //!

@@ -71,7 +71,7 @@
 //!
 //! ## Floats
 //!
-//! The KSON specification includes half, single, and double precision floating point
+//! The KSON specification includes half, single, and double precision floating-point
 //! numbers.
 //!
 //! ```
@@ -84,9 +84,9 @@
 //! let double = 1f64.into_kson();
 //! ```
 //!
-//! Arbitrary precision floating point is not a core part of the format, but we intend to
-//! add support for [MPFR](https://en.wikipedia.org/wiki/GNU_MPFR) arbitrary precision floating
-//! points through a separate crate in the near future.
+//! Arbitrary precision floating-point is not a core part of the format, but we intend to
+//! add support for [MPFR](https://en.wikipedia.org/wiki/GNU_MPFR) arbitrary precision floats
+//! through a separate crate in the near future.
 //!
 //! See also [`Float`] and the [float specification](#float-1).
 //!
@@ -137,7 +137,7 @@
 //! # Implementing the `KsonRep` trait
 //!
 //! While auto-deriving [`KsonRep`] is [usually a better idea](#usage), it is fairly
-//! straightforward, if not a bit tedious, to implement it by hand. An example:
+//! straight-forward, if not a bit tedious, to implement it by hand. An example:
 //!
 //! ```
 //! use kson::prelude::*;

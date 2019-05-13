@@ -1,4 +1,4 @@
-/// Converts a `u64` to the smallest possible vector of digits in little-endian order.
+/// Converts a [`u64`] to the smallest possible vector of digits in little-endian order.
 ///
 /// # Arguments
 ///
