@@ -2,8 +2,9 @@
 //!
 //! KSON defines two types of errors:
 //!
-//! * [`DecodingError`] - An error indicating that the deserialization has encountered an
-//!   error, with an error message describing what went wrong.
+//! * [`DecodingError`](`crate::errors::DecodingError`) - An error indicating that the
+//!   deserialization has encountered an error, with an error message describing what went
+//!   wrong.
 //!
 //! * [`KsonConversionError`] - An error indicating that a value could not be successfully
 //!   converted from [`Kson`](`crate::Kson`).

@@ -9,9 +9,9 @@ use std::{
 };
 pub use vecmap::VecMap;
 
-/// A value representable as `Kson`.
+/// A value representable as [`Kson`].
 pub trait KsonRep: Clone + Sized {
-    /// Converts value into `Kson`.
+    /// Converts value into [`Kson`].
     ///
     /// # Example
     ///
@@ -22,7 +22,7 @@ pub trait KsonRep: Clone + Sized {
     /// ```
     fn to_kson(&self) -> Kson { self.clone().into_kson() }
 
-    /// Consumes value, converting it into kson.
+    /// Consumes value, converting it into [`Kson`].
     ///
     /// # Example
     ///
@@ -33,11 +33,11 @@ pub trait KsonRep: Clone + Sized {
     /// ```
     fn into_kson(self) -> Kson { self.to_kson() }
 
-    /// Converts value from `Kson`.
+    /// Converts value from [`Kson`].
     ///
     /// # Arguments
     ///
-    /// `ks: Kson` - The value to be converted from `Kson`.
+    /// `ks: Kson` - The value to be converted from [`Kson`].
     ///
     /// # Example
     ///
@@ -53,7 +53,7 @@ pub trait KsonRep: Clone + Sized {
 }
 
 // TryFrom<Kson> impls
-/// Helper macro for implementing `TryFrom` for `Kson`.
+/// Helper macro for implementing `TryFrom` for [`Kson`].
 macro_rules! try_from_kson {
     ($t: ty) => {
         impl TryFrom<Kson> for $t {
@@ -106,7 +106,7 @@ try_from_kson!(f32, Float);
 try_from_kson!(f64, Float);
 
 // KsonRep impls
-/// KsonRep given TryFrom<Kson>
+/// [KsonRep] given TryFrom<Kson>
 macro_rules! try_from_kson_rep {
     ($t:ty) => {
         impl KsonRep for $t {
@@ -290,7 +290,7 @@ impl KsonRep for String {
 
     fn to_kson(&self) -> Kson { Kson::from_buf(self) }
 
-    /// Tries to convert a `Kson` value to a utf8 string.
+    /// Tries to convert a [`Kson`] value to a utf8 string.
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         String::from_utf8(Bytes::from_kson(ks)?.to_vec())
             .map_err(|e| KsonConversionError::new(&e.to_string()))
@@ -449,11 +449,11 @@ impl KsonRep for SocketAddrV4 {
     }
 }
 
-/// Gets the next element from an iterator of `Kson` values as `T`.
+/// Gets the next element from an iterator of [`Kson`] values as `T`.
 ///
 /// # Arguments
 ///
-/// * `iter: &mut IntoIter<Kson>` - An interator of `Kson` values to be converted into
+/// * `iter: &mut IntoIter<Kson>` - An interator of [`Kson`] values to be converted into
 ///   `T`.
 ///
 /// # Example
