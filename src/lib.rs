@@ -722,58 +722,67 @@ impl Kson {
 
 fn fmt_bytes(bytes: &Bytes) -> String {
     let mut bytes_string: String = "\"".to_owned();
-    for c in bytes.iter() {
-        bytes_string.push_str(&format!("{:x}", c));
-    }
+    bytes
+        .iter()
+        .for_each(|c| bytes_string.push_str(&format!("{:x}", c)));
     bytes_string.push_str("\"");
 
     bytes_string
 }
 
-fn fmt_map(m: &VecMap<Bytes, Kson>, indent: usize) -> String {
-    let mut map_string: String = format!("{:indent$}{{", "", indent = indent);
-    for (i, (k, v)) in m.iter().enumerate() {
-        if i == 0 {
-            map_string.push_str(&format!("\n{:indent$}", "", indent = indent + 1));
-        } else {
-            map_string.push_str(&format!(",\n{:indent$}", "", indent = indent + 1));
-        }
-        map_string.push_str(&format!("{key}: {value}", key = fmt_bytes(k), value = v));
-
-        // check if we're at last element
-        if i == m.len() - 1 {
-            map_string.push_str(&format!("\n{:indent$}", "", indent = indent));
-        }
-    }
-    map_string.push_str("}");
-
-    map_string
-}
-
+// TODO make the display nicer for recursive structures
 impl std::fmt::Display for Kson {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        fn fmt_helper(ks: &Kson, indent: usize, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fn fmt_map(m: &VecMap<Bytes, Kson>, indent: usize) -> String {
+            let mut map_string: String = "{".to_owned();
+            for (i, (k, v)) in m.iter().enumerate() {
+                if i == 0 {
+                    map_string.push_str(&format!("\n{:indent$}", "", indent = indent + 2));
+                } else {
+                    map_string.push_str(&format!(",\n{:indent$}", "", indent = indent + 2));
+                }
+
+                let value = fmt_helper(v, indent + 2);
+                map_string.push_str(&format!(
+                    "{key}: {value}",
+                    key = fmt_bytes(k),
+                    value = value,
+                ));
+
+                // check if we're at last element
+                if i == m.len() - 1 {
+                    map_string.push_str(&format!("\n{:indent$}", "", indent = indent));
+                }
+            }
+            map_string.push('}');
+
+            map_string
+        }
+
+        fn fmt_helper(ks: &Kson, indent: usize) -> String {
             match ks {
-                Null => write!(f, "NULL"),
-                Bool(b) => write!(f, "{}", if *b { "TRUE" } else { "FALSE" }),
-                Byt(bytes) => write!(f, "{}", &fmt_bytes(bytes)),
-                Kfloat(flt) => write!(f, "{}", flt),
-                Kint(i) => write!(f, "{}", i),
+                Null => format!("NULL"),
+                Bool(b) => format!("{}", if *b { "TRUE" } else { "FALSE" }),
+                Byt(bytes) => format!("{}", &fmt_bytes(bytes)),
+                Kfloat(flt) => format!("{}", flt),
+                Kint(i) => format!("{}", i),
                 Array(a) => {
-                    write!(f, "[")?;
+                    let mut arr_string: String = "[".to_owned();
                     for (i, ks) in a.iter().enumerate() {
                         if i != 0 {
-                            write!(f, ", ")?;
+                            arr_string.push_str(", ");
                         }
-                        write!(f, "{}", ks)?;
+                        arr_string.push_str(&format!("{}", ks));
                     }
-                    write!(f, "]")
+                    arr_string.push(']');
+
+                    arr_string
                 }
-                Map(m) => write!(f, "{}", fmt_map(m, indent)),
+                Map(m) => format!("{}", fmt_map(m, indent)),
             }
         }
 
-        fmt_helper(self, 0, f)
+        write!(f, "{}", fmt_helper(self, 0))
     }
 }
 
