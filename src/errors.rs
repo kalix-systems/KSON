@@ -8,23 +8,6 @@
 //!
 //! * [`KsonConversionError`] - An error indicating that a value could not be successfully
 //!   converted from [`Kson`](`crate::Kson`).
-//!
-//! # Example: `DecodingError`
-//!
-//!
-//! # Example: `KsonConversionError`
-//!
-//! ```
-//! use kson::prelude::*;
-//!
-//! let ks_null = Kson::Null;
-//!
-//! // This conversion will not succeed in a sane world.
-//! match i32::from_kson(ks_null) {
-//!     Err(e) => println!("{}", e), // print the message describing what went wrong
-//!     Ok(value) => panic!("Nothing makes sense anymore"),
-//! }
-//! ```
 
 use std::{error::Error, fmt};
 
@@ -56,6 +39,14 @@ impl DecodingError {
     /// # Arguments
     ///
     /// * `s: & str` - The message associated with the error.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let err = DecodingError::new("This is not a helpful error message");
+    /// ```
     pub fn new(s: &str) -> Self { DecodingError(s.to_string()) }
 }
 
@@ -76,6 +67,18 @@ impl fmt::Display for DecodingError {
 
 #[derive(Debug, Clone, Default)]
 /// An error encountered when a type-conversion from [`Kson`](`crate::Kson`) fails.
+///
+/// ```
+/// use kson::prelude::*;
+///
+/// let ks_null = Kson::Null;
+///
+/// // This conversion will not succeed in a sane world.
+/// match i32::from_kson(ks_null) {
+///     Err(e) => println!("{}", e), // print the message describing what went wrong
+///     Ok(value) => panic!("Nothing makes sense anymore"),
+/// }
+/// ```
 pub struct KsonConversionError(pub String);
 
 impl Error for KsonConversionError {}
@@ -86,6 +89,14 @@ impl KsonConversionError {
     /// # Arguments
     ///
     /// * `s: & str` - The message associated with the error.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let err = KsonConversionError::new("This is not a helpful error message");
+    /// ```
     pub fn new(s: &str) -> Self { KsonConversionError(s.to_string()) }
 }
 
