@@ -1,6 +1,10 @@
 //! Errors that can be encountered when working with KSON.
 
-use std::{error::Error, fmt};
+use std::{
+    error::Error,
+    fmt,
+    io::{Error as IoErr, ErrorKind::*},
+};
 
 #[derive(Debug, Clone, Default)]
 /// An error encountered when decoding fails.
@@ -54,4 +58,12 @@ impl fmt::Display for KsonConversionError {
             error = self.0,
         )
     }
+}
+
+impl From<DecodingError> for IoErr {
+    fn from(err: DecodingError) -> IoErr { IoErr::new(Other, format!("{:?}", err)) }
+}
+
+impl From<KsonConversionError> for IoErr {
+    fn from(err: KsonConversionError) -> IoErr { IoErr::new(Other, format!("{:?}", err)) }
 }
