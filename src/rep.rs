@@ -1,7 +1,7 @@
 //! # Values representable as KSON.
 
 use crate::*;
-use bytes::Bytes;
+use bytes::{buf::Buf, Bytes};
 use hashbrown::HashMap;
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
@@ -290,10 +290,34 @@ impl KsonRep for String {
 
     fn to_kson(&self) -> Kson { Kson::from_buf(self) }
 
-    /// Tries to convert a [`Kson`] value to a utf8 string.
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
-        String::from_utf8(Bytes::from_kson(ks)?.to_vec())
-            .map_err(|e| KsonConversionError::new(&e.to_string()))
+        let bs = Bytes::from_kson(ks)?;
+
+        match String::from_utf8(bs.to_vec()) {
+            Ok(s) => Ok(s),
+            Err(_) => {
+                // pre-allocate
+                let mut chars = Vec::with_capacity(bs.len() / 2 + 1);
+
+                // bytestring into buffer
+                let buf = &mut bs.into_buf();
+
+                // get u16s
+                for _ in 0..buf.remaining() {
+                    chars.push(buf.get_u16_le());
+                }
+
+                // try to read
+                match String::from_utf16(&chars) {
+                    Ok(s) => Ok(s),
+                    Err(_) => {
+                        Err(KsonConversionError::new(
+                            "Bytestring was neither valid utf-8 nor utf-16",
+                        ))
+                    }
+                }
+            }
+        }
     }
 }
 

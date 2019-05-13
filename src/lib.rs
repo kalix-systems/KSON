@@ -668,6 +668,16 @@ impl Kson {
 
     /// Consumes the value, converting it to an [`Inum`].
     /// This will return a [`KsonConversionError`] if the value is not an [`Inum`].
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let ks_num = 1.into_kson();
+    ///
+    /// let n = u64::try_from(ks_num.into_inum().unwrap().clone()).unwrap();
+    ///
+    /// assert_eq!(n, 1);
+    /// ```
     pub fn into_inum(self) -> Result<Inum, KsonConversionError> {
         match self {
             Kint(i) => Ok(i),
