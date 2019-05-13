@@ -764,7 +764,7 @@ impl std::fmt::Display for Kson {
                 Null => "NULL".to_owned(),
                 Bool(b) => if *b { "TRUE" } else { "FALSE" }.to_owned(),
                 Byt(bytes) => fmt_bytes(bytes),
-                Kfloat(flt) => format!("{}", flt),
+                Kfloat(float) => format!("{}", float),
                 Kint(i) => format!("{}", i),
                 Array(a) => {
                     let mut arr_string: String = "[".to_owned();
