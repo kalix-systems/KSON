@@ -668,6 +668,16 @@ impl Kson {
 
     /// Consumes the value, converting it to an [`Inum`].
     /// This will return a [`KsonConversionError`] if the value is not an [`Inum`].
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let ks_num = 1.into_kson();
+    ///
+    /// let n = u64::try_from(ks_num.into_inum().unwrap().clone()).unwrap();
+    ///
+    /// assert_eq!(n, 1);
+    /// ```
     pub fn into_inum(self) -> Result<Inum, KsonConversionError> {
         match self {
             Kint(i) => Ok(i),
@@ -717,6 +727,72 @@ impl Kson {
             Byt(s) => Ok(s),
             _ => Err(KsonConversionError::new("Value is not a bytestring")),
         }
+    }
+}
+
+fn fmt_bytes(bytes: &Bytes) -> String {
+    let mut bytes_string: String = "\"".to_owned();
+    bytes
+        .iter()
+        .for_each(|c| bytes_string.push_str(&format!("{:x}", c)));
+    bytes_string.push_str("\"");
+
+    bytes_string
+}
+
+// TODO make the display nicer for recursive structures
+impl std::fmt::Display for Kson {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        fn fmt_map(m: &VecMap<Bytes, Kson>, indent: usize) -> String {
+            let mut map_string: String = "{".to_owned();
+            for (i, (k, v)) in m.iter().enumerate() {
+                if i == 0 {
+                    map_string.push_str(&format!("\n{:indent$}", "", indent = indent + 2));
+                } else {
+                    map_string.push_str(&format!(",\n{:indent$}", "", indent = indent + 2));
+                }
+
+                let value = fmt_helper(v, indent + 2);
+                map_string.push_str(&format!(
+                    "{key}: {value}",
+                    key = fmt_bytes(k),
+                    value = value,
+                ));
+
+                // check if we're at last element
+                if i == m.len() - 1 {
+                    map_string.push_str(&format!("\n{:indent$}", "", indent = indent));
+                }
+            }
+            map_string.push('}');
+
+            map_string
+        }
+
+        fn fmt_helper(ks: &Kson, indent: usize) -> String {
+            match ks {
+                Null => "NULL".to_owned(),
+                Bool(b) => if *b { "TRUE" } else { "FALSE" }.to_owned(),
+                Byt(bytes) => fmt_bytes(bytes),
+                Kfloat(float) => format!("{}", float),
+                Kint(i) => format!("{}", i),
+                Array(a) => {
+                    let mut arr_string: String = "[".to_owned();
+                    for (i, ks) in a.iter().enumerate() {
+                        if i != 0 {
+                            arr_string.push_str(", ");
+                        }
+                        arr_string.push_str(&format!("{}", ks));
+                    }
+                    arr_string.push(']');
+
+                    arr_string
+                }
+                Map(m) => fmt_map(m, indent),
+            }
+        }
+
+        write!(f, "{}", fmt_helper(self, 0))
     }
 }
 

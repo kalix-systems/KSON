@@ -1,7 +1,7 @@
 //! # Values representable as KSON.
 
 use crate::*;
-use bytes::Bytes;
+use bytes::{buf::Buf, Bytes};
 use hashbrown::HashMap;
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
@@ -9,9 +9,9 @@ use std::{
 };
 pub use vecmap::VecMap;
 
-/// A value representable as `Kson`.
+/// A value representable as [`Kson`].
 pub trait KsonRep: Clone + Sized {
-    /// Converts value into `Kson`.
+    /// Converts value into [`Kson`].
     ///
     /// # Example
     ///
@@ -22,7 +22,7 @@ pub trait KsonRep: Clone + Sized {
     /// ```
     fn to_kson(&self) -> Kson { self.clone().into_kson() }
 
-    /// Consumes value, converting it into kson.
+    /// Consumes value, converting it into [`Kson`].
     ///
     /// # Example
     ///
@@ -33,11 +33,11 @@ pub trait KsonRep: Clone + Sized {
     /// ```
     fn into_kson(self) -> Kson { self.to_kson() }
 
-    /// Converts value from `Kson`.
+    /// Converts value from [`Kson`].
     ///
     /// # Arguments
     ///
-    /// `ks: Kson` - The value to be converted from `Kson`.
+    /// `ks: Kson` - The value to be converted from [`Kson`].
     ///
     /// # Example
     ///
@@ -53,7 +53,7 @@ pub trait KsonRep: Clone + Sized {
 }
 
 // TryFrom<Kson> impls
-/// Helper macro for implementing `TryFrom` for `Kson`.
+/// Helper macro for implementing `TryFrom` for [`Kson`].
 macro_rules! try_from_kson {
     ($t: ty) => {
         impl TryFrom<Kson> for $t {
@@ -106,7 +106,7 @@ try_from_kson!(f32, Float);
 try_from_kson!(f64, Float);
 
 // KsonRep impls
-/// KsonRep given TryFrom<Kson>
+/// [KsonRep] given TryFrom<Kson>
 macro_rules! try_from_kson_rep {
     ($t:ty) => {
         impl KsonRep for $t {
@@ -117,7 +117,8 @@ macro_rules! try_from_kson_rep {
                     Ok(v) => Ok(v),
                     Err(_) => {
                         Err(KsonConversionError::new(&format!(
-                            "Conversion was not possible"
+                            "Could not convert `Kson` to `{}`",
+                            stringify!($t)
                         )))
                     }
                 }
@@ -289,10 +290,34 @@ impl KsonRep for String {
 
     fn to_kson(&self) -> Kson { Kson::from_buf(self) }
 
-    /// Tries to convert a `Kson` value to a utf8 string.
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
-        String::from_utf8(Bytes::from_kson(ks)?.to_vec())
-            .map_err(|e| KsonConversionError::new(&e.to_string()))
+        let bs = Bytes::from_kson(ks)?;
+
+        match String::from_utf8(bs.to_vec()) {
+            Ok(s) => Ok(s),
+            Err(_) => {
+                // pre-allocate
+                let mut chars = Vec::with_capacity(bs.len() / 2 + 1);
+
+                // bytestring into buffer
+                let buf = &mut bs.into_buf();
+
+                // get u16s
+                for _ in 0..buf.remaining() {
+                    chars.push(buf.get_u16_le());
+                }
+
+                // try to read
+                match String::from_utf16(&chars) {
+                    Ok(s) => Ok(s),
+                    Err(_) => {
+                        Err(KsonConversionError::new(
+                            "Bytestring was neither valid utf-8 nor utf-16",
+                        ))
+                    }
+                }
+            }
+        }
     }
 }
 
@@ -362,6 +387,36 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for Hash
 
         for (k, v) in vmap.into_iter() {
             pairs.push((k, T::from_kson(v)?));
+        }
+
+        Ok(pairs.into_iter().collect())
+    }
+}
+
+impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for HashMap<String, T, S> {
+    fn into_kson(self) -> Kson {
+        Map(self
+            .into_iter()
+            .map(|(k, v)| (Bytes::from_buf(k.into_buf()), v.into_kson()))
+            .collect())
+    }
+
+    fn to_kson(&self) -> Kson {
+        Map(self
+            .iter()
+            .map(|(k, v)| (Bytes::from_buf(k.clone().into_buf()), v.to_kson()))
+            .collect())
+    }
+
+    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+        let vmap = ks.into_vecmap()?;
+
+        let mut pairs: Vec<(String, T)> = Vec::with_capacity(vmap.len());
+
+        for (k, v) in vmap.into_iter() {
+            let str_key = String::from_utf8(k.to_vec())
+                .map_err(|e| KsonConversionError::new(&e.to_string()))?;
+            pairs.push((str_key, T::from_kson(v)?));
         }
 
         Ok(pairs.into_iter().collect())
@@ -448,11 +503,11 @@ impl KsonRep for SocketAddrV4 {
     }
 }
 
-/// Gets the next element from an iterator of `Kson` values as `T`.
+/// Gets the next element from an iterator of [`Kson`] values as `T`.
 ///
 /// # Arguments
 ///
-/// * `iter: &mut IntoIter<Kson>` - An interator of `Kson` values to be converted into
+/// * `iter: &mut IntoIter<Kson>` - An interator of [`Kson`] values to be converted into
 ///   `T`.
 ///
 /// # Example

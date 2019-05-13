@@ -554,7 +554,7 @@ pub fn decode<B: Buf>(data: &mut B) -> Result<Kson, DecodingError> {
                 }
                 unknown => {
                     Err(DecodingError::new(&format!(
-                        "Expected a floating-point tag, found {:b}",
+                        "Expected a float tag, found {:b}",
                         unknown
                     )))
                 }

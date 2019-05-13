@@ -164,12 +164,12 @@
 //! ```
 
 use half::f16;
-use std::convert::TryFrom;
+use std::{cmp::Ordering, convert::TryFrom};
 
 // TODO arithmetic
 // TODO make from_kson work for specific precisions, when possible
 
-#[derive(Eq, Copy, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
+#[derive(Eq, Copy, PartialEq, Ord, Clone, Hash, Debug)]
 /// Floating point numbers. See also: [`float`](`crate::float`).
 pub enum Float {
     /// Half precision float
@@ -206,6 +206,25 @@ pub enum Float {
 
 use Float::*;
 
+impl PartialOrd for Float {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        match (f64::try_from(*self), f64::try_from(*other)) {
+            (Ok(a), Ok(b)) => a.partial_cmp(&b),
+            _ => None,
+        }
+    }
+}
+
+impl std::fmt::Display for Float {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Half(n) => write!(f, "{}", f16::from_bits(*n)),
+            Single(n) => write!(f, "{}", f32::from_bits(*n)),
+            Double(n) => write!(f, "{}", f64::from_bits(*n)),
+        }
+    }
+}
+
 // From impls
 impl From<f16> for Float {
     fn from(f: f16) -> Self { Half(f.to_bits()) }
@@ -236,6 +255,7 @@ impl TryFrom<Float> for f32 {
 
     fn try_from(f: Float) -> Result<Self, Float> {
         match f {
+            Half(n) => Ok(f16::from_bits(n).to_f32()),
             Single(n) => Ok(Self::from_bits(n)),
             _ => Err(f),
         }
@@ -247,8 +267,9 @@ impl TryFrom<Float> for f64 {
 
     fn try_from(f: Float) -> Result<Self, Float> {
         match f {
+            Half(n) => Ok(f16::from_bits(n).to_f64()),
+            Single(n) => Ok(f32::from_bits(n) as f64),
             Double(n) => Ok(Self::from_bits(n)),
-            _ => Err(f),
         }
     }
 }

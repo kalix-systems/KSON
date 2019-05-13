@@ -8,13 +8,12 @@ proptest! {
 
     #[test]
     fn encode_decode(k in arb_kson()) {
-        println!("trying to encode {:?}", k);
+        println!("trying to encode {}", k);
         let enc = encode_full(&k);
-        println!("encoded as {:x?}", &enc);
+        //println!("encoded as {:x?}", &enc);
         let dec = decode(&mut enc.into_buf()).ok();
-        println!("decoded as {:?}", dec);
+        //println!("decoded as {:?}", dec);
         if dec != Some(k.clone()) {
-            // panic!(format!("Tried encoding\n {:?}\n as \n{:?}\n got \n{:?}\n", k, enc, dec))
             panic!("assertion failed")
         }
     }
