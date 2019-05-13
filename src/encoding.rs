@@ -456,7 +456,7 @@ pub fn decode<B: Buf>(data: &mut B) -> Result<Kson, DecodingError> {
             let len = read_len(data, big, len)?;
             let mut out = Vec::with_capacity(len);
             for _ in 0..len {
-                let key: Bytes = decode(data)?.try_into().map_err(|e| {
+                let key: Bytes = decode(data)?.try_into().map_err(|_| {
                     DecodingError::new(&format!(
                         "Expected bytestring, found some other `Kson` value",
                     ))

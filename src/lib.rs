@@ -357,6 +357,7 @@ pub mod inum;
 pub mod prelude;
 // /// Python support.
 // pub mod python;
+/// Errors that can occur when working with this library.
 pub mod errors;
 /// Types representable as `Kson`.
 pub mod rep;
