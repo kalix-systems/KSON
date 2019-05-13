@@ -1,26 +1,5 @@
 use std::{error::Error, fmt};
 
-#[derive(Debug, Clone)]
-pub struct EncodingError(pub String);
-
-impl EncodingError {
-    pub fn new(s: &str) -> Self { EncodingError(s.to_string()) }
-}
-
-impl Error for EncodingError {}
-
-impl fmt::Display for EncodingError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(
-            f,
-            "Encoding failed at {line}::{column} with error: {error}",
-            line = line!(),
-            column = column!(),
-            error = self.0,
-        )
-    }
-}
-
 #[derive(Debug, Clone, Default)]
 pub struct DecodingError(pub String);
 

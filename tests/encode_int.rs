@@ -12,7 +12,7 @@ proptest! {
         let enc = encode_full(&k);
         // println!("tag is {:b}", enc[0]);
         // println!("encoded as {:?}", enc.as_slice());
-        let dec = decode_full(&enc);
+        let dec = decode_full(&enc).ok();
         // println!("decoded as {:?}", dec);
         if dec != Some(k.clone()) {
             panic!(format!("Tried encoding\n {:?}\n as \n{:?}\n got \n{:?}\n", k, enc, dec))
@@ -26,7 +26,7 @@ proptest! {
         let enc = encode_full(&k);
         // println!("tag is {:b}", enc[0]);
         // println!("encoded as {:?}", enc.as_slice());
-        let dec = decode_full(&enc);
+        let dec = decode_full(&enc).ok();
         // println!("decoded as {:?}", dec);
         if dec != Some(k.clone()) {
             panic!(format!("Tried encoding\n {:?}\n as \n{:?}\n got \n{:?}\n", k, enc, dec))
