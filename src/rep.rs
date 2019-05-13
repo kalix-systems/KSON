@@ -117,7 +117,8 @@ macro_rules! try_from_kson_rep {
                     Ok(v) => Ok(v),
                     Err(_) => {
                         Err(KsonConversionError::new(&format!(
-                            "Conversion was not possible"
+                            "Could not convert `Kson` to `{}`",
+                            stringify!($t)
                         )))
                     }
                 }

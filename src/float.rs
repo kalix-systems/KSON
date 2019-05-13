@@ -206,6 +206,16 @@ pub enum Float {
 
 use Float::*;
 
+impl std::fmt::Display for Float {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            Half(n) => write!(f, "{}", f16::from_bits(*n)),
+            Single(n) => write!(f, "{}", f32::from_bits(*n)),
+            Double(n) => write!(f, "{}", f64::from_bits(*n)),
+        }
+    }
+}
+
 // From impls
 impl From<f16> for Float {
     fn from(f: f16) -> Self { Half(f.to_bits()) }

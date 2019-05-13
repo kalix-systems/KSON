@@ -34,6 +34,15 @@ pub enum Inum {
     Int(BigInt),
 }
 
+impl std::fmt::Display for Inum {
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        match self {
+            I64(i) => write!(f, "{}", i),
+            Int(i) => write!(f, "{}", i),
+        }
+    }
+}
+
 use Inum::*;
 
 // From impls

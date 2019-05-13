@@ -1,4 +1,29 @@
 //! Errors that can be encountered when working with KSON.
+//!
+//! KSON defines two types of errors:
+//!
+//! * [`DecodingError`] - An error indicating that the deserialization has encountered an
+//!   error, with an error message describing what went wrong.
+//!
+//! * [`KsonConversionError`] - An error indicating that a value could not be successfully
+//!   converted from [`Kson`](`crate::Kson`).
+//!
+//! # Example: `DecodingError`
+//!
+//!
+//! # Example: `KsonConversionError`
+//!
+//! ```
+//! use kson::prelude::*;
+//!
+//! let ks_null = Kson::Null;
+//!
+//! // This conversion will not succeed in a sane world.
+//! match i32::from_kson(ks_null) {
+//!     Err(e) => println!("{}", e), // print the message describing what went wrong
+//!     Ok(value) => panic!("Nothing makes sense anymore"),
+//! }
+//! ```
 
 use std::{error::Error, fmt};
 
@@ -48,7 +73,7 @@ impl fmt::Display for KsonConversionError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Conversion {line}::{column} with error: {error}",
+            "Conversion failed at {line}::{column} with error: {error}",
             line = line!(),
             column = column!(),
             error = self.0,
