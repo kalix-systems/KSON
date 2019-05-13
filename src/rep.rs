@@ -494,6 +494,30 @@ mod tests {
     }
 
     #[test]
+    // Test `KsonRep` autoderive for enum of unit-like structs
+    fn unit_enum() {
+        #[derive(KsonRep, Clone, Debug)]
+        enum UnitEnum {
+            Foo,
+            Bar(u8),
+        }
+
+        use UnitEnum::*;
+
+        // to_kson
+        match UnitEnum::from_kson(Foo.to_kson()) {
+            Ok(Foo) => (),
+            _ => panic!("Failed to retrieve unit-like struct"),
+        }
+
+        // into_kson
+        match UnitEnum::from_kson(Foo.into_kson()) {
+            Ok(Foo) => (),
+            _ => panic!("Failed to retrieve unit-like struct"),
+        }
+    }
+
+    #[test]
     // Test `KsonRep` autoderive for enum of named-tuple structs
     fn named_tuple_enum() {
         #[derive(KsonRep, Clone, Debug)]
@@ -525,33 +549,10 @@ mod tests {
         }
     }
 
-    #[test]
-    // Test `KsonRep` autoderive for enum of unit-like structs
-    fn unit_enum() {
-        #[derive(KsonRep, Clone, Debug)]
-        enum UnitEnum {
-            Foo,
-            Bar(u8),
-        }
-
-        use UnitEnum::*;
-
-        // to_kson
-        match UnitEnum::from_kson(Foo.to_kson()) {
-            Ok(Foo) => (),
-            _ => panic!("Failed to retrieve unit-like struct"),
-        }
-
-        // into_kson
-        match UnitEnum::from_kson(Foo.into_kson()) {
-            Ok(Foo) => (),
-            _ => panic!("Failed to retrieve unit-like struct"),
-        }
-    }
-
     // Test `KsonRep` autoderive for enum of C-style structs
     #[test]
     fn c_style_enum() {
+        #[derive(KsonRep, Clone, Debug)]
         enum CStyle {
             Foo { num: u8, string: String },
             Bar,

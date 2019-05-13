@@ -182,7 +182,7 @@
 //!         }
 //!     }
 //!
-//!     fn from_kson(ks: Kson) -> Option<SillyEnum> {
+//!     fn from_kson(ks: Kson) -> Result<SillyEnum, KsonConversionError> {
 //!         let ks_iter = &mut ks.into_vec()?.into_iter();
 //!         
 //!         let name: String = pop_kson(ks_iter)?;
@@ -191,10 +191,10 @@
 //!             "Foo" => {
 //!                 // it shouldn't have any fields
 //!                 if ks_iter.len() == 0 {
-//!                     Some(SillyEnum::Foo)
+//!                     Ok(SillyEnum::Foo)
 //!                 } else {
-//!                     // if it /does/, presumably something went wrong
-//!                     None
+//!                     // if it *does*, presumably something went wrong
+//!                     Err(KsonConversionError::new("Unit-like variants shouldn't have fields!"))
 //!                 }
 //!             }
 //!             "Bar" => {
@@ -203,9 +203,9 @@
 //!                 let s = pop_kson(ks_iter)?;
 //!
 //!                 if ks_iter.len() == 0 {
-//!                     Some(SillyEnum::Bar(n, s))
+//!                     Ok(SillyEnum::Bar(n, s))
 //!                 } else {
-//!                     None
+//!                     Err(KsonConversionError::new("Found too many fields!"))
 //!                 }
 //!             }
 //!             "Baz" => {
@@ -213,21 +213,22 @@
 //!                 
 //!                 // there should be exactly two fields
 //!                 if fields.len() != 2 {
-//!                     return None
+//!                     return Err(KsonConversionError::new("Found the wrong number of fields!"))
 //!                 }
 //!                 
 //!                 // and ks_iter should be exhausted
 //!                 if ks_iter.len() > 0 {
-//!                     return None
+//!                     return Err(KsonConversionError::new("Found too many fields!"))
 //!                 }
 //!
 //!                 // get the fields
-//!                 let x = i32::from_kson(fields.remove(&Bytes::from("x"))?)?;
-//!                 let y = f32::from_kson(fields.remove(&Bytes::from("y"))?)?;
+//!                 let x = i32::from_kson(fields.remove(&Bytes::from("x")).ok_or(KsonConversionError::new("Field not found"))?)?;
+//!                 let y =
+//!                 f32::from_kson(fields.remove(&Bytes::from("y")).ok_or(KsonConversionError::new("Field not found"))?)?;
 //!
-//!                 Some(SillyEnum::Baz { x, y})                 
+//!                 Ok(SillyEnum::Baz { x, y})                 
 //!             }
-//!             _ => None // catch-all
+//!             _ => Err(KsonConversionError::new("This isn't a variant")) // catch-all
 //!         }
 //!     }
 //! }
