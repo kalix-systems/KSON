@@ -536,7 +536,7 @@ pub fn encode_full(ks: &Kson) -> Vec<u8> {
     out
 }
 
-/// Decodes a bytestring into `Kson`, returns `None` if decoding fails.
+/// Decodes a bytestring into `Kson`, returns a [`DecodingError`] if decoding fails.
 ///
 /// # Arguments
 ///

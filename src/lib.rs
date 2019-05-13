@@ -481,7 +481,7 @@ use Kson::*;
 
 impl Kson {
     /// Converts a `Kson` value to a vector of `Kson`.
-    /// This will return `None` if the value is not a `Kson` array.
+    /// This will return a [`KsonConversionError`] if the value is not a `Kson` array.
     ///
     /// # Example
     ///
@@ -505,7 +505,7 @@ impl Kson {
     }
 
     /// Consumes a `Kson` value, converting it into a vector of `Kson`.
-    /// This will return `None` if the value is not a `Kson` array.
+    /// This will return a [`KsonConversionError`] if the value is not a `Kson` array.
     ///
     /// # Example
     ///
@@ -528,7 +528,7 @@ impl Kson {
     }
 
     /// Converts a `Kson` value to a `VecMap`.
-    /// This will return `None` if the value is a not a `Kson` map.
+    /// This will return a [`KsonConversionError`] if the value is a not a `Kson` map.
     ///
     /// # Example
     ///
@@ -554,7 +554,7 @@ impl Kson {
     }
 
     /// Consumes a `Kson` value, converting it into a `HashMap`.
-    /// This will return `None` if the value is a not a `Kson` map.
+    /// This will return a [`KsonConversionError`] if the value is a not a `Kson` map.
     ///
     /// # Example
     ///
@@ -579,7 +579,7 @@ impl Kson {
     }
 
     /// Consumes a `Kson` value, converting it into a `HashMap`.
-    /// This will return `None` if the value is a not a `Kson` map.
+    /// This will return a [`KsonConversionError`] if the value is a not a `Kson` map.
     ///
     /// # Example
     ///
@@ -652,7 +652,7 @@ impl Kson {
     }
 
     /// Tries to convert value to an `Inum`.
-    /// This will return `None` if the value is not an `Inum`.
+    /// This will return a [`KsonConversionError`] if the value is not an `Inum`.
     ///
     /// # Example
     ///
@@ -677,7 +677,7 @@ impl Kson {
     }
 
     /// Consumes the value, converting it to an `Inum`.
-    /// This will return `None` if the value is not an `Inum`.
+    /// This will return a [`KsonConversionError`] if the value is not an `Inum`.
     pub fn into_inum(self) -> Result<Inum, KsonConversionError> {
         match self {
             Kint(i) => Ok(i),
@@ -690,7 +690,7 @@ impl Kson {
     }
 
     /// Tries to convert value to a `bool`.
-    /// This will return `None` if the value is not a `Kson` bool.
+    /// This will return a [`KsonConversionError`] if the value is not a `Kson` bool.
     ///
     /// # Example
     ///
@@ -710,7 +710,8 @@ impl Kson {
     }
 
     /// Tries to convert value to `Bytes`.
-    /// This will return `None` if the value is not a `Kson` bytestring.
+    /// This will return a [`KsonConversionError`] if the value is not a `Kson`
+    /// bytestring.
     ///
     /// # Example
     ///
