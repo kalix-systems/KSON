@@ -2,7 +2,7 @@
 //!
 //! Integers behave more or less as expected.
 //!
-//! You can do arithmetic:
+//! # Example
 //!
 //! ```
 //! use kson::prelude::*;
@@ -12,8 +12,10 @@
 //! // a small number
 //! let m = Inum::from(22);
 //!
+//! // some arithmetic
 //! let sum = n + m;
 //!
+//! // convert into `Kson`
 //! let ks = sum.into_kson();
 //! ```
 
@@ -21,16 +23,37 @@ use crate::{from_as, from_fn};
 use num_bigint::{BigInt, ParseBigIntError};
 use num_traits::*;
 use std::{
+    cmp::Ordering,
     convert::TryFrom,
     ops::{Add, Div, Mul, Neg, Rem, Sub},
 };
 
 /// [`Inum`]s are either [`i64`]s or [`BigInt`]s (i.e., big integers).
-#[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
+#[derive(Eq, PartialEq, Ord, Clone, Hash, Debug)]
 pub enum Inum {
-    /// Small integer type.
+    /// Small integer.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let small = Inum::from(1i32);
+    /// ```
     I64(i64),
-    /// Large integer type.
+    /// Large integer.
+    ///
+    /// # Example
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// let large = Inum::from(i64::min_value()) - Inum::from(1);
+    ///
+    /// println!("{}", large.clone());
+    /// dbg!(i64::min_value());
+    /// assert!(large < Inum::from(i64::min_value()));
+    /// ```
     Int(BigInt),
 }
 
@@ -40,6 +63,17 @@ impl std::fmt::Display for Inum {
             I64(i) => write!(f, "{}", i),
             Int(i) => write!(f, "{}", i),
         }
+    }
+}
+
+impl PartialOrd for Inum {
+    fn partial_cmp(&self, other: &Self) -> Option<Ordering> {
+        Some(match (self, other) {
+            (Int(a), Int(b)) => a.cmp(b),
+            (I64(a), I64(b)) => a.cmp(b),
+            (Int(a), I64(b)) => a.cmp(&BigInt::from(*b)),
+            (I64(a), Int(b)) => b.cmp(&BigInt::from(*a)),
+        })
     }
 }
 

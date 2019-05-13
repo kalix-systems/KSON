@@ -761,9 +761,9 @@ impl std::fmt::Display for Kson {
 
         fn fmt_helper(ks: &Kson, indent: usize) -> String {
             match ks {
-                Null => format!("NULL"),
-                Bool(b) => format!("{}", if *b { "TRUE" } else { "FALSE" }),
-                Byt(bytes) => format!("{}", &fmt_bytes(bytes)),
+                Null => "NULL".to_owned(),
+                Bool(b) => if *b { "TRUE" } else { "FALSE" }.to_owned(),
+                Byt(bytes) => fmt_bytes(bytes),
                 Kfloat(flt) => format!("{}", flt),
                 Kint(i) => format!("{}", i),
                 Array(a) => {
@@ -778,7 +778,7 @@ impl std::fmt::Display for Kson {
 
                     arr_string
                 }
-                Map(m) => format!("{}", fmt_map(m, indent)),
+                Map(m) => fmt_map(m, indent),
             }
         }
 
