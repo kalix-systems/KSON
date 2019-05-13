@@ -4,11 +4,11 @@ use hashbrown::HashMap;
 use std::{collections::BTreeMap, hash::*, iter::FromIterator, slice::Iter, vec::IntoIter};
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug, Default)]
-/// A map implemented as a sorted `Vec` of pairs.
+/// A map implemented as a sorted [`Vec`] of pairs.
 pub struct VecMap<K: Ord, V>(Vec<(K, V)>);
 
 impl<K: Ord, V> VecMap<K, V> {
-    /// Creates a `VecMap` from a vector of key-value pairs sorted by their first
+    /// Creates a [`VecMap`] from a vector of key-value pairs sorted by their first
     /// elements.  
     /// # Arguments
     ///

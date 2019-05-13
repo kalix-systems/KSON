@@ -510,7 +510,6 @@ impl Kson {
     /// let k_numbers = ks.into_vec().unwrap();
     /// ```
     pub fn into_vec(self) -> Result<Vec<Kson>, KsonConversionError> {
-        // TODO return a sane error message
         self.try_into()
             .map_err(|_| KsonConversionError::new("This value is not an `Array`"))
     }
@@ -561,7 +560,6 @@ impl Kson {
     /// let vmap = k_map.into_vecmap();
     /// ```
     pub fn into_vecmap(self) -> Result<VecMap<Bytes, Kson>, KsonConversionError> {
-        // TODO error message
         self.try_into()
             .map_err(|_| errors::KsonConversionError::new("This value is not a `Map`"))
     }
