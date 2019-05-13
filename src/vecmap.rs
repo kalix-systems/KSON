@@ -25,10 +25,30 @@ impl<K: Ord, V> VecMap<K, V> {
     ///
     /// # Panics
     ///
-    /// This function will panic if `v` is not sorted.
+    /// This function will panic if `v` is not sorted by its first element.
+    /// This requirement is strict, and keys must be unique.
+    ///
+    /// For example, this will panic because it is not sorted:
+    ///
+    /// ```should_panic
+    /// use kson::prelude::*;
+    ///
+    /// let vmap = VecMap::from_sorted(vec![("b", ""), ("a", "")]);
+    /// ```
+    ///
+    /// And so will this, because the keys are not unique:
+    ///
+    /// ```should_panic
+    /// use kson::prelude::*;
+    ///
+    /// let vmap = VecMap::from_sorted(vec![("a", ""), ("a", "")]);
+    /// ```
     pub fn from_sorted(v: Vec<(K, V)>) -> Self {
-        // panic if `v` is not sorted
-        // assert!(v.is_sorted_by(|(k1, _), (k2, _)| k1.partial_cmp(k2)));
+        for i in 1..v.len() {
+            if !(v[i - 1].0 < v[i].0) {
+                panic!("`Vec` is not sorted by key")
+            }
+        }
         VecMap(v)
     }
 
