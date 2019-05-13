@@ -30,6 +30,24 @@ use std::{error::Error, fmt};
 
 #[derive(Debug, Clone, Default)]
 /// An error encountered when decoding fails.
+///
+/// # Example
+///
+/// ```
+/// use kson::prelude::*;
+///
+/// // This is an invalid tag byte.
+/// // It starts with `000`, so it should be a constant,
+/// // but it's not part of the specification.
+/// let bad_tag = &mut vec![0b0001_0000].into_buf();
+///
+/// // this will fail
+/// match decode(bad_tag) {
+///     Err(e) => println!("{}", e), // print message describing failure
+///     //        ^-- prints: [src/errors.rs:70:22] Decoding failed with error: Encountered unknown constant `10000` while reading tag
+///     Ok(v) => panic!(),
+/// }
+/// ```
 pub struct DecodingError(pub String);
 
 impl DecodingError {
@@ -47,7 +65,8 @@ impl fmt::Display for DecodingError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Decoding failed at {line}::{column} with error: {error}",
+            "[{file}:{line}:{column}] Decoding failed with error: {error}",
+            file = file!(),
             line = line!(),
             column = column!(),
             error = self.0,
@@ -74,7 +93,8 @@ impl fmt::Display for KsonConversionError {
     fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
         write!(
             f,
-            "Conversion failed at {line}::{column} with error: {error}",
+            "[{file}:{line}:{column}] Conversion failed with error: {error}",
+            file = file!(),
             line = line!(),
             column = column!(),
             error = self.0,
