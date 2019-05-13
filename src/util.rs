@@ -19,7 +19,7 @@ pub(crate) fn u64_to_digits(num: u64) -> Vec<u8> {
 fn coldvec() -> Vec<u8> { vec![0] }
 
 #[macro_export]
-/// Helper macro to make implementing `From` easier.
+/// Helper macro for implementing `From`.
 macro_rules! from_fn {
     ($to:ty, $from:ty, $fn:expr) => {
         impl From<$from> for $to {
@@ -29,7 +29,7 @@ macro_rules! from_fn {
 }
 
 #[macro_export]
-/// Helper macro to make implementing `From` easier.
+/// Helper macro for implementing `From`.
 macro_rules! from_as {
     ($to:tt, $from:ty, $as:ty) => {
         impl From<$from> for $to {
@@ -39,7 +39,7 @@ macro_rules! from_as {
 }
 
 #[macro_export]
-/// Try from constructor
+/// Helper macro for implementing `TryFrom`.
 macro_rules! try_from_ctor {
     ($from:ty, $to:ty, $ctor:tt) => {
         impl TryFrom<$from> for $to {
@@ -56,7 +56,7 @@ macro_rules! try_from_ctor {
 }
 
 #[macro_export]
-/// Try TryFrom impls together.
+/// Helper macro for chaining `TryFrom` implementations.
 macro_rules! chain_try_from {
     ($e: expr) => { $e.and_then(|x| x.try_into().map_err(|_| ())) };
     ($e: expr, $i: tt) => {
