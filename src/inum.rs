@@ -79,7 +79,7 @@ impl PartialOrd for Inum {
 
 use Inum::*;
 
-// From impls
+// From implementations
 
 // i64 -> Inum
 from_fn!(Inum, i64, I64);
@@ -134,7 +134,7 @@ from_fn!(Inum, usize, |i| { Inum::from(i as u64) });
 // isize -> Inum
 from_fn!(Inum, isize, |i| { Inum::from(i as i64) });
 
-// TryFrom impls
+// TryFrom implementation
 impl TryFrom<Inum> for i32 {
     type Error = Inum;
 

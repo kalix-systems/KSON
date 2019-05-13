@@ -7,7 +7,7 @@
 //!
 //! The trait [`KsonRep`] is used to specify how data is converted into [`Kson`].
 //!
-//! This trait can usually be autoderived, and then it's ready for serialization.
+//! This trait can usually be auto-derived, and then it's ready for serialization.
 //!
 //! For example:
 //!
@@ -27,7 +27,7 @@
 //! // encode
 //! let encoded = &mut encode_full(&silly_example.to_kson()).into_buf();
 //!
-//! // and then immediately decode, because this is a silly exaple
+//! // and then immediately decode, because this is a silly example
 //! let decoded = SillyEnum::from_kson(decode(encoded).unwrap()).unwrap();
 //!
 //! assert_eq!(silly_example, decoded);
@@ -38,7 +38,7 @@
 //!
 //! # An overview of KSON types
 //!
-//! This section contains a brief overview of the core KSON datatypes. For details
+//! This section contains a brief overview of the core KSON data types. For details
 //! about how they are encoded, see [Specification](#specification).
 //!
 //! ## Integers
@@ -136,8 +136,8 @@
 //!
 //! # Implementing the `KsonRep` trait
 //!
-//! While autoderiving [`KsonRep`] is [usually a better idea](#usage), it is fairly
-//! straightforward, if not a bit tedious, to implement by hand. An example:
+//! While auto-deriving [`KsonRep`] is [usually a better idea](#usage), it is fairly
+//! straightforward, if not a bit tedious, to implement it by hand. An example:
 //!
 //! ```
 //! use kson::prelude::*;
@@ -615,7 +615,7 @@ impl Kson {
     /// ```
     /// use kson::prelude::*;
     ///
-    /// // bytesting literal
+    /// // bytestring literal
     /// let foo = b"this is an example";
     ///
     /// // convert to `Kson`
@@ -689,8 +689,8 @@ impl Kson {
         }
     }
 
-    /// Tries to convert a value to a `bool`.
-    /// This will return a [`KsonConversionError`] if the value is not a `Kson` bool.
+    /// Tries to convert a value to a [`bool`].
+    /// This will return a [`KsonConversionError`] if the value is not a [`Kson::Bool`].
     ///
     /// # Example
     ///

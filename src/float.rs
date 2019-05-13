@@ -2,7 +2,7 @@
 //!
 //! KSON supports half, single, and double precision floating point numbers.
 //!
-//! Our wrapper types current do not support arithmetic.
+//! Our wrapper types currently do not support arithmetic.
 //!
 //! # Variants
 //!

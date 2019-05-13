@@ -55,7 +55,7 @@ use num_bigint::{BigInt, Sign::*};
 use num_traits::*;
 use std::convert::TryInto;
 
-// TODO: replace len vecs w/heapless vec of size at most 8
+// TODO: replace len vecs w/ heapless vec of size at most 8
 
 /// 0xe0
 const MASK_TYPE: u8 = 0b1110_0000;
@@ -145,7 +145,7 @@ fn inum_to_meta<'a, 'b>(i: &'a Inum) -> KMeta<'b> {
             KMInt(pos, Len(digs.len() as u8), digs)
         }
         Int(i) => {
-            // TODO: do the arithmetic on bytes directly so we don't have to allocate a new bigint
+            // TODO: do the arithmetic on bytes directly so we don't have to allocate a new BigInt
             let (sign, mut digs) = i.to_bytes_le();
             debug_assert!(digs.len() >= 8);
             if sign == Minus {
