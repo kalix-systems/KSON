@@ -1,6 +1,7 @@
 use super::*;
 use half::f16;
 use num_bigint::{BigInt, Sign};
+use smallvec::SmallVec;
 // use std::io::Error;
 
 pub trait Serializer {
@@ -11,10 +12,10 @@ pub trait Serializer {
 }
 
 pub trait SerializerExt: Serializer {
-    fn put_i8(&mut self, i: i8) { self.put_i16(i as i16) }
-    fn put_i16(&mut self, i: i16) { self.put_i32(i as i32) }
-    fn put_i32(&mut self, i: i32) { self.put_i64(i as i64) }
-    fn put_i64(&mut self, i: i64) { self.put_bigint(&BigInt::from(i)) }
+    fn put_i8(&mut self, i: i8);
+    fn put_i16(&mut self, i: i16);
+    fn put_i32(&mut self, i: i32);
+    fn put_i64(&mut self, i: i64);
     fn put_bigint(&mut self, i: &BigInt);
 
     fn put_bytes(&mut self, b: &Bytes);
@@ -43,7 +44,7 @@ enum LenOrDigs {
     /// Length variant
     Len(u8),
     /// Digits variant
-    Digs(Vec<u8>),
+    Digs(SmallVec<[u8; 8]>),
 }
 
 use LenOrDigs::*;
@@ -73,7 +74,7 @@ macro_rules! len_or_tag {
         match $id {
             Len(l) => {
                 $tag |= $f(l);
-                $len_digs = vec![];
+                $len_digs = smallvec![];
             }
             Digs(l_d) => {
                 let len_len = l_d.len() as u8 - 1;
@@ -93,12 +94,13 @@ macro_rules! tag_and_len {
         let mut tag = $type;
         let len_digs;
         len_or_tag!(tag, len_digs, $len_or_digs);
-        $out.put_slice(&[tag]);
+        $out.put_byte(tag);
         $out.put_slice(&len_digs);
     };
 }
 
 impl<S: Serializer> SerializerExt for S {
+    #[inline]
     fn put_i64(&mut self, mut i: i64) {
         let pos = !i.is_negative();
         if !pos {

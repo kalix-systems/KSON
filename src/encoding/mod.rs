@@ -46,7 +46,7 @@ use crate::{
     errors::DecodingError,
     util::*,
     vecmap::VecMap,
-    Float::{self, *},
+    Float::*,
     Inum::{self, *},
     Kson::{self, *},
 };
@@ -54,7 +54,7 @@ use bytes::{Buf, Bytes, IntoBuf};
 use num_bigint::{BigInt, Sign::*};
 use std::convert::TryInto;
 
-mod ser;
+pub mod ser;
 pub use ser::*;
 mod constants;
 pub(crate) use constants::*;
