@@ -7,11 +7,7 @@ extern crate kson;
 use bytes::Bytes;
 use criterion::{black_box, Criterion};
 
-use kson::{
-    encoding::{decode_full, encode_full},
-    vecmap::*,
-    Kson,
-};
+use kson::prelude::*;
 
 pub fn u64_to_bytes_le(x: u64) -> Bytes { Bytes::from(u64::to_le_bytes(x).to_vec()) }
 
@@ -64,6 +60,23 @@ fn bench_enc(c: &mut Criterion) {
     );
 }
 
+fn bench_enc_single_alloc(c: &mut Criterion) {
+    let big_k = big_k();
+    let enc_len = encode_full(&big_k).len();
+    c.bench_function(
+        &format!(
+            "Encoding a Kson object, output size of {} bytes, buffer preallocated",
+            enc_len
+        ),
+        move |b| {
+            b.iter(|| {
+                let mut out = Vec::with_capacity(enc_len * 2);
+                encode(black_box(&big_k), &mut out)
+            })
+        },
+    );
+}
+
 fn bench_dec(c: &mut Criterion) {
     let big_k = big_k();
     let enc = encode_full(&big_k);
@@ -94,6 +107,7 @@ criterion_group!(
     benches,
     bench_construction,
     bench_enc,
+    bench_enc_single_alloc,
     bench_dec,
     bench_enc_flat,
     bench_dec_flat
