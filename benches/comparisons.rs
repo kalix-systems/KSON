@@ -146,6 +146,7 @@ fn json_tiny_str_decode(c: &mut Criterion) {
         b.iter(|| serde_json::to_string(black_box(&buf)))
     });
 }
+
 criterion_group!(
     benches,
     kson_i64_encode,
