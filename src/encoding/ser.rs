@@ -24,10 +24,13 @@ pub trait SerializerExt: Serializer {
 
     fn put_bool(&mut self, b: bool);
     fn put_null(&mut self);
+
+    fn put_arr<S: Serialize>(&mut self, v: Vec<S>);
+    fn put_map<S: Serialize>(&mut self, m: VecMap<Bytes, S>);
 }
 
 pub trait Serialize {
-    fn ser<S: Serializer>(self, s: S) -> S::Out;
+    fn ser<S: Serializer>(self, s: &mut S);
 }
 
 fn compute_int_tag(big: bool, pos: bool, len: u8) -> u8 {
@@ -42,6 +45,46 @@ impl Serializer for Vec<u8> {
     fn put_slice(&mut self, slice: &[u8]) { self.extend_from_slice(slice) }
 
     fn finalize(self) -> Vec<u8> { self }
+}
+
+macro_rules! len_or_digs {
+    ($id:ident) => {
+        if $id.len() <= MASK_LEN_BITS as usize {
+            Len($id.len() as u8)
+        } else {
+            Digs(u64_to_digits($id.len() as u64 - BIGCOL_MIN_LEN))
+        }
+    };
+}
+
+macro_rules! len_or_tag {
+    ($tag:ident, $len_digs:ident, $id:ident, $f:expr) => {
+        match $id {
+            Len(l) => {
+                $tag |= $f(l);
+                $len_digs = vec![];
+            }
+            Digs(l_d) => {
+                let len_len = l_d.len() as u8 - 1;
+                $tag |= BIG_BIT;
+                $tag |= len_len;
+                $len_digs = l_d;
+            }
+        }
+    };
+    ($tag:ident, $len_digs:ident, $id:ident) => {
+        len_or_tag!($tag, $len_digs, $id, |x| x)
+    };
+}
+
+macro_rules! tag_and_len {
+    ($type:expr, $len_or_digs:ident, $out:ident) => {
+        let mut tag = $type;
+        let len_digs;
+        len_or_tag!(tag, len_digs, $len_or_digs);
+        $out.put_slice(&[tag]);
+        $out.put_slice(&len_digs);
+    };
 }
 
 impl<S: Serializer> SerializerExt for S {
@@ -115,7 +158,7 @@ impl<S: Serializer> SerializerExt for S {
         if digs.len() <= 8 {
             push_digs(pos, &digs, self)
         } else {
-            let len = digs.len() - BIGCON_MIN_LEN as usize;
+            let len = digs.len() - BIGINT_MIN_LEN as usize;
             if len <= u16::max_value() as usize {
                 let len_digs = u16_to_digits(len as u16);
                 self.put_byte(TYPE_INT | BIG_BIT | ((pos as u8) << 3) | (len_digs.len() as u8 - 1));
@@ -142,6 +185,16 @@ impl<S: Serializer> SerializerExt for S {
     }
 
     fn put_null(&mut self) { self.put_byte(CON_NULL) }
+
+    fn put_arr<T: Serialize>(&mut self, v: Vec<T>) {
+        let len_or_digs = len_or_digs!(v);
+        tag_and_len!(TYPE_ARR, len_or_digs, self);
+        for t in v {
+            t.ser(self);
+        }
+    }
+
+    fn put_map<T: Serialize>(&mut self, m: VecMap<Bytes, T>) { unimplemented!() }
 }
 
 #[cold]

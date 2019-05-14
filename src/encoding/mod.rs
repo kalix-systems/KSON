@@ -62,47 +62,6 @@ pub(crate) use constants::*;
 
 // TODO: replace len vecs w/ heapless vec of size at most 8
 
-/// 0xe0
-const MASK_TYPE: u8 = 0b1110_0000;
-/// 0x1f
-const MASK_META: u8 = 0b0001_1111;
-/// 0x00
-const TYPE_CON: u8 = 0b0000_0000;
-/// Integer type bits, 0x20
-const TYPE_INT: u8 = 0b0010_0000;
-/// String type bits, 0x40
-const TYPE_BYT: u8 = 0b0100_0000;
-/// Array type bits, 0x60
-const TYPE_ARR: u8 = 0b0110_0000;
-/// Map type bits, 0x80
-const TYPE_MAP: u8 = 0b1000_0000;
-/// Large integer indicator bit, 0x10
-const BIG_BIT: u8 = 0b0001_0000;
-/// Integer sign bit, 0x0f
-const INT_POSITIVE: u8 = 0b0000_1000;
-
-/// Float type bits
-const TYPE_FLOAT: u8 = 0b101_00_000;
-/// Half-precision tag
-const HALF: u8 = TYPE_FLOAT;
-/// Single-precision tag
-const SINGLE: u8 = TYPE_FLOAT | 0b000_01_000;
-/// Double-precision tag
-const DOUBLE: u8 = TYPE_FLOAT | 0b000_10_000;
-
-/// [`Null`] constant.
-const CON_NULL: u8 = 0b0000_0000;
-/// `True` constant.
-const CON_TRUE: u8 = 0b0000_0001;
-/// `False` constant.
-const CON_FALSE: u8 = 0b0000_0010;
-
-const MASK_LEN_BITS: u8 = 0b0000_1111;
-const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
-
-const BIGINT_MIN_LEN: u64 = MASK_INT_LEN_BITS as u64 + 2;
-const BIGCOL_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
-
 #[derive(Clone, Debug)]
 /// The second element in a tagged KSON integer, bytestring, array, or map.
 /// It is either a length (in the case of large versions)

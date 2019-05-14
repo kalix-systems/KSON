@@ -37,4 +37,4 @@ pub(crate) const MASK_LEN_BITS: u8 = 0b0000_1111;
 pub(crate) const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
 
 pub(crate) const BIGINT_MIN_LEN: u64 = MASK_INT_LEN_BITS as u64 + 2;
-pub(crate) const BIGCON_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
+pub(crate) const BIGCOL_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;

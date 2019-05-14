@@ -325,7 +325,7 @@
 //! | Type | Half (00), Single (01), Double (10) | Currently Unused |
 
 #![warn(
-    missing_docs,
+    // missing_docs,
     deprecated_in_future,
     unsafe_code,
     unused_labels,
