@@ -55,6 +55,11 @@ use num_bigint::{BigInt, Sign::*};
 use num_traits::*;
 use std::convert::TryInto;
 
+mod ser;
+pub use ser::*;
+mod constants;
+pub(crate) use constants::*;
+
 // TODO: replace len vecs w/ heapless vec of size at most 8
 
 /// 0xe0
@@ -96,7 +101,7 @@ const MASK_LEN_BITS: u8 = 0b0000_1111;
 const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
 
 const BIGINT_MIN_LEN: u64 = MASK_INT_LEN_BITS as u64 + 2;
-const BIGCON_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
+const BIGCOL_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
 
 #[derive(Clone, Debug)]
 /// The second element in a tagged KSON integer, bytestring, array, or map.
@@ -191,7 +196,7 @@ macro_rules! len_or_digs {
         if $id.len() <= MASK_LEN_BITS as usize {
             Len($id.len() as u8)
         } else {
-            Digs(u64_to_digits($id.len() as u64 - BIGCON_MIN_LEN))
+            Digs(u64_to_digits($id.len() as u64 - BIGCOL_MIN_LEN))
         }
     };
 }
@@ -444,7 +449,7 @@ fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Result<usize, DecodingE
                 e.0
             ))
         })? as usize
-            + BIGCON_MIN_LEN as usize)
+            + BIGCOL_MIN_LEN as usize)
     } else {
         Ok(len as usize)
     }
