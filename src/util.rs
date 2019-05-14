@@ -1,4 +1,4 @@
-pub use smallvec::{smallvec, SmallVec};
+pub(crate) use smallvec::{smallvec, SmallVec};
 
 /// Converts a [`u64`] to the smallest possible vector of digits in little-endian order.
 ///
