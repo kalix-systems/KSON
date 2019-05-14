@@ -31,7 +31,7 @@ pub trait KsonRep: Clone + Sized {
     ///
     /// let k_num = 1.into_kson();
     /// ```
-    fn into_kson(self) -> Kson { self.to_kson() }
+    fn into_kson(self) -> Kson;
 
     /// Consumes value, converting it from [`Kson`].
     ///
@@ -130,6 +130,8 @@ macro_rules! try_from_kson_rep {
         impl KsonRep for $t {
             fn to_kson(&self) -> Kson { self.clone().into() }
 
+            fn into_kson(self) -> Kson { self.into() }
+
             fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
                 match ks.try_into() {
                     Ok(v) => Ok(v),
@@ -157,58 +159,37 @@ try_from_kson_rep!(Bytes);
 // BigInt
 try_from_kson_rep!(BigInt);
 
-/// [`KsonRep`] given TryFrom<Kson> for `Copy` types
-macro_rules! try_from_kson_rep_copy {
-    ($t:ty) => {
-        impl KsonRep for $t {
-            fn to_kson(&self) -> Kson { (*self).into() }
-
-            fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
-                match ks.try_into() {
-                    Ok(v) => Ok(v),
-                    Err(_) => {
-                        Err(KsonConversionError::new(&format!(
-                            "Could not convert `Kson` to `{}`",
-                            stringify!($t)
-                        )))
-                    }
-                }
-            }
-        }
-    };
-}
-
 // bool
-try_from_kson_rep_copy!(bool);
+try_from_kson_rep!(bool);
 
 // sizes
-try_from_kson_rep_copy!(usize);
-try_from_kson_rep_copy!(isize);
+try_from_kson_rep!(usize);
+try_from_kson_rep!(isize);
 
 // 8-bit integers
-try_from_kson_rep_copy!(u8);
-try_from_kson_rep_copy!(i8);
+try_from_kson_rep!(u8);
+try_from_kson_rep!(i8);
 
 // 16-bit integers
-try_from_kson_rep_copy!(u16);
-try_from_kson_rep_copy!(i16);
+try_from_kson_rep!(u16);
+try_from_kson_rep!(i16);
 
 // 32-bit integers
-try_from_kson_rep_copy!(u32);
-try_from_kson_rep_copy!(i32);
+try_from_kson_rep!(u32);
+try_from_kson_rep!(i32);
 
 // 64-bit integers
-try_from_kson_rep_copy!(u64);
-try_from_kson_rep_copy!(i64);
+try_from_kson_rep!(u64);
+try_from_kson_rep!(i64);
 
 // 128-bit integers
-try_from_kson_rep_copy!(i128);
-try_from_kson_rep_copy!(u128);
+try_from_kson_rep!(i128);
+try_from_kson_rep!(u128);
 
 // Floating point numbers
-try_from_kson_rep_copy!(f16);
-try_from_kson_rep_copy!(f32);
-try_from_kson_rep_copy!(f64);
+try_from_kson_rep!(f16);
+try_from_kson_rep!(f32);
+try_from_kson_rep!(f64);
 
 macro_rules! kson_rep_kson_from {
     ($from:tt) => {
@@ -469,6 +450,8 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for Hash
 impl KsonRep for () {
     fn to_kson(&self) -> Kson { Array(vec![]) }
 
+    fn into_kson(self) -> Kson { Array(vec![]) }
+
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         let v = ks.into_vec()?;
 
@@ -524,6 +507,12 @@ impl KsonRep for Ipv4Addr {
         Bytes::from(octs).into_kson()
     }
 
+    fn into_kson(self) -> Kson {
+        let octs: &[u8] = &self.octets();
+
+        Bytes::from(octs).into_kson()
+    }
+
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         let bs: Bytes = KsonRep::from_kson(ks)?;
         if bs.len() == 4 {
@@ -539,6 +528,8 @@ impl KsonRep for Ipv4Addr {
 
 impl KsonRep for SocketAddrV4 {
     fn to_kson(&self) -> Kson { (*self.ip(), self.port()).into_kson() }
+
+    fn into_kson(self) -> Kson { (*self.ip(), self.port()).into_kson() }
 
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
         let (ip, port) = KsonRep::from_kson(ks)?;
