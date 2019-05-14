@@ -13,7 +13,7 @@ proptest! {
         let dec = decode_full(&enc).ok();
 
         if dec != Some(k.clone()) {
-            panic!(format!("Tried encoding\n {:?}\n as \n{:?}\n got \n{:?}\n", k, enc, dec))
+            panic!(format!("Tried encoding\n {:?}\n as \n{:x?}\n got \n{:?}\n", k, enc, dec))
         }
     }
 
@@ -25,7 +25,7 @@ proptest! {
         let dec = decode_full(&enc).ok();
 
         if dec != Some(k.clone()) {
-            panic!(format!("Tried encoding\n {:?}\n as \n{:?}\n got \n{:?}\n", k, enc, dec))
+            panic!(format!("Tried encoding\n {:?}\n as \n{:x?}\n got \n{:?}\n", k, enc, dec))
         }
     }
 

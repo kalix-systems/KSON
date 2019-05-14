@@ -1,22 +1,48 @@
+pub use smallvec::{smallvec, SmallVec};
+
 /// Converts a [`u64`] to the smallest possible vector of digits in little-endian order.
 ///
 /// # Arguments
 ///
 /// * `num: u64` - The integer to be converted.
 /// ```
-pub(crate) fn u64_to_digits(num: u64) -> Vec<u8> {
+pub(crate) fn u64_to_digits(num: u64) -> SmallVec<[u8; 8]> {
     let len = 8 - u64::leading_zeros(num) / 8;
     if len == 0 {
-        coldvec()
+        coldvec8()
     } else {
-        let mut out = u64::to_le_bytes(num).to_vec();
+        let mut out = SmallVec::from_buf(u64::to_le_bytes(num));
+        out.truncate(len as usize);
+        out
+    }
+}
+
+pub(crate) fn u32_to_digits(num: u32) -> SmallVec<[u8; 4]> {
+    let len = 4 - u32::leading_zeros(num) / 8;
+    if len == 0 {
+        coldvec4()
+    } else {
+        let mut out = SmallVec::from_buf(u32::to_le_bytes(num));
+        out.truncate(len as usize);
+        out
+    }
+}
+
+pub(crate) fn u16_to_digits(num: u16) -> SmallVec<[u8; 2]> {
+    let len = 2 - u16::leading_zeros(num) / 8;
+    if len == 0 {
+        coldvec2()
+    } else {
+        let mut out = SmallVec::from_buf(u16::to_le_bytes(num));
         out.truncate(len as usize);
         out
     }
 }
 
 #[cold]
-fn coldvec() -> Vec<u8> { vec![0] }
+fn coldvec8() -> SmallVec<[u8; 8]> { smallvec![0] }
+fn coldvec4() -> SmallVec<[u8; 4]> { smallvec![0] }
+fn coldvec2() -> SmallVec<[u8; 2]> { smallvec![0] }
 
 #[macro_export]
 /// Helper macro for implementing `From`.
