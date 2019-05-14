@@ -1,15 +1,60 @@
 //! A wrapper around a sorted vector of tuples that KSON uses to serialize maps.
+//!
+//! This data structure is mostly for internal use, but it has several methods that can
+//! provide some flexibility when constructing and processing KSON [maps][`Kson::Map`].
+//!
+//! # Example
+//!
+//! ```
+//! // Note that we use a different hash map than the one in Rust's
+//! // standard library. For those unfamiliar, the implementation in
+//! // `hashbrown` is API compatible with the one in the standard library
+//! // and will replace the standard implementation when 1.36 is released.
+//! use hashbrown::HashMap;
+//! use kson::prelude::*;
+//! use std::collections::BTreeMap;
+//!
+//! let key = Bytes::from_buf("a");
+//! let value = 1;
+//!
+//! // from a `BTreeMap`
+//! let mut btmap = BTreeMap::new();
+//! btmap.insert(key.clone(), value);
+//!
+//! let bt_vm = VecMap::from(btmap);
+//!
+//! // from a `HashMap`
+//! let mut hashmap = HashMap::new();
+//! hashmap.insert(key.clone(), value);
+//!
+//! let hm_vm = VecMap::from(hashmap);
+//!
+//! // from a vector of tuples
+//! let entries = vec![(key.clone(), value)];
+//!
+//! let vec_vm = VecMap::from(entries);
+//!
+//! // From a vector of tuples we know is sorted by the keys.
+//! // This is still checked and the function panics if it is not sorted,
+//! // but this is in `O(n)` instead of `O(log(n))`
+//! let entries = vec![(key.clone(), value)];
+//!
+//! let vec_vm = VecMap::from_sorted(entries);
+//! ```
 
 use hashbrown::HashMap;
 use std::{collections::BTreeMap, hash::*, iter::FromIterator, slice::Iter, vec::IntoIter};
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug, Default)]
 /// A map implemented as a sorted [`Vec`] of pairs.
+///
+/// See also: [module level documentation](`crate::vecmap`).
 pub struct VecMap<K: Ord, V>(Vec<(K, V)>);
 
 impl<K: Ord, V> VecMap<K, V> {
     /// Creates a [`VecMap`] from a vector of key-value pairs sorted by their first
     /// elements.  
+    ///
     /// # Arguments
     ///
     /// * `v: Vec<(K, V)>` - A vector of key-value pairs sorted by their first element.
@@ -67,7 +112,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// ```
     pub fn len(&self) -> usize { self.0.len() }
 
-    /// Indicates whether or not the `VecMap` is empty.
+    /// Indicates whether the [`VecMap`] is empty.
     ///
     /// # Example
     ///
@@ -82,7 +127,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// ```
     pub fn is_empty(&self) -> bool { self.0.is_empty() }
 
-    /// Returns an `Iter` of the key value pairs.
+    /// Returns an [`Iter`] of the key value pairs.
     ///
     /// # Example
     ///
@@ -102,7 +147,12 @@ impl<K: Ord, V> VecMap<K, V> {
 }
 
 impl<K: Ord + Hash, V> VecMap<K, V> {
-    /// Consumes a `VecMap`, producing a `HashMap` from the entries.
+    /// Consumes a [`VecMap`], producing a [`HashMap`] from the entries.
+    ///
+    /// Note that we use a different hash map than the one in Rust's
+    /// standard library. For those unfamiliar, the implementation in
+    /// [`hashbrown`] is API compatible with the one in the standard library
+    /// and will replace the standard implementation when 1.36 is released.
     ///
     /// # Example
     ///

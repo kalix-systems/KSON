@@ -52,7 +52,7 @@ pub trait KsonRep: Clone + Sized {
     fn from_kson(ks: Kson) -> Result<Self, KsonConversionError>;
 }
 
-// TryFrom<Kson> impls
+// TryFrom<Kson> implementations
 /// Helper macro for implementing `TryFrom` for [`Kson`].
 macro_rules! try_from_kson {
     ($t: ty) => {
@@ -105,8 +105,8 @@ try_from_kson!(f16, Float);
 try_from_kson!(f32, Float);
 try_from_kson!(f64, Float);
 
-// KsonRep impls
-/// [KsonRep] given TryFrom<Kson>
+// `KsonRep` implementations
+/// [`KsonRep`] given TryFrom<Kson>
 macro_rules! try_from_kson_rep {
     ($t:ty) => {
         impl KsonRep for $t {
@@ -507,7 +507,7 @@ impl KsonRep for SocketAddrV4 {
 ///
 /// # Arguments
 ///
-/// * `iter: &mut IntoIter<Kson>` - An interator of [`Kson`] values to be converted into
+/// * `iter: &mut IntoIter<Kson>` - An iterator of [`Kson`] values to be converted into
 ///   `T`.
 ///
 /// # Example
@@ -546,7 +546,7 @@ mod tests {
     use crate::kson_macro::*;
 
     #[test]
-    // Test `KsonRep` autoderive for unit-like struct
+    // Test `KsonRep` auto-derive for unit-like struct
     fn unit_struct() {
         #[derive(KsonRep, Clone)]
         struct UnitStruct;
@@ -580,7 +580,7 @@ mod tests {
     }
 
     #[test]
-    // Test `KsonRep` autoderive for C-style struct
+    // Test `KsonRep` auto-derive for C-style struct
     fn c_struct() {
         #[derive(KsonRep, Clone)]
         struct CStruct {
@@ -603,7 +603,7 @@ mod tests {
     }
 
     #[test]
-    // Test `KsonRep` autoderive for enum of unit-like structs
+    // Test `KsonRep` auto-derive for enum of unit-like structs
     fn unit_enum() {
         #[derive(KsonRep, Clone, Debug)]
         enum UnitEnum {
@@ -658,7 +658,7 @@ mod tests {
         }
     }
 
-    // Test `KsonRep` autoderive for enum of C-style structs
+    // Test `KsonRep` auto-derive for enum of C-style structs
     #[test]
     fn c_style_enum() {
         #[derive(KsonRep, Clone, Debug)]
