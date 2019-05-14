@@ -152,6 +152,33 @@
 //! }
 //!
 //! impl KsonRep for SillyEnum {
+//!     fn to_kson(&self) -> Kson {
+//!         match self {
+//!             SillyEnum::Foo => vec![Kson::from("Foo")].into_kson(), // just the name for unit-like structs
+//!             SillyEnum::Bar(n, s) => {
+//!                 vec![
+//!                     Kson::from("Bar"), // name
+//!                     n.to_kson(),     // first field
+//!                     s.to_kson(),     // second field
+//!                 ]
+//!                 .into_kson() // convert the vector into a `Kson` array
+//!             }
+//!             SillyEnum::Baz { x, y } => {
+//!                 vec![
+//!                     Kson::from("Baz"), // name
+//!                     VecMap::from_sorted(
+//!                         // construct map
+//!                         vec![
+//!                             (Bytes::from("x"), x.to_kson()), // first field
+//!                             (Bytes::from("y"), y.to_kson()), // second field
+//!                         ],
+//!                     )
+//!                     .into_kson(), // into a KSON map
+//!                 ]
+//!                 .into_kson() // convert the vector into `Kson`
+//!             }
+//!         }
+//!     }
 //!     fn into_kson(self) -> Kson {
 //!         match self {
 //!             SillyEnum::Foo => vec![Kson::from("Foo")].into_kson(), // just the name for unit-like structs

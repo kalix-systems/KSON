@@ -16,7 +16,7 @@ pub(crate) fn u64_to_digits(num: u64) -> Vec<u8> {
 }
 
 pub(crate) fn u32_to_digits(num: u32) -> Vec<u8> {
-    let len = 8 - u32::leading_zeros(num) / 8;
+    let len = 4 - u32::leading_zeros(num) / 8;
     if len == 0 {
         coldvec()
     } else {
@@ -27,7 +27,7 @@ pub(crate) fn u32_to_digits(num: u32) -> Vec<u8> {
 }
 
 pub(crate) fn u16_to_digits(num: u16) -> Vec<u8> {
-    let len = 8 - u16::leading_zeros(num) / 8;
+    let len = 2 - u16::leading_zeros(num) / 8;
     if len == 0 {
         coldvec()
     } else {

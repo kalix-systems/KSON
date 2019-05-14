@@ -1,0 +1,7 @@
+# Seeds for failure cases proptest has generated in the past. It is
+# automatically read and these particular cases re-run before any
+# novel cases are generated.
+#
+# It is recommended to check this file in to source control so that
+# everyone who runs the test benefits from these saved cases.
+cc 7f6f8bbdfba989ca43f577f9be3b97fa21e5a20c92177a84e9b41322cbfea5cc # shrinks to k = Array([Kint(Int(BigInt { sign: Plus, data: BigUint { data: [0, 2147483648] } }))])
