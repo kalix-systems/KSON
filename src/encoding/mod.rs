@@ -129,7 +129,7 @@ pub fn encode_full<T: Ser>(t: &T) -> Vec<u8> {
     out
 }
 
-/// Decodes a bytestring into [`Kson`], returns a [`DecodingError`] if decoding fails.
+/// Decodes a bytestring into [`Kson`], returns an error if decoding fails.
 ///
 /// # Arguments
 ///

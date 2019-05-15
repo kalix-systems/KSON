@@ -88,7 +88,7 @@ pub trait SerializerExt: Serializer {
     /// # Arguments
     ///
     /// * `v` - The value to be added.
-    fn put_arr<S: Ser>(&mut self, v: &Vec<S>);
+    fn put_arr<S: Ser>(&mut self, v: &[S]);
     /// Add a map to the output value.
     ///
     /// # Arguments
@@ -281,7 +281,7 @@ impl<S: Serializer> SerializerExt for S {
 
     fn put_null(&mut self) { self.put_byte(CON_NULL) }
 
-    fn put_arr<T: Ser>(&mut self, v: &Vec<T>) {
+    fn put_arr<T: Ser>(&mut self, v: &[T]) {
         let len_or_digs = len_or_digs!(v);
         tag_and_len!(TYPE_ARR, len_or_digs, self);
         for t in v {
@@ -334,7 +334,7 @@ fn u64_digs<S: Serializer>(pos: bool, u: u64, digs: Vec<u8>, out: &mut S) {
 
 /// An value that can be serialized.
 pub trait Ser {
-    /// Serial
+    /// TODO docstring
     fn ser<S: Serializer>(&self, s: &mut S);
 }
 

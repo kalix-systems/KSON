@@ -79,13 +79,13 @@ pub trait Deserializer {
     fn read_inum(&mut self) -> Result<Inum, Error>;
     #[inline(always)]
     /// Read an [`f16`].
-    fn read_half(&mut self) -> Result<f16, Error>;
+    fn read_f16(&mut self) -> Result<f16, Error>;
     #[inline(always)]
     /// Read an [`f32`].
-    fn read_single(&mut self) -> Result<f32, Error>;
+    fn read_f32(&mut self) -> Result<f32, Error>;
     #[inline(always)]
     /// Read an [`f64`].
-    fn read_double(&mut self) -> Result<f64, Error>;
+    fn read_f64(&mut self) -> Result<f64, Error>;
     #[inline(always)]
     /// Read a [`Float`].
     fn read_float(&mut self) -> Result<Float, Error>;
@@ -358,21 +358,21 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
-    fn read_half(&mut self) -> Result<f16, Error> {
+    fn read_f16(&mut self) -> Result<f16, Error> {
         match self.read_tag()? {
             KFloat(HALF) => self.read_u16().map(f16::from_bits),
             _ => bail!("bad tag when reading half-precision float"),
         }
     }
 
-    fn read_single(&mut self) -> Result<f32, Error> {
+    fn read_f32(&mut self) -> Result<f32, Error> {
         match self.read_tag()? {
             KFloat(SINGLE) => self.read_u32().map(f32::from_bits),
             _ => bail!("bad tag when reading single-precision float"),
         }
     }
 
-    fn read_double(&mut self) -> Result<f64, Error> {
+    fn read_f64(&mut self) -> Result<f64, Error> {
         match self.read_tag()? {
             KFloat(DOUBLE) => self.read_u64().map(f64::from_bits),
             _ => bail!("bad tag when reading double-precision float"),
@@ -470,7 +470,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
-    fn read_half(&mut self) -> Result<f16, Error> {
+    fn read_f16(&mut self) -> Result<f16, Error> {
         let k = self.rent();
         self.replace(Null);
         match k {
@@ -479,7 +479,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
-    fn read_single(&mut self) -> Result<f32, Error> {
+    fn read_f32(&mut self) -> Result<f32, Error> {
         let k = self.rent();
         self.replace(Null);
         match k {
@@ -488,7 +488,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
-    fn read_double(&mut self) -> Result<f64, Error> {
+    fn read_f64(&mut self) -> Result<f64, Error> {
         let k = self.rent();
         self.replace(Null);
         match k {
