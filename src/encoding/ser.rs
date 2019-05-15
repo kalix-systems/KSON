@@ -2,32 +2,98 @@ use super::*;
 use half::f16;
 use num_bigint::{BigInt, Sign};
 use smallvec::SmallVec;
-// use std::io::Error;
 
+/// TODO docstring
 pub trait Serializer {
+    /// The type of the output value.
     type Out;
+    /// Add a byte to the output value.
     fn put_byte(&mut self, u: u8);
+    /// Add a slice to the output value.
     fn put_slice(&mut self, slice: &[u8]);
+    /// Return the output value.
     fn finalize(self) -> Self::Out;
 }
 
+/// Convenience methods for [`Serializer`].
 pub trait SerializerExt: Serializer {
+    /// Add an [`i8`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `i: i8`  - The value to be added.
     fn put_i8(&mut self, i: i8);
+    /// Add an [`i16`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `i: i16`  - The value to be added.
     fn put_i16(&mut self, i: i16);
+    /// Add an [`i32`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `i: i32`  - The value to be added.
     fn put_i32(&mut self, i: i32);
+    /// Add an [`i64`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `i: i64`  - The value to be added.
     fn put_i64(&mut self, i: i64);
+    /// Add a [`BigInt`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `i: &BigInt` - The value to be added.
     fn put_bigint(&mut self, i: &BigInt);
 
+    /// Add [`Bytes`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `b: &Bytes` - The value to be added.
     fn put_bytes(&mut self, b: &Bytes);
 
+    /// Add a [`f16] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `f: f16` - The value to be added.
     fn put_f16(&mut self, f: f16);
+    /// Add an [`f32`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `f: f32` - The value to be added.
     fn put_f32(&mut self, f: f32);
+    /// Add an [`f64`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `f: f64` - The value to be added.
     fn put_f64(&mut self, f: f64);
 
+    /// Add a [`bool`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `b: bool` - The value to be added.
     fn put_bool(&mut self, b: bool);
+    /// Add [`Kson::Null`] to the output value.
     fn put_null(&mut self);
 
+    /// Add a vector to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `v` - The value to be added.
     fn put_arr<S: Ser>(&mut self, v: &Vec<S>);
+    /// Add a map to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `m` - The value to be added.
     fn put_map<S: Ser>(&mut self, m: &VecMap<Bytes, S>);
 }
 
@@ -266,7 +332,9 @@ fn u64_digs<S: Serializer>(pos: bool, u: u64, digs: Vec<u8>, out: &mut S) {
     out.put_slice(&digs);
 }
 
+/// An value that can be serialized.
 pub trait Ser {
+    /// Serial
     fn ser<S: Serializer>(&self, s: &mut S);
 }
 
