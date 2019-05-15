@@ -189,7 +189,7 @@ impl<D: DeserializerBytes> Deserializer for D {
             KCon(CON_TRUE) => Ok(Bool(true)),
             KCon(CON_FALSE) => Ok(Bool(false)),
             KInt(big, pos, len) => {
-                debug_assert!((!big && len <= 8) || (big && len >= 8));
+                // debug_assert!((!big && len <= 8) || (big && len >= 8));
                 let val = self.read_uint(len)?;
                 let mut i;
                 if !big {
