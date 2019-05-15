@@ -32,10 +32,8 @@
 //! assert_eq!(*out, enc_full);
 //!
 //! // Note: decoding returns a `Result`
-//! let dec_full: SomeData = decode(&mut enc_full.into_buf())
-//!     .unwrap() // did the decoding succeed?
-//!     .into_rep() // convert into `SomeData`
-//!     .unwrap(); // did the conversion succeed?
+//! let dec_ks: Kson = decode_full(&enc_full).unwrap(); // did the decoding succeed?
+//! let dec_full: SomeData = dec_ks.into_rep().unwrap(); // did the conversion succeed?
 //!
 //! // success!
 //! assert_eq!(dec_full, some_data);
@@ -43,7 +41,6 @@
 
 #![allow(clippy::inconsistent_digit_grouping)]
 use crate::{
-    errors::DecodingError,
     util::*,
     vecmap::VecMap,
     Float::*,
@@ -51,11 +48,12 @@ use crate::{
     Kson::{self, *},
 };
 use bytes::{Buf, Bytes, IntoBuf};
-use num_bigint::{BigInt, Sign::*};
-use std::convert::TryInto;
+use failure::Error;
 
 pub mod ser;
 pub use ser::*;
+pub mod de;
+pub use de::*;
 mod constants;
 pub(crate) use constants::*;
 
@@ -81,140 +79,7 @@ pub(crate) use constants::*;
 /// // encode value
 /// encode(&ks, out);
 /// ```
-pub fn encode(ks: &Kson, out: &mut Vec<u8>) { ks.ser(out) }
-
-/// Read a specific number of bytes from a buffer.
-///
-/// # Arguments
-///
-/// * `data: &mut B` - A mutable reference to the buffer that will be read from.
-/// * `num_bytes` - The number of bytes to read from the buffer.
-fn read_bytes<B: Buf>(data: &mut B, num_bytes: usize) -> Result<Vec<u8>, DecodingError> {
-    if data.remaining() >= num_bytes {
-        let mut bts = vec![0; num_bytes];
-        data.copy_to_slice(&mut bts);
-        Ok(bts)
-    } else {
-        Err(DecodingError::new(&format!(
-            "Requested {} bytes, but only {} bytes were left",
-            num_bytes,
-            data.remaining()
-        )))
-    }
-}
-
-#[derive(Copy, Clone, Debug)]
-/// KSON tags.
-enum KTag {
-    KCon(u8),
-    KInt(bool, bool, u8),
-    KByt(bool, u8),
-    KArr(bool, u8),
-    KMap(bool, u8),
-    KFloat(u8),
-}
-
-use KTag::*;
-
-macro_rules! big_and_len {
-    ($ctor:expr, $mask:expr, $len_fn:expr, $byte:ident) => {{
-        let big = $byte & BIG_BIT == BIG_BIT;
-        let len = $byte & $mask;
-        Ok($ctor(big, $len_fn(len)))
-    }};
-    ($ctor:expr, $byte:ident) => {
-        big_and_len!($ctor, MASK_LEN_BITS, |x| x, $byte)
-    };
-}
-
-/// Try to read tag byte from buffer.
-///
-/// # Arguments
-///
-/// * `input: &mut Buf` - A mutable reference to the buffer to be read from.
-fn read_tag(input: &mut Buf) -> Result<KTag, DecodingError> {
-    if input.has_remaining() {
-        let byte = input.get_u8();
-
-        match byte & MASK_TYPE {
-            TYPE_CON => Ok(KCon(byte & MASK_META)),
-            TYPE_INT => {
-                let big = byte & BIG_BIT == BIG_BIT;
-                let pos = byte & INT_POSITIVE == INT_POSITIVE;
-                let len = byte & MASK_INT_LEN_BITS;
-                debug_assert!(len <= MASK_INT_LEN_BITS);
-                Ok(KInt(big, pos, len + 1))
-            }
-            TYPE_BYT => big_and_len!(KByt, byte),
-            TYPE_ARR => big_and_len!(KArr, byte),
-            TYPE_MAP => big_and_len!(KMap, byte),
-            TYPE_FLOAT => Ok(KFloat(byte)),
-            unknown => {
-                Err(DecodingError::new(&format!(
-                    "Found unknown tag: {:b}",
-                    unknown
-                )))
-            }
-        }
-    } else {
-        Err(DecodingError::new(
-            "Buffer was empty, couldn't get tag byte",
-        ))
-    }
-}
-
-/// Try to read [`u64`] from buffer.
-fn read_u64<B: Buf>(data: &mut B, len: u8) -> Result<u64, DecodingError> {
-    debug_assert!(len <= 8);
-    if data.remaining() >= len as usize {
-        Ok(data.get_uint_le(len as usize))
-    } else {
-        Err(DecodingError::new(&format!(
-            "Requested 8 bytes to read `u64`, but only {} bytes were left",
-            data.remaining()
-        )))
-    }
-}
-
-/// Try to read [`Inum`] from buffer.
-fn read_int<B: Buf>(data: &mut B, big: bool, pos: bool, len: u8) -> Result<Inum, DecodingError> {
-    debug_assert!(len - 1 <= MASK_INT_LEN_BITS);
-    let u = read_u64(data, len).map_err(|e| {
-        DecodingError::new(&format!(
-            "While attempting to read an `Inum`, this error was encountered: {}",
-            e.0
-        ))
-    })?;
-    let mut i = {
-        if big {
-            Int(BigInt::from_bytes_le(
-                Plus,
-                &read_bytes(data, u as usize + BIGINT_MIN_LEN as usize)?,
-            ))
-        } else {
-            Inum::from(u)
-        }
-    };
-    if !pos {
-        i = -i - I64(1);
-    }
-    Ok(i)
-}
-
-/// Try to read length from buffer.
-fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Result<usize, DecodingError> {
-    if big {
-        Ok(read_u64(data, len + 1).map_err(|e| {
-            DecodingError::new(&format!(
-                "While attempting to read a length, this error was encountered: {}",
-                e.0
-            ))
-        })? as usize
-            + BIGCOL_MIN_LEN as usize)
-    } else {
-        Ok(len as usize)
-    }
-}
+pub fn encode<T: Ser>(t: &T, out: &mut Vec<u8>) { t.ser(out) }
 
 /// Tries to decode a buffer into [`Kson`].
 ///
@@ -231,7 +96,7 @@ fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Result<usize, DecodingE
 /// let k_null = &mut encode_full(&Kson::Null).into_buf();
 ///
 /// // Did the decoding succeed?
-/// let dec = match decode(k_null) {
+/// let dec: Kson = match decode_full(k_null) {
 ///     Ok(value) => value,
 ///     Err(_e) => panic!("Oh no. Whatever will I do?"),
 /// };
@@ -239,95 +104,7 @@ fn read_len<B: Buf>(data: &mut B, big: bool, len: u8) -> Result<usize, DecodingE
 /// // should be equal
 /// assert_eq!(dec, Kson::Null);
 /// ```
-pub fn decode<B: Buf>(data: &mut B) -> Result<Kson, DecodingError> {
-    let tag = read_tag(data)?;
-    match tag {
-        KCon(u) => {
-            match u {
-                0 => Ok(Null),
-                1 => Ok(Bool(true)),
-                2 => Ok(Bool(false)),
-                unknown => {
-                    Err(DecodingError::new(&format!(
-                        "Encountered unknown constant `{:b}` while reading tag",
-                        unknown
-                    )))
-                }
-            }
-        }
-        KInt(big, pos, len) => read_int(data, big, pos, len).map(Kint),
-        KByt(big, len) => {
-            let len = read_len(data, big, len)?;
-            Ok(Byt(Bytes::from(read_bytes(data, len)?)))
-        }
-        KArr(big, len) => {
-            let len = read_len(data, big, len)?;
-            let mut out = Vec::with_capacity(len);
-            for _ in 0..len {
-                out.push(decode(data)?)
-            }
-            Ok(Array(out))
-        }
-        KMap(big, len) => {
-            let len = read_len(data, big, len)?;
-            let mut out = Vec::with_capacity(len);
-            for _ in 0..len {
-                let key: Bytes = decode(data)?.try_into().map_err(|_| {
-                    DecodingError::new("Expected bytestring, found some other [`Kson`] value")
-                })?;
-                let val = decode(data)?;
-                out.push((key, val));
-            }
-            Ok(Map(VecMap::from(out)))
-        }
-        KFloat(b) => {
-            match b {
-                HALF => {
-                    let f = if data.remaining() >= 2 {
-                        Ok(data.get_u16_le())
-                    } else {
-                        Err(DecodingError::new(&format!(
-                            "Requested 2 bytes to read `f16`, but only {} bytes were left",
-                            data.remaining()
-                        )))
-                    };
-
-                    Ok(Kfloat(Half(f?)))
-                }
-                SINGLE => {
-                    let f = if data.remaining() >= 4 {
-                        Ok(data.get_u32_le())
-                    } else {
-                        Err(DecodingError::new(&format!(
-                            "Requested 4 bytes to read `f32`, but only {} bytes were left",
-                            data.remaining()
-                        )))
-                    };
-
-                    Ok(Kfloat(Single(f?)))
-                }
-                DOUBLE => {
-                    let f = if data.remaining() >= 8 {
-                        Ok(data.get_u64_le())
-                    } else {
-                        Err(DecodingError::new(&format!(
-                            "Requested 8 bytes to read `f64`, but only {} bytes were left",
-                            data.remaining()
-                        )))
-                    };
-
-                    Ok(Kfloat(Double(f?)))
-                }
-                unknown => {
-                    Err(DecodingError::new(&format!(
-                        "Expected a float tag, found {:b}",
-                        unknown
-                    )))
-                }
-            }
-        }
-    }
-}
+pub fn decode<D: Deserializer, T: De>(data: &mut D) -> Result<T, Error> { T::de(data) }
 
 /// Encodes a [`Kson`] object into a vector of bytes.
 ///
@@ -346,10 +123,9 @@ pub fn decode<B: Buf>(data: &mut B) -> Result<Kson, DecodingError> {
 /// // encoded value
 /// let enc: Vec<u8> = encode_full(&ks);
 /// ```
-pub fn encode_full(ks: &Kson) -> Vec<u8> {
+pub fn encode_full<T: Ser>(t: &T) -> Vec<u8> {
     let mut out = Vec::new();
-    ks.ser(&mut out);
-    // encode(ks, &mut out);
+    t.ser(&mut out);
     out
 }
 
@@ -368,14 +144,14 @@ pub fn encode_full(ks: &Kson) -> Vec<u8> {
 /// let bs = encode_full(&Null);
 ///
 /// // decode value
-/// let dec = decode_full(bs);
+/// let dec: Result<Kson, failure::Error> = decode_full(&bs);
 /// ```
-pub fn decode_full<B: IntoBuf>(bs: B) -> Result<Kson, DecodingError> { decode(&mut bs.into_buf()) }
+pub fn decode_full<B: IntoBuf, T: De>(bs: B) -> Result<T, Error> { decode(&mut bs.into_buf()) }
 
 #[cfg(test)]
 mod tests {
     use super::*;
-    use num_traits::*;
+    use num_bigint::BigInt;
     use std::ops::Neg;
 
     #[test]
@@ -717,10 +493,10 @@ mod tests {
     #[test]
     // for completeness
     fn trivial() {
-        assert!(read_bytes(&mut Vec::new().into_buf(), 3).is_err());
+        assert!((&mut Vec::new().into_buf()).read_many(3).is_err());
 
-        assert!(read_u64(&mut Vec::new().into_buf(), 3).is_err());
+        assert!((&mut Vec::new().into_buf()).read_uint(3).is_err());
 
-        assert!(decode(&mut vec![0b0000_0011].into_buf()).is_err());
+        // assert!(decode(&mut vec![0b0000_0011].into_buf()).is_err());
     }
 }

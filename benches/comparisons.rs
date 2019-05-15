@@ -26,14 +26,21 @@ fn kson_i64_ser(c: &mut Criterion) {
 }
 fn json_i64_encode(c: &mut Criterion) {
     c.bench_function("JSON i64 encode", |b| {
-        b.iter(|| serde_json::to_string(&black_box(BENCH_INT)))
+        b.iter(|| serde_json::to_string(&black_box(BENCH_INT)).unwrap())
     });
 }
 
 fn kson_i64_decode(c: &mut Criterion) {
     c.bench_function("KSON i64 decode", |b| {
         let buf = encode_full(&BENCH_INT.into_kson());
-        b.iter(|| decode_full(black_box(&buf)))
+        b.iter(|| i64::from_kson(decode_full(black_box(&buf)).unwrap()).unwrap())
+    });
+}
+
+fn kson_i64_deser(c: &mut Criterion) {
+    c.bench_function("KSON i64 deser", |b| {
+        let buf = encode_full(&BENCH_INT.into_kson());
+        b.iter(|| decode_full(black_box(&buf)).map(|i: i64| i).unwrap())
     });
 }
 
@@ -58,10 +65,18 @@ fn kson_str_encode(c: &mut Criterion) {
     });
 }
 
+fn kson_str_ser(c: &mut Criterion) {
+    c.bench_function("KSON string ser", |b| {
+        let s = bench_str();
+        let k = Bytes::from(s);
+        b.iter(|| (&mut Vec::new()).put_bytes(&k))
+    });
+}
+
 fn json_str_encode(c: &mut Criterion) {
     c.bench_function("JSON string encode", |b| {
         let s = bench_str();
-        b.iter(|| serde_json::to_string(&black_box(&s)))
+        b.iter(|| serde_json::to_string(&black_box(&s)).unwrap())
     });
 }
 
@@ -69,15 +84,22 @@ fn kson_str_decode(c: &mut Criterion) {
     c.bench_function("KSON string decode", |b| {
         let s = Bytes::from(bench_str());
         let buf = encode_full(&s.into_kson());
-        b.iter(|| decode_full(black_box(&buf)))
+        b.iter(|| Bytes::from_kson(decode_full(black_box(&buf)).unwrap()).unwrap())
+    });
+}
+
+fn kson_str_deser(c: &mut Criterion) {
+    c.bench_function("KSON string deser", |b| {
+        let s = Bytes::from(bench_str());
+        let buf = encode_full(&s.into_kson());
+        b.iter(|| decode_full(black_box(&buf)).map(|b: Bytes| b).unwrap())
     });
 }
 
 fn json_str_decode(c: &mut Criterion) {
     c.bench_function("JSON string decode", |b| {
-        let s = Bytes::from(bench_str());
-        let buf = encode_full(&s.into_kson());
-        b.iter(|| serde_json::to_string(black_box(&buf)))
+        let buf = serde_json::to_string(&bench_str()).unwrap();
+        b.iter(|| serde_json::from_str(&buf).map(|x: Vec<u8>| x).unwrap())
     });
 }
 
@@ -88,6 +110,14 @@ fn kson_small_str_encode(c: &mut Criterion) {
         let s = bench_small_str();
         let k = Bytes::from(s).into_kson();
         b.iter(|| encode_full(black_box(&k)))
+    });
+}
+
+fn kson_small_str_ser(c: &mut Criterion) {
+    c.bench_function("KSON small_string ser", |b| {
+        let s = bench_small_str();
+        let k = Bytes::from(s);
+        b.iter(|| (&mut Vec::new()).put_bytes(&k))
     });
 }
 
@@ -102,15 +132,22 @@ fn kson_small_str_decode(c: &mut Criterion) {
     c.bench_function("KSON small_string decode", |b| {
         let s = Bytes::from(bench_small_str());
         let buf = encode_full(&s.into_kson());
-        b.iter(|| decode_full(black_box(&buf)))
+        b.iter(|| Bytes::from_kson(decode_full(black_box(&buf)).unwrap()).unwrap())
+    });
+}
+
+fn kson_small_str_deser(c: &mut Criterion) {
+    c.bench_function("KSON small_string deser", |b| {
+        let s = Bytes::from(bench_small_str());
+        let buf = encode_full(&s.into_kson());
+        b.iter(|| decode_full(black_box(&buf)).map(|b: Bytes| b).unwrap())
     });
 }
 
 fn json_small_str_decode(c: &mut Criterion) {
     c.bench_function("JSON small_string decode", |b| {
-        let s = Bytes::from(bench_small_str());
-        let buf = encode_full(&s.into_kson());
-        b.iter(|| serde_json::to_string(black_box(&buf)))
+        let buf = serde_json::to_string(&bench_small_str()).unwrap();
+        b.iter(|| serde_json::from_str(&buf).map(|x: Vec<u8>| x).unwrap())
     });
 }
 
@@ -121,6 +158,14 @@ fn kson_tiny_str_encode(c: &mut Criterion) {
         let s = bench_tiny_str();
         let k = Bytes::from(s).into_kson();
         b.iter(|| encode_full(black_box(&k)))
+    });
+}
+
+fn kson_tiny_str_ser(c: &mut Criterion) {
+    c.bench_function("KSON tiny_string ser", |b| {
+        let s = bench_tiny_str();
+        let k = Bytes::from(s);
+        b.iter(|| (&mut Vec::new()).put_bytes(&k))
     });
 }
 
@@ -135,36 +180,50 @@ fn kson_tiny_str_decode(c: &mut Criterion) {
     c.bench_function("KSON tiny_string decode", |b| {
         let s = Bytes::from(bench_tiny_str());
         let buf = encode_full(&s.into_kson());
-        b.iter(|| decode_full(black_box(&buf)))
+        b.iter(|| Bytes::from_kson(decode_full(black_box(&buf)).unwrap()).unwrap())
+    });
+}
+
+fn kson_tiny_str_deser(c: &mut Criterion) {
+    c.bench_function("KSON tiny_string deser", |b| {
+        let s = Bytes::from(bench_tiny_str());
+        let buf = encode_full(&s.into_kson());
+        b.iter(|| decode_full(black_box(&buf)).map(|b: Bytes| b).unwrap())
     });
 }
 
 fn json_tiny_str_decode(c: &mut Criterion) {
     c.bench_function("JSON tiny_string decode", |b| {
-        let s = Bytes::from(bench_tiny_str());
-        let buf = encode_full(&s.into_kson());
-        b.iter(|| serde_json::to_string(black_box(&buf)))
+        let buf = serde_json::to_string(&bench_tiny_str()).unwrap();
+        b.iter(|| serde_json::from_str(&buf).map(|x: Vec<u8>| x).unwrap())
     });
 }
 
 criterion_group!(
     benches,
-    kson_i64_encode,
-    kson_i64_ser,
-    json_i64_encode,
+    // kson_i64_encode,
+    // kson_i64_ser,
+    // json_i64_encode,
     kson_i64_decode,
+    kson_i64_deser,
     json_i64_decode,
-    kson_str_encode,
-    json_str_encode,
+    // kson_str_encode,
+    // kson_str_ser,
+    // json_str_encode,
     kson_str_decode,
+    kson_str_deser,
     json_str_decode,
-    kson_small_str_encode,
-    json_small_str_encode,
+    // kson_small_str_encode,
+    // kson_small_str_ser,
+    // json_small_str_encode,
     kson_small_str_decode,
+    kson_small_str_deser,
     json_small_str_decode,
-    kson_tiny_str_encode,
-    json_tiny_str_encode,
+    // kson_tiny_str_encode,
+    // kson_tiny_str_ser,
+    // json_tiny_str_encode,
     kson_tiny_str_decode,
+    kson_tiny_str_deser,
     json_tiny_str_decode,
 );
 

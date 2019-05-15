@@ -90,7 +90,7 @@ impl<K: Ord, V> VecMap<K, V> {
     /// ```
     pub fn from_sorted(v: Vec<(K, V)>) -> Self {
         for i in 1..v.len() {
-            if !(v[i - 1].0 < v[i].0) {
+            if v[i - 1].0 >= v[i].0 {
                 panic!("`Vec` is not sorted by key")
             }
         }

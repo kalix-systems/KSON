@@ -25,7 +25,7 @@ use num_traits::*;
 use std::{
     cmp::Ordering,
     convert::TryFrom,
-    ops::{Add, Div, Mul, Neg, Rem, Sub},
+    ops::{Add, AddAssign, Div, Mul, MulAssign, Neg, Rem, Sub},
 };
 
 /// [`Inum`]s are either [`i64`]s or [`BigInt`]s (i.e., big integers).
@@ -362,6 +362,48 @@ impl Num for Inum {
         match i64::from_str_radix(n_str, radix) {
             Err(_) => BigInt::from_str_radix(n_str, radix).map(Int),
             Ok(i) => Ok(I64(i)),
+        }
+    }
+}
+
+impl AddAssign<i64> for Inum {
+    #[inline]
+    fn add_assign(&mut self, other: i64) {
+        let j = {
+            match self {
+                I64(i) => {
+                    Ok(i.checked_add(other)
+                        .map_or_else(|| Int(BigInt::from(*i) + other), I64))
+                }
+                Int(i) => {
+                    *i += other;
+                    Err(())
+                }
+            }
+        };
+        if let Ok(j) = j {
+            *self = j;
+        }
+    }
+}
+
+impl MulAssign<i64> for Inum {
+    #[inline]
+    fn mul_assign(&mut self, other: i64) {
+        let j = {
+            match self {
+                I64(i) => {
+                    Ok(i.checked_mul(other)
+                        .map_or_else(|| Int(BigInt::from(*i) * other), I64))
+                }
+                Int(i) => {
+                    *i *= other;
+                    Err(())
+                }
+            }
+        };
+        if let Ok(j) = j {
+            *self = j;
         }
     }
 }
