@@ -2,7 +2,8 @@ use super::*;
 use crate::{float::Float, rentable::Rentable};
 use failure::*;
 use half::f16;
-use num_bigint::Sign;
+use num_bigint::{BigInt, Sign};
+use KTag::*;
 
 /// KSON tags.
 #[derive(Copy, Clone, Debug)]
@@ -35,31 +36,42 @@ pub trait DeserializerBytes {
 }
 
 pub trait Deserializer {
+    #[inline(always)]
     fn read_kson(&mut self) -> Result<Kson, Error>;
+    #[inline(always)]
     fn read_null(&mut self) -> Result<(), Error>;
+    #[inline(always)]
     fn read_bool(&mut self) -> Result<bool, Error>;
+    #[inline(always)]
     fn read_i64(&mut self) -> Result<i64, Error>;
+    #[inline(always)]
     fn read_bigint(&mut self) -> Result<BigInt, Error>;
+    #[inline(always)]
     fn read_inum(&mut self) -> Result<Inum, Error>;
+    #[inline(always)]
     fn read_half(&mut self) -> Result<f16, Error>;
+    #[inline(always)]
     fn read_single(&mut self) -> Result<f32, Error>;
+    #[inline(always)]
     fn read_double(&mut self) -> Result<f64, Error>;
+    #[inline(always)]
     fn read_float(&mut self) -> Result<Float, Error>;
+    #[inline(always)]
     fn read_bytes(&mut self) -> Result<Bytes, Error>;
+    #[inline(always)]
     fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error>;
+    #[inline(always)]
     fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error>;
 }
 
-pub trait De: Sized {
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error>;
+/// Try to read length from buffer.
+fn read_len<D: DeserializerBytes>(data: &mut D, big: bool, len: u8) -> Result<usize, Error> {
+    if big {
+        Ok(data.read_uint(len + 1)? as usize + BIGCOL_MIN_LEN as usize)
+    } else {
+        Ok(len as usize)
+    }
 }
-
-impl De for Kson {
-    #[inline(always)]
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_kson() }
-}
-
-use KTag::*;
 
 macro_rules! big_and_len {
     ($ctor:expr, $mask:expr, $byte:ident) => {{
@@ -177,7 +189,7 @@ impl<D: DeserializerBytes> Deserializer for D {
             KCon(CON_TRUE) => Ok(Bool(true)),
             KCon(CON_FALSE) => Ok(Bool(false)),
             KInt(big, pos, len) => {
-                debug_assert!((big && len <= 8) || (!big && len >= 8));
+                debug_assert!((!big && len <= 8) || (big && len >= 8));
                 let val = self.read_uint(len)?;
                 let mut i;
                 if !big {
@@ -187,48 +199,34 @@ impl<D: DeserializerBytes> Deserializer for D {
                     i = Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs));
                 }
                 if !pos {
-                    i *= -1;
-                    i += -1;
+                    i = -i - I64(1);
                 }
                 Ok(Kint(i))
             }
+
             KFloat(HALF) => self.read_u16().map(Half).map(Kfloat),
             KFloat(SINGLE) => self.read_u32().map(Single).map(Kfloat),
             KFloat(DOUBLE) => self.read_u64().map(Double).map(Kfloat),
 
             KByt(big, len) => {
-                if !big {
-                    self.read_many(len as usize)
-                        .map(Bytes::from)
-                        .map(Kson::from)
-                } else {
-                    let len = self.read_uint(len)?;
-                    self.read_many(len as usize)
-                        .map(Bytes::from)
-                        .map(Kson::from)
-                }
+                let len = read_len(self, big, len)?;
+                self.read_many(len).map(Bytes::from).map(Byt)
             }
+
             KArr(big, len) => {
-                let len = if big {
-                    self.read_uint(len)?
-                } else {
-                    len as u64
-                } as usize;
+                let len = read_len(self, big, len)?;
                 let mut out = Vec::with_capacity(len);
                 for _ in 0..len {
                     out.push(Kson::de(self)?);
                 }
                 Ok(Array(out))
             }
+
             KMap(big, len) => {
-                let len = if big {
-                    self.read_uint(len)?
-                } else {
-                    len as u64
-                } as usize;
+                let len = read_len(self, big, len)?;
                 let mut out = Vec::with_capacity(len);
                 for _ in 0..len {
-                    out.push((self.read_bytes()?, Kson::de(self)?));
+                    out.push((self.read_bytes()?, self.read_kson()?));
                 }
                 // doesn't enforce canonicity - maybe it should?
                 Ok(Map(VecMap::from(out)))
@@ -240,12 +238,8 @@ impl<D: DeserializerBytes> Deserializer for D {
     fn read_bytes(&mut self) -> Result<Bytes, Error> {
         match self.read_tag()? {
             KByt(big, len) => {
-                if !big {
-                    self.read_many(len as usize).map(Bytes::from)
-                } else {
-                    let len = self.read_uint(len)?;
-                    self.read_many(len as usize).map(Bytes::from)
-                }
+                let len = read_len(self, big, len)?;
+                self.read_many(len).map(Bytes::from)
             }
             _ => bail!("bad tag"),
         }
@@ -362,11 +356,7 @@ impl<D: DeserializerBytes> Deserializer for D {
     fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
         match self.read_tag()? {
             KArr(big, len) => {
-                let len = if big {
-                    self.read_uint(len)?
-                } else {
-                    len as u64
-                } as usize;
+                let len = read_len(self, big, len)?;
                 let mut out = Vec::with_capacity(len);
                 for _ in 0..len {
                     out.push(T::de(self)?);
@@ -380,11 +370,7 @@ impl<D: DeserializerBytes> Deserializer for D {
     fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
         match self.read_tag()? {
             KMap(big, len) => {
-                let len = if big {
-                    self.read_uint(len)?
-                } else {
-                    len as u64
-                } as usize;
+                let len = read_len(self, big, len)?;
                 let mut out = Vec::with_capacity(len);
                 for _ in 0..len {
                     out.push((self.read_bytes()?, T::de(self)?));
@@ -521,4 +507,39 @@ impl Deserializer for Rentable<Kson> {
             k => bail!("expected array, got {:?}", k),
         }
     }
+}
+
+pub trait De: Sized {
+    #[inline(always)]
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error>;
+}
+
+impl De for Kson {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_kson() }
+}
+
+impl De for Bytes {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bytes() }
+}
+impl De for i64 {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_i64() }
+}
+impl De for BigInt {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bigint() }
+}
+
+impl De for Inum {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_inum() }
+}
+
+impl De for bool {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bool() }
+}
+
+impl De for () {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_null() }
+}
+
+impl<T: De> De for Vec<T> {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_arr() }
 }

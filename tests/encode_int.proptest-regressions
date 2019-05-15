@@ -10,3 +10,4 @@ cc bce93a78231344a05131e32d2576f5f9ef73c4b882a52595b3deccf97b6208bf # shrinks to
 cc 23643bed0052f6b44b817f635aab30548a5376dbc7b35feafabf52a05fb7c89e # shrinks to i = 9230000000000000000
 cc da7f602508cc29dd2d788503dd5dabd4cf6de98d1dbc490a338b0e848d1ea042 # shrinks to i = BigInt { sign: Minus, data: BigUint { data: [2339600640, 2328306436] } }
 cc 60c43aed93e396fefd1089d88271ba17a421f2c8017564f7782e4807afdde5b1 # shrinks to i = BigInt { sign: Plus, data: BigUint { data: [0, 2147483648] } }
+cc bc952c23fe8f9db688abc58d12ee1ca38ed5b77c5531b6591dbcc733e7330d84 # shrinks to i = 0
