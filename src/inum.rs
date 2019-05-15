@@ -250,25 +250,21 @@ impl TryFrom<Inum> for i128 {
 impl TryFrom<Inum> for usize {
     type Error = Inum;
 
-    fn try_from(n: Inum) -> Result<Self, Inum> {
-        if std::mem::size_of::<usize>() == 8 {
-            Ok(u64::try_from(n)? as usize)
-        } else {
-            Ok(u32::try_from(n)? as usize)
-        }
-    }
+    #[cfg(target_pointer_width = "32")]
+    fn try_from(n: Inum) -> Result<Self, Inum> { Ok(u32::try_from(n)? as usize) }
+
+    #[cfg(target_pointer_width = "64")]
+    fn try_from(n: Inum) -> Result<Self, Inum> { Ok(u64::try_from(n)? as usize) }
 }
 
 impl TryFrom<Inum> for isize {
     type Error = Inum;
 
-    fn try_from(n: Inum) -> Result<Self, Inum> {
-        if std::mem::size_of::<usize>() == 8 {
-            Ok(i64::try_from(n)? as isize)
-        } else {
-            Ok(i32::try_from(n)? as isize)
-        }
-    }
+    #[cfg(target_pointer_width = "32")]
+    fn try_from(n: Inum) -> Result<Self, Inum> { Ok(u32::try_from(n)? as isize) }
+
+    #[cfg(target_pointer_width = "64")]
+    fn try_from(n: Inum) -> Result<Self, Inum> { Ok(u64::try_from(n)? as isize) }
 }
 
 // num_traits
