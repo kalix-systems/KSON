@@ -3,6 +3,7 @@ use crate::{float::Float, rentable::Rentable};
 use failure::*;
 use half::f16;
 use num_bigint::{BigInt, Sign};
+use std::convert::TryFrom;
 use KTag::*;
 
 /// KSON tags.
@@ -590,10 +591,12 @@ impl De for Bytes {
     #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bytes() }
 }
+
 impl De for i64 {
     #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_i64() }
 }
+
 impl De for BigInt {
     #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bigint() }
@@ -618,3 +621,30 @@ impl<T: De> De for Vec<T> {
     #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_arr() }
 }
+
+// Implementations for primitive types
+
+// Integers
+macro_rules! easy_int_de {
+    ($typ:ty) => {
+        impl De for $typ {
+            #[inline(always)]
+            fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+                match Self::try_from(d.read_i64()?) {
+                    Err(_) => bail!("Value to big to be `{}`", stringify!(Self)),
+                    Ok(v) => Ok(v),
+                }
+            }
+        }
+    };
+}
+
+// unsigned
+easy_int_de!(u8);
+easy_int_de!(u16);
+easy_int_de!(u32);
+
+// signed
+easy_int_de!(i8);
+easy_int_de!(i16);
+easy_int_de!(i32);
