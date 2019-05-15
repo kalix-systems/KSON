@@ -583,54 +583,18 @@ pub trait De: Sized {
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error>;
 }
 
-impl De for Kson {
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_kson() }
-}
-
-impl De for Bytes {
-    #[inline(always)]
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bytes() }
-}
-
-impl De for i64 {
-    #[inline(always)]
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_i64() }
-}
-
-impl De for BigInt {
-    #[inline(always)]
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bigint() }
-}
-
-impl De for Inum {
-    #[inline(always)]
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_inum() }
-}
-
-impl De for bool {
-    #[inline(always)]
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bool() }
-}
-
-impl De for () {
-    #[inline(always)]
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_null() }
-}
-
 impl<T: De> De for Vec<T> {
     #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_arr() }
 }
 
 // Implementations for primitive types
-
-// Integers
-macro_rules! easy_int_de {
-    ($typ:ty) => {
+macro_rules! easy_de {
+    ($typ:ty, $read:tt) => {
         impl De for $typ {
             #[inline(always)]
             fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
-                match Self::try_from(d.read_i64()?) {
+                match Self::try_from(d.$read()?) {
                     Err(_) => bail!("Value to big to be `{}`", stringify!(Self)),
                     Ok(v) => Ok(v),
                 }
@@ -639,12 +603,53 @@ macro_rules! easy_int_de {
     };
 }
 
+macro_rules! trivial_de {
+    ($typ:ty, $read:tt) => {
+        impl De for $typ {
+            #[inline(always)]
+            fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.$read() }
+        }
+    };
+}
+
+// Kson
+trivial_de!(Kson, read_kson);
+
+// Integers
+
+// Inum
+trivial_de!(Inum, read_inum);
+
+// BigInt
+trivial_de!(BigInt, read_bigint);
+
 // unsigned
-easy_int_de!(u8);
-easy_int_de!(u16);
-easy_int_de!(u32);
+easy_de!(u8, read_i64);
+easy_de!(u16, read_i64);
+easy_de!(u32, read_i64);
+easy_de!(u64, read_inum);
+easy_de!(usize, read_inum);
 
 // signed
-easy_int_de!(i8);
-easy_int_de!(i16);
-easy_int_de!(i32);
+easy_de!(i8, read_i64);
+easy_de!(i16, read_i64);
+easy_de!(i32, read_i64);
+trivial_de!(i64, read_i64);
+easy_de!(isize, read_i64);
+
+// Floats
+trivial_de!(Float, read_float);
+trivial_de!(f16, read_f16);
+trivial_de!(f32, read_f32);
+trivial_de!(f64, read_f64);
+
+// Misc
+
+// unit/nil
+trivial_de!((), read_null);
+
+// boolean
+trivial_de!(bool, read_bool);
+
+// bytes
+trivial_de!(Bytes, read_bytes);
