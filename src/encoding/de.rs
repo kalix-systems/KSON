@@ -25,29 +25,28 @@ pub enum KTag {
 // TODO: error-chain based handling
 /// A sequence of bytes with read methods.
 pub trait DeserializerBytes {
-    #[inline(always)]
     /// Read a tag byte as a [`KTag`].
     fn read_tag(&mut self) -> Result<KTag, Error>;
-    #[inline(always)]
+
     /// Read a specified number of bytes as a `Vec<u8>`.
     ///
     /// # Arguments
     ///
     /// * `len: usize` - The number of bytes to be read.
     fn read_many(&mut self, len: usize) -> Result<Vec<u8>, Error>;
-    #[inline(always)]
+
     /// Read a single byte.
     fn read_u8(&mut self) -> Result<u8, Error>;
-    #[inline(always)]
+
     /// Read two bytes as a [`u16`].
     fn read_u16(&mut self) -> Result<u16, Error>;
-    #[inline(always)]
+
     /// Read four bytes as a [`u32`].
     fn read_u32(&mut self) -> Result<u32, Error>;
-    #[inline(always)]
+
     /// Read eight bytes as a [`u64`].
     fn read_u64(&mut self) -> Result<u64, Error>;
-    #[inline(always)]
+
     /// Reads an unsigned n-bytes integer.
     ///
     /// # Arguments
@@ -58,44 +57,43 @@ pub trait DeserializerBytes {
 
 /// Values that can be deserialized from.
 pub trait Deserializer {
-    #[inline(always)]
     /// Read a [`Kson`] value.
     fn read_kson(&mut self) -> Result<Kson, Error>;
-    #[inline(always)]
+
     /// Read a  [`Kson::Null`]. Returns `Ok(())` if successful, otherwise returns an
     /// error.
     fn read_null(&mut self) -> Result<(), Error>;
-    #[inline(always)]
+
     /// Read a [`bool`].
     fn read_bool(&mut self) -> Result<bool, Error>;
-    #[inline(always)]
+
     /// Read an [`i64`].
     fn read_i64(&mut self) -> Result<i64, Error>;
-    #[inline(always)]
+
     /// Read a [`BigInt`].
     fn read_bigint(&mut self) -> Result<BigInt, Error>;
-    #[inline(always)]
+
     /// Read an [`Inum`].
     fn read_inum(&mut self) -> Result<Inum, Error>;
-    #[inline(always)]
+
     /// Read an [`f16`].
     fn read_f16(&mut self) -> Result<f16, Error>;
-    #[inline(always)]
+
     /// Read an [`f32`].
     fn read_f32(&mut self) -> Result<f32, Error>;
-    #[inline(always)]
+
     /// Read an [`f64`].
     fn read_f64(&mut self) -> Result<f64, Error>;
-    #[inline(always)]
+
     /// Read a [`Float`].
     fn read_float(&mut self) -> Result<Float, Error>;
-    #[inline(always)]
+
     /// Read a [`Bytes`].
     fn read_bytes(&mut self) -> Result<Bytes, Error>;
-    #[inline(always)]
+
     /// Read a vector.
     fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error>;
-    #[inline(always)]
+
     /// Read a [`VecMap`].
     fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error>;
 }
@@ -182,6 +180,7 @@ impl<B: Buf> DeserializerBytes for B {
         }
     }
 
+    #[inline(always)]
     fn read_u32(&mut self) -> Result<u32, Error> {
         if self.remaining() >= 4 {
             Ok(self.get_u32_le())
@@ -193,6 +192,7 @@ impl<B: Buf> DeserializerBytes for B {
         }
     }
 
+    #[inline(always)]
     fn read_u64(&mut self) -> Result<u64, Error> {
         if self.remaining() >= 8 {
             Ok(self.get_u64_le())
@@ -219,6 +219,7 @@ impl<B: Buf> DeserializerBytes for B {
     }
 }
 impl<D: DeserializerBytes> Deserializer for D {
+    #[inline(always)]
     fn read_kson(&mut self) -> Result<Kson, Error> {
         match self.read_tag()? {
             KCon(CON_NULL) => Ok(Null),
@@ -226,13 +227,13 @@ impl<D: DeserializerBytes> Deserializer for D {
             KCon(CON_FALSE) => Ok(Bool(false)),
             KInt(big, pos, len) => {
                 let val = self.read_uint(len)?;
-                let mut i;
-                if !big {
-                    i = Inum::from(val);
+                let mut i = if !big {
+                    Inum::from(val)
                 } else {
                     let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
-                    i = Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs));
-                }
+                    Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs))
+                };
+
                 if !pos {
                     i = -i - I64(1);
                 }
@@ -270,6 +271,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_bytes(&mut self) -> Result<Bytes, Error> {
         match self.read_tag()? {
             KByt(big, len) => {
@@ -280,6 +282,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_i64(&mut self) -> Result<i64, Error> {
         match self.read_tag()? {
             KInt(false, pos, len) if len <= 8 => {
@@ -298,19 +301,21 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_bigint(&mut self) -> Result<BigInt, Error> {
         match self.read_tag()? {
             KInt(big, pos, len) => {
                 debug_assert!((big && len <= 8) || (!big && len >= 8));
                 let val = self.read_uint(len)?;
-                let mut i;
-                if !big {
-                    i = BigInt::from(val);
+
+                let mut i = if !big {
+                    BigInt::from(val)
                 } else {
                     let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
                     let sign = if big { Sign::Plus } else { Sign::Minus };
-                    i = BigInt::from_bytes_le(sign, &digs);
-                }
+                    BigInt::from_bytes_le(sign, &digs)
+                };
+
                 if !pos {
                     i *= -1;
                     i += -1;
@@ -321,18 +326,20 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_inum(&mut self) -> Result<Inum, Error> {
         match self.read_tag()? {
             KInt(big, pos, len) => {
                 debug_assert!((big && len <= 8) || (!big && len >= 8));
                 let val = self.read_uint(len)?;
-                let mut i;
-                if !big {
-                    i = Inum::from(val);
+
+                let mut i = if !big {
+                    Inum::from(val)
                 } else {
                     let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
-                    i = Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs));
-                }
+                    Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs))
+                };
+
                 if !pos {
                     i *= -1;
                     i += -1;
@@ -343,6 +350,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_bool(&mut self) -> Result<bool, Error> {
         match self.read_tag()? {
             KCon(CON_TRUE) => Ok(true),
@@ -351,6 +359,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_null(&mut self) -> Result<(), Error> {
         match self.read_tag()? {
             KCon(CON_NULL) => Ok(()),
@@ -358,6 +367,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_f16(&mut self) -> Result<f16, Error> {
         match self.read_tag()? {
             KFloat(HALF) => self.read_u16().map(f16::from_bits),
@@ -365,6 +375,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_f32(&mut self) -> Result<f32, Error> {
         match self.read_tag()? {
             KFloat(SINGLE) => self.read_u32().map(f32::from_bits),
@@ -372,6 +383,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_f64(&mut self) -> Result<f64, Error> {
         match self.read_tag()? {
             KFloat(DOUBLE) => self.read_u64().map(f64::from_bits),
@@ -379,6 +391,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_float(&mut self) -> Result<Float, Error> {
         match self.read_tag()? {
             KFloat(HALF) => self.read_u16().map(Half),
@@ -388,6 +401,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
         match self.read_tag()? {
             KArr(big, len) => {
@@ -402,6 +416,7 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
+    #[inline(always)]
     fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
         match self.read_tag()? {
             KMap(big, len) => {
@@ -419,12 +434,14 @@ impl<D: DeserializerBytes> Deserializer for D {
 }
 
 impl Deserializer for Rentable<Kson> {
+    #[inline(always)]
     fn read_kson(&mut self) -> Result<Kson, Error> {
         let k = self.rent();
         self.replace(Null);
         Ok(k)
     }
 
+    #[inline(always)]
     fn read_null(&mut self) -> Result<(), Error> {
         let k = self.rent();
         self.replace(Null);
@@ -434,6 +451,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_bool(&mut self) -> Result<bool, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -443,6 +461,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_i64(&mut self) -> Result<i64, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -452,6 +471,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_bigint(&mut self) -> Result<BigInt, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -461,6 +481,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_inum(&mut self) -> Result<Inum, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -470,6 +491,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_f16(&mut self) -> Result<f16, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -479,6 +501,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_f32(&mut self) -> Result<f32, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -488,6 +511,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_f64(&mut self) -> Result<f64, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -497,6 +521,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_float(&mut self) -> Result<Float, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -506,6 +531,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_bytes(&mut self) -> Result<Bytes, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -515,6 +541,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -528,6 +555,7 @@ impl Deserializer for Rentable<Kson> {
         }
     }
 
+    #[inline(always)]
     fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
         let k = self.rent();
         self.replace(Null);
@@ -546,7 +574,6 @@ impl Deserializer for Rentable<Kson> {
 
 /// Values that can be deserialized.
 pub trait De: Sized {
-    #[inline(always)]
     /// Read a value of type `Self` from a [`Deserializer`].
     ///
     /// # Arguments
@@ -560,27 +587,34 @@ impl De for Kson {
 }
 
 impl De for Bytes {
+    #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bytes() }
 }
 impl De for i64 {
+    #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_i64() }
 }
 impl De for BigInt {
+    #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bigint() }
 }
 
 impl De for Inum {
+    #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_inum() }
 }
 
 impl De for bool {
+    #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_bool() }
 }
 
 impl De for () {
+    #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_null() }
 }
 
 impl<T: De> De for Vec<T> {
+    #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_arr() }
 }
