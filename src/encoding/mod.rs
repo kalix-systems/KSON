@@ -56,6 +56,9 @@ use std::convert::TryInto;
 
 pub mod ser;
 pub use ser::*;
+pub mod de;
+pub use de::*;
+use KTag::*;
 mod constants;
 pub(crate) use constants::*;
 
@@ -102,19 +105,6 @@ fn read_bytes<B: Buf>(data: &mut B, num_bytes: usize) -> Result<Vec<u8>, Decodin
         )))
     }
 }
-
-#[derive(Copy, Clone, Debug)]
-/// KSON tags.
-enum KTag {
-    KCon(u8),
-    KInt(bool, bool, u8),
-    KByt(bool, u8),
-    KArr(bool, u8),
-    KMap(bool, u8),
-    KFloat(u8),
-}
-
-use KTag::*;
 
 macro_rules! big_and_len {
     ($ctor:expr, $mask:expr, $len_fn:expr, $byte:ident) => {{

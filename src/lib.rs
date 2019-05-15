@@ -377,6 +377,7 @@ pub mod errors;
 pub mod float;
 pub mod inum;
 pub mod prelude;
+pub(crate) mod rentable;
 pub mod rep;
 mod util;
 pub mod vecmap;
