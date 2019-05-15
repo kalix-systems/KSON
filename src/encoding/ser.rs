@@ -50,13 +50,13 @@ enum LenOrDigs {
 use LenOrDigs::*;
 
 impl Serializer for Vec<u8> {
-    type Out = Vec<u8>;
+    type Out = Self;
 
     fn put_byte(&mut self, u: u8) { self.push(u) }
 
     fn put_slice(&mut self, slice: &[u8]) { self.extend_from_slice(slice) }
 
-    fn finalize(self) -> Vec<u8> { self }
+    fn finalize(self) -> Self::Out { self }
 }
 
 macro_rules! len_or_digs {

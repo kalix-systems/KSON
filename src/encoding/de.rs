@@ -8,59 +8,95 @@ use KTag::*;
 /// KSON tags.
 #[derive(Copy, Clone, Debug)]
 pub enum KTag {
+    /// Constant tag.
     KCon(u8),
+    /// Integer tag.
     KInt(bool, bool, u8),
+    /// Bytestring tag.
     KByt(bool, u8),
+    /// Array tag.
     KArr(bool, u8),
+    /// Map tag.
     KMap(bool, u8),
+    /// Float tag.
     KFloat(u8),
 }
 
-// TODO: error-chain based handling instead of this
-// but I'm lazy
+// TODO: error-chain based handling
+/// A sequence of bytes with read methods.
 pub trait DeserializerBytes {
     #[inline(always)]
+    /// Read a tag byte as a [`KTag`].
     fn read_tag(&mut self) -> Result<KTag, Error>;
     #[inline(always)]
+    /// Read a specified number of bytes as a `Vec<u8>`.
+    ///
+    /// # Arguments
+    ///
+    /// * `len: usize` - The number of bytes to be read.
     fn read_many(&mut self, len: usize) -> Result<Vec<u8>, Error>;
     #[inline(always)]
+    /// Read a single byte.
     fn read_u8(&mut self) -> Result<u8, Error>;
     #[inline(always)]
+    /// Read two bytes as a [`u16`].
     fn read_u16(&mut self) -> Result<u16, Error>;
     #[inline(always)]
+    /// Read four bytes as a [`u32`].
     fn read_u32(&mut self) -> Result<u32, Error>;
     #[inline(always)]
+    /// Read eight bytes as a [`u64`].
     fn read_u64(&mut self) -> Result<u64, Error>;
     #[inline(always)]
+    /// Reads an unsigned n-bytes integer.
+    ///
+    /// # Arguments
+    ///
+    /// * `len: u8` - The number of bytes to be read, where `1 <= len <= 8`.
     fn read_uint(&mut self, len: u8) -> Result<u64, Error>;
 }
 
+/// Values that can be deserialized from.
 pub trait Deserializer {
     #[inline(always)]
+    /// Read a [`Kson`] value.
     fn read_kson(&mut self) -> Result<Kson, Error>;
     #[inline(always)]
+    /// Read a  [`Kson::Null`]. Returns `Ok(())` if successful, otherwise returns an
+    /// error.
     fn read_null(&mut self) -> Result<(), Error>;
     #[inline(always)]
+    /// Read a [`bool`].
     fn read_bool(&mut self) -> Result<bool, Error>;
     #[inline(always)]
+    /// Read an [`i64`].
     fn read_i64(&mut self) -> Result<i64, Error>;
     #[inline(always)]
+    /// Read a [`BigInt`].
     fn read_bigint(&mut self) -> Result<BigInt, Error>;
     #[inline(always)]
+    /// Read an [`Inum`].
     fn read_inum(&mut self) -> Result<Inum, Error>;
     #[inline(always)]
+    /// Read an [`f16`].
     fn read_half(&mut self) -> Result<f16, Error>;
     #[inline(always)]
+    /// Read an [`f32`].
     fn read_single(&mut self) -> Result<f32, Error>;
     #[inline(always)]
+    /// Read an [`f64`].
     fn read_double(&mut self) -> Result<f64, Error>;
     #[inline(always)]
+    /// Read a [`Float`].
     fn read_float(&mut self) -> Result<Float, Error>;
     #[inline(always)]
+    /// Read a [`Bytes`].
     fn read_bytes(&mut self) -> Result<Bytes, Error>;
     #[inline(always)]
+    /// Read a vector.
     fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error>;
     #[inline(always)]
+    /// Read a [`VecMap`].
     fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error>;
 }
 
@@ -189,7 +225,6 @@ impl<D: DeserializerBytes> Deserializer for D {
             KCon(CON_TRUE) => Ok(Bool(true)),
             KCon(CON_FALSE) => Ok(Bool(false)),
             KInt(big, pos, len) => {
-                // debug_assert!((!big && len <= 8) || (big && len >= 8));
                 let val = self.read_uint(len)?;
                 let mut i;
                 if !big {
@@ -256,10 +291,10 @@ impl<D: DeserializerBytes> Deserializer for D {
                         Ok(-(val as i64) - 1)
                     }
                 } else {
-                    bail!("int too large for i64")
+                    bail!("int too large to be i64")
                 }
             }
-            _ => bail!("bad tag when reading i64"),
+            _ => bail!("Bad tag when reading i64"),
         }
     }
 
@@ -282,7 +317,7 @@ impl<D: DeserializerBytes> Deserializer for D {
                 }
                 Ok(i)
             }
-            _ => bail!("bad tag when reading bigint"),
+            _ => bail!("Bad tag when reading BigInt"),
         }
     }
 
@@ -509,8 +544,14 @@ impl Deserializer for Rentable<Kson> {
     }
 }
 
+/// Values that can be deserialized.
 pub trait De: Sized {
     #[inline(always)]
+    /// Read a value of type `Self` from a [`Deserializer`].
+    ///
+    /// # Arguments
+    ///
+    /// * `d` - The [`Deserializer`] to be read from.
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error>;
 }
 

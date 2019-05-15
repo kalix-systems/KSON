@@ -55,7 +55,7 @@ pub use ser::*;
 pub mod de;
 pub use de::*;
 mod constants;
-pub(crate) use constants::*;
+use constants::*;
 
 // TODO: replace len vecs w/ heapless vec of size at most 8
 /// Encode [`Kson`] into its binary representation, storing output in `out`.

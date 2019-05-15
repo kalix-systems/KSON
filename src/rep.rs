@@ -1,6 +1,6 @@
 //! # Values representable as KSON.
 
-use crate::*;
+use crate::{encoding::Ser, *};
 use bytes::{buf::Buf, Bytes};
 use hashbrown::HashMap;
 use std::{
