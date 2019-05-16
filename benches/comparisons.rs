@@ -2,7 +2,7 @@
 extern crate criterion;
 
 use criterion::{black_box, Criterion};
-use kson::{encoding::ser::SerializerExt, prelude::*};
+use kson::{encoding::ser::Serializer, prelude::*};
 use serde_json;
 
 pub fn u64_to_bytes_le(x: u64) -> Bytes { Bytes::from(u64::to_le_bytes(x).to_vec()) }
@@ -201,27 +201,27 @@ fn json_tiny_str_decode(c: &mut Criterion) {
 
 criterion_group!(
     benches,
-    // kson_i64_encode,
-    // kson_i64_ser,
-    // json_i64_encode,
+    kson_i64_encode,
+    kson_i64_ser,
+    json_i64_encode,
     kson_i64_decode,
     kson_i64_deser,
     json_i64_decode,
-    // kson_str_encode,
-    // kson_str_ser,
-    // json_str_encode,
+    kson_str_encode,
+    kson_str_ser,
+    json_str_encode,
     kson_str_decode,
     kson_str_deser,
     json_str_decode,
-    // kson_small_str_encode,
-    // kson_small_str_ser,
-    // json_small_str_encode,
+    kson_small_str_encode,
+    kson_small_str_ser,
+    json_small_str_encode,
     kson_small_str_decode,
     kson_small_str_deser,
     json_small_str_decode,
-    // kson_tiny_str_encode,
-    // kson_tiny_str_ser,
-    // json_tiny_str_encode,
+    kson_tiny_str_encode,
+    kson_tiny_str_ser,
+    json_tiny_str_encode,
     kson_tiny_str_decode,
     kson_tiny_str_deser,
     json_tiny_str_decode,

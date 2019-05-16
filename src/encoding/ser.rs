@@ -1,5 +1,4 @@
 use super::*;
-use crate::rentable::Rentable;
 use half::f16;
 use num_bigint::{BigInt, Sign};
 use smallvec::SmallVec;
@@ -115,10 +114,11 @@ pub trait Serializer: Sized {
 
     // this is only here so that we can have Ser do double-duty as KsonRep
     // most of the time you'll want an associated SerSeq, SerMap, and use the default impl
-    // #[inline(always)]
+    #[inline(always)]
     fn put_kson(self, k: Kson) -> Self { ser_kson(self, &k) }
 }
 
+#[inline(always)]
 pub fn ser_kson<S: Serializer>(mut s: S, k: &Kson) -> S {
     match k {
         Null => s.put_null(),
@@ -134,7 +134,7 @@ pub fn ser_kson<S: Serializer>(mut s: S, k: &Kson) -> S {
             return a.iter().fold(seq, |seq, v| seq.put(v)).finalize();
         }
         Map(m) => {
-            let mut map = S::Map::new(s, m.len());
+            let map = S::Map::new(s, m.len());
             return m.iter().fold(map, |map, (k, v)| map.put(k, v)).finalize();
         }
     }
@@ -172,11 +172,11 @@ impl SerializerBytes for Bytes {
 }
 
 macro_rules! len_or_digs {
-    ($id:ident) => {
-        if $id.len() <= MASK_LEN_BITS as usize {
-            Len($id.len() as u8)
+    ($len:expr) => {
+        if $len <= MASK_LEN_BITS as usize {
+            Len($len as u8)
         } else {
-            Digs(u64_to_digits($id.len() as u64 - BIGCOL_MIN_LEN))
+            Digs(u64_to_digits($len as u64 - BIGCOL_MIN_LEN))
         }
     };
 }
@@ -213,13 +213,14 @@ macro_rules! tag_and_len {
 
 #[derive(Debug)]
 pub struct SerSeqBytes<S> {
-    len:      u64,
-    so_far:   u64,
     internal: S,
 }
 
 impl<S: SerializerBytes> SerSeq<S> for SerSeqBytes<S> {
+    #[inline(always)]
     fn new(mut start: S, len: usize) -> Self {
+        // let len_or_digs = len_or_digs!(len);
+        // tag_and_len!(TYPE_ARR, len_or_digs, start);
         if len <= MASK_LEN_BITS as usize {
             let tag = TYPE_ARR | len as u8;
             start.put_byte(tag);
@@ -230,38 +231,30 @@ impl<S: SerializerBytes> SerSeq<S> for SerSeqBytes<S> {
             start.put_byte(tag);
             start.put_slice(&len_digs);
         }
-        SerSeqBytes {
-            len:      len as u64,
-            so_far:   0,
-            internal: start,
-        }
+        SerSeqBytes { internal: start }
     }
 
+    #[inline(always)]
     fn put<T: Ser>(self, t: T) -> Self {
-        debug_assert!(self.so_far < self.len);
         SerSeqBytes {
-            len:      self.len,
-            so_far:   self.so_far + 1,
             internal: t.ser(self.internal),
         }
     }
 
-    fn finalize(self) -> S {
-        assert_eq!(self.len, self.so_far);
-        self.internal
-    }
+    #[inline(always)]
+    fn finalize(self) -> S { self.internal }
 }
 
 #[derive(Debug)]
 pub struct SerMapBytes<S> {
-    len:      u64,
-    so_far:   u64,
     internal: S,
 }
 
 impl<S: SerializerBytes> SerMap<S> for SerMapBytes<S> {
     #[inline(always)]
     fn new(mut start: S, len: usize) -> Self {
+        // let len_or_digs = len_or_digs!(len);
+        // tag_and_len!(TYPE_MAP, len_or_digs, start);
         if len <= MASK_LEN_BITS as usize {
             let tag = TYPE_MAP | len as u8;
             start.put_byte(tag);
@@ -272,28 +265,18 @@ impl<S: SerializerBytes> SerMap<S> for SerMapBytes<S> {
             start.put_byte(tag);
             start.put_slice(&len_digs);
         }
-        SerMapBytes {
-            len:      len as u64,
-            so_far:   0,
-            internal: start,
-        }
+        SerMapBytes { internal: start }
     }
 
     #[inline(always)]
     fn put<T: Ser>(self, key: &Bytes, t: T) -> Self {
-        debug_assert!(self.so_far < self.len);
         SerMapBytes {
-            len:      self.len,
-            so_far:   self.so_far + 1,
             internal: t.ser(key.ser(self.internal)),
         }
     }
 
     #[inline(always)]
-    fn finalize(self) -> S {
-        assert_eq!(self.len, self.so_far);
-        self.internal
-    }
+    fn finalize(self) -> S { self.internal }
 }
 
 impl<S: SerializerBytes> Serializer for S {
@@ -400,7 +383,7 @@ impl<S: SerializerBytes> Serializer for S {
     }
 
     fn put_bytes(&mut self, b: &Bytes) {
-        let len_or_digs = len_or_digs!(b);
+        let len_or_digs = len_or_digs!(b.len());
         tag_and_len!(TYPE_BYT, len_or_digs, self);
         self.put_slice(b);
     }
