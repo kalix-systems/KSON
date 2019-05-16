@@ -440,9 +440,6 @@ impl KContainer {
 }
 
 impl Serializer for KContainer {
-    type Map = Vec<(Bytes, Kson)>;
-    type Seq = Vec<Kson>;
-
     fn put_null(&mut self) { self.place(Null); }
 
     fn put_bool(&mut self, b: bool) { self.place(Kson::from(b)); }
@@ -459,11 +456,10 @@ impl Serializer for KContainer {
 
     fn put_bytes(&mut self, b: &Bytes) { self.place(Kson::from(b.clone())); }
 
-    fn put_seq(&mut self, s: Self::Seq) { self.place(Kson::from(s)); }
-
-    fn put_map(&mut self, m: Self::Map) { self.place(Kson::from(VecMap::from(m))); }
-
-    fn put_kson(&mut self, k: Kson) { self.place(Kson::from(k)); }
+    fn put_kson(mut self, k: Kson) -> Self {
+        self.place(Kson::from(k));
+        self
+    }
 }
 
 #[cold]
