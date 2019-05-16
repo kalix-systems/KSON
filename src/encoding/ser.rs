@@ -33,41 +33,41 @@ pub trait Serializer: Sized {
     ///
     /// * `i: i8`  - The value to be added.
     #[inline(always)]
-    fn put_i8(self, i: i8) -> Self { self.put_i16(i as i16) }
+    fn put_i8(&mut self, i: i8) { self.put_i16(i as i16) }
     /// Add an [`i16`] to the output value.
     ///
     /// # Arguments
     ///
     /// * `i: i16`  - The value to be added.
     #[inline(always)]
-    fn put_i16(self, i: i16) -> Self { self.put_i32(i as i32) }
+    fn put_i16(&mut self, i: i16) { self.put_i32(i as i32) }
     /// Add an [`i32`] to the output value.
     ///
     /// # Arguments
     ///
     /// * `i: i32`  - The value to be added.
     #[inline(always)]
-    fn put_i32(self, i: i32) -> Self { self.put_i64(i as i64) }
+    fn put_i32(&mut self, i: i32) { self.put_i64(i as i64) }
     /// Add an [`i64`] to the output value.
     ///
     /// # Arguments
     ///
     /// * `i: i64`  - The value to be added.
     #[inline(always)]
-    fn put_i64(self, i: i64) -> Self { self.put_bigint(&BigInt::from(i)) }
+    fn put_i64(&mut self, i: i64) { self.put_bigint(&BigInt::from(i)) }
     /// Add a [`BigInt`] to the output value.
     ///
     /// # Arguments
     ///
     /// * `i: &BigInt` - The value to be added.
-    fn put_bigint(self, i: &BigInt) -> Self;
+    fn put_bigint(&mut self, i: &BigInt);
 
     /// Add [`Bytes`] to the output value.
     ///
     /// # Arguments
     ///
     /// * `b: &Bytes` - The value to be added.
-    fn put_bytes(self, b: &Bytes) -> Self;
+    fn put_bytes(&mut self, b: &Bytes);
 
     /// Add a [`f16] to the output value.
     ///
@@ -75,29 +75,29 @@ pub trait Serializer: Sized {
     ///
     /// * `f: f16` - The value to be added.
     #[inline(always)]
-    fn put_f16(self, f: f16) -> Self { self.put_f32(f32::from(f)) }
+    fn put_f16(&mut self, f: f16) { self.put_f32(f32::from(f)) }
     /// Add an [`f32`] to the output value.
     ///
     /// # Arguments
     ///
     /// * `f: f32` - The value to be added.
     #[inline(always)]
-    fn put_f32(self, f: f32) -> Self { self.put_f64(f64::from(f)) }
+    fn put_f32(&mut self, f: f32) { self.put_f64(f64::from(f)) }
     /// Add an [`f64`] to the output value.
     ///
     /// # Arguments
     ///
     /// * `f: f64` - The value to be added.
-    fn put_f64(self, f: f64) -> Self;
+    fn put_f64(&mut self, f: f64);
 
     /// Add a [`bool`] to the output value.
     ///
     /// # Arguments
     ///
     /// * `b: bool` - The value to be added.
-    fn put_bool(self, b: bool) -> Self;
+    fn put_bool(&mut self, b: bool);
     /// Add [`Kson::Null`] to the output value.
-    fn put_null(self) -> Self;
+    fn put_null(&mut self);
 
     /// Add a vector to the output value.
     ///
@@ -113,13 +113,13 @@ pub trait Serializer: Sized {
     // fn put_map<S: Ser>(&mut self, m: &VecMap<Bytes, S>);
 
     // this is only here so that we can have Ser do double-duty as KsonRep
-    // default implementation is almost always correct
+    // most of the time you'll want an associated SerSeq, SerMap, and use the default impl
     // #[inline(always)]
     fn put_kson(self, k: Kson) -> Self;
 }
 
 pub fn ser_kson<S: Serializer, V: SerSeq<Backend = S>, M: SerMap<Backend = S>>(
-    s: S,
+    mut s: S,
     k: &Kson,
 ) -> S {
     match k {
@@ -136,16 +136,17 @@ pub fn ser_kson<S: Serializer, V: SerSeq<Backend = S>, M: SerMap<Backend = S>>(
             for k in a {
                 seq.put(k);
             }
-            seq.finalize()
+            return seq.finalize();
         }
         Map(m) => {
             let mut map = M::new(s, m.len());
             for (k, v) in m.iter() {
                 map.put(k.clone(), v);
             }
-            map.finalize()
+            return map.finalize();
         }
     }
+    s
 }
 
 #[inline(always)]
