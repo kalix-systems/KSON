@@ -79,7 +79,7 @@ use constants::*;
 /// // encode value
 /// encode(&ks, out);
 /// ```
-pub fn encode<T: Ser>(t: &T, out: &mut Vec<u8>) { t.ser(out) }
+pub fn encode<T: Ser>(t: T, out: &mut Vec<u8>) { t.ser(out) }
 
 /// Tries to decode a buffer into [`Kson`].
 ///
@@ -123,7 +123,7 @@ pub fn decode<D: Deserializer, T: De>(data: &mut D) -> Result<T, Error> { T::de(
 /// // encoded value
 /// let enc: Vec<u8> = encode_full(&ks);
 /// ```
-pub fn encode_full<T: Ser>(t: &T) -> Vec<u8> {
+pub fn encode_full<T: Ser>(t: T) -> Vec<u8> {
     let mut out = Vec::new();
     t.ser(&mut out);
     out

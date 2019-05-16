@@ -8,18 +8,22 @@ pub(crate) struct Rentable<T> {
 }
 
 impl<T> Rentable<T> {
+    #[inline(always)]
     /// Creates a new `Rentable` value.
     pub(crate) fn new(value: T) -> Rentable<T> { Rentable { value: Some(value) } }
 
+    #[inline(always)]
     /// Is the value currently rented out?
     pub(crate) fn is_rented(&self) -> bool { self.value.is_none() }
 
+    #[inline(always)]
     /// Rents the value.
     pub(crate) fn rent(&mut self) -> T {
         assert!(!self.is_rented());
         self.value.take().unwrap()
     }
 
+    #[inline(always)]
     /// Returns the value after renting is done.
     pub(crate) fn replace(&mut self, val: T) {
         assert!(self.is_rented());
