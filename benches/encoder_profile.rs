@@ -29,8 +29,9 @@ fn main() {
     // let size = black_box(&big_k).size();
     let enc_outer = encode_full(black_box(&big_k));
     for _ in 0..N_REPS {
-        let enc = encode_full(black_box(&big_k));
-        if enc != enc_outer {
+        let mut out = Vec::with_capacity(4096);
+        encode(&big_k, &mut out);
+        if out != enc_outer {
             panic!("this hsouldn't happen!");
         }
     }

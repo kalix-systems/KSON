@@ -202,7 +202,7 @@ fn json_tiny_str_decode(c: &mut Criterion) {
 criterion_group!(
     benches,
     // kson_i64_encode,
-    kson_i64_ser,
+    // kson_i64_ser,
     // json_i64_encode,
     kson_i64_decode,
     kson_i64_deser,
