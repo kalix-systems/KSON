@@ -234,9 +234,6 @@ macro_rules! tuple_kson {
                         Err(e) => return Err(e),
                     },)*);
                     Ok(tuple)
-                    //Ok($(match $typ::from_kson(arr[$idx]) { Ok(val) => val,
-                    //    Err(e) => return Err(e),
-                    //},*))
 
                 } else {
                     Err(KsonConversionError::new(&format!(

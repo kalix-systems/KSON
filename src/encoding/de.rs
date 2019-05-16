@@ -3,7 +3,10 @@ use crate::{float::Float, rentable::Rentable};
 use failure::*;
 use half::f16;
 use num_bigint::{BigInt, Sign};
-use std::convert::TryFrom;
+use std::{
+    convert::TryFrom,
+    net::{Ipv4Addr, SocketAddrV4},
+};
 use KTag::*;
 
 /// KSON tags.
@@ -724,3 +727,101 @@ impl<T: De> De for Option<T> {
         }
     }
 }
+
+impl De for Ipv4Addr {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+        let bs = Bytes::de(d)?;
+
+        if bs.len() == 4 {
+            Ok(Self::new(bs[0], bs[1], bs[2], bs[3]))
+        } else {
+            bail!(
+                "Value is {} bytes long, an `Ipv4Addr` should be 4 bytes long",
+                bs.len(),
+            )
+        }
+    }
+}
+
+impl De for SocketAddrV4 {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+        let (ip, port) = <(Ipv4Addr, u16)>::de(d)?;
+        Ok(Self::new(ip, port))
+    }
+}
+
+macro_rules! tuple_de {
+    ($len:expr, $($idx:tt : $typ:ident),*) => {
+        impl<$($typ: De),*> De for ($($typ,)*) {
+            fn de<Des: Deserializer>(d: &mut Des) -> Result<Self, Error> {
+                let exp_len = $len;
+                let arr: Vec<Kson> = d.read_arr()?;
+
+                if arr.len() == exp_len {
+                    let mut k_iter = arr.into_iter();
+
+                    let tuple = ($($typ::de(&mut Rentable::new(k_iter.next().unwrap()))?,)*);
+                    Ok(tuple)
+
+                } else {
+                    bail!("Tuple has wrong number of fields; expected {}, found {}",
+                          exp_len,
+                          arr.len()
+                    )
+                }
+            }
+        }
+    }
+}
+
+tuple_de!(1, 0: A);
+tuple_de!(2, 0: A, 1: B);
+tuple_de!(3, 0: A, 1: B, 2: C);
+tuple_de!(4, 0: A, 1: B, 2: C, 3: D);
+tuple_de!(5, 0: A, 1: B, 2: C, 3: D, 4: E);
+tuple_de!(6, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F);
+tuple_de!(7, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G);
+tuple_de!(8, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H);
+tuple_de!(9, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H, 8: I);
+tuple_de!(
+    10,
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J
+);
+tuple_de!(
+    11,
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J,
+    10: K
+);
+tuple_de!(
+    12,
+    0: A,
+    1: B,
+    2: C,
+    3: D,
+    4: E,
+    5: F,
+    6: G,
+    7: H,
+    8: I,
+    9: J,
+    10: K,
+    11: L
+);
