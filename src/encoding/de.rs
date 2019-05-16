@@ -615,8 +615,6 @@ macro_rules! trivial_de {
 // Kson
 trivial_de!(Kson, read_kson);
 
-// Integers
-
 // Inum
 trivial_de!(Inum, read_inum);
 
@@ -629,6 +627,7 @@ easy_de!(u16, read_i64);
 easy_de!(u32, read_i64);
 easy_de!(u64, read_inum);
 easy_de!(usize, read_inum);
+easy_de!(u128, read_inum);
 
 // signed
 easy_de!(i8, read_i64);
@@ -636,6 +635,7 @@ easy_de!(i16, read_i64);
 easy_de!(i32, read_i64);
 trivial_de!(i64, read_i64);
 easy_de!(isize, read_i64);
+easy_de!(i128, read_inum);
 
 // Floats
 trivial_de!(Float, read_float);
@@ -653,3 +653,74 @@ trivial_de!(bool, read_bool);
 
 // bytes
 trivial_de!(Bytes, read_bytes);
+
+impl De for String {
+    #[inline(always)]
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+        let bs = d.read_bytes()?;
+
+        match String::from_utf8(bs.to_vec()) {
+            Ok(s) => Ok(s),
+            Err(_) => {
+                // pre-allocate
+                let mut chars = Vec::with_capacity(bs.len() / 2 + 1);
+
+                // bytestring into buffer
+                let buf = &mut bs.into_buf();
+
+                // get u16s
+                for _ in 0..buf.remaining() {
+                    chars.push(buf.get_u16_le());
+                }
+
+                // try to read
+                match String::from_utf16(&chars) {
+                    Ok(s) => Ok(s),
+                    Err(_) => bail!("Bytestring was neither valid utf-8 nor utf-16",),
+                }
+            }
+        }
+    }
+}
+
+impl De for char {
+    #[inline(always)]
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+        let mut buf = d.read_bytes()?.into_buf();
+
+        let rem = buf.remaining();
+
+        let c = if rem == 4 {
+            buf.get_u32_le()
+        } else {
+            bail!("Characters are expected to be four bytes, found {}", rem)
+        };
+
+        match std::char::from_u32(c) {
+            None => bail!("Bytestring is not a valid character"),
+            Some(ch) => Ok(ch),
+        }
+    }
+}
+
+impl<T: De> De for Option<T> {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+        match d.read_kson()? {
+            Null => Ok(None),
+            Array(v) => {
+                let mut iter = v.into_iter();
+                let val = &mut match iter.next() {
+                    None => bail!("Value is not an `Option`"),
+                    Some(v) => Rentable::new(v),
+                };
+
+                if iter.next().is_none() {
+                    Ok(Some(T::de(val)?))
+                } else {
+                    bail!("Value is not an `Option`")
+                }
+            }
+            _ => bail!("Value is not an `Option`"),
+        }
+    }
+}
