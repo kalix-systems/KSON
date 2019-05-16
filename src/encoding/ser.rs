@@ -8,7 +8,7 @@ pub trait Serializer {
     /// The type of the output value.
     type Out;
     /// Add a byte to the output value.
-    fn put_byte(&mut self, u: u8);
+    fn put_u8(&mut self, u: u8);
     /// Add a slice to the output value.
     fn put_slice(&mut self, slice: &[u8]);
     /// Return the output value.
@@ -118,7 +118,7 @@ use LenOrDigs::*;
 impl Serializer for Vec<u8> {
     type Out = Self;
 
-    fn put_byte(&mut self, u: u8) { self.push(u) }
+    fn put_u8(&mut self, u: u8) { self.push(u) }
 
     fn put_slice(&mut self, slice: &[u8]) { self.extend_from_slice(slice) }
 
@@ -160,7 +160,7 @@ macro_rules! tag_and_len {
         let mut tag = $type;
         let len_digs;
         len_or_tag!(tag, len_digs, $len_or_digs);
-        $out.put_byte(tag);
+        $out.put_u8(tag);
         $out.put_slice(&len_digs);
     };
 }
@@ -178,7 +178,7 @@ impl<S: Serializer> SerializerExt for S {
         let digs = u64_to_digits(i as u64);
         debug_assert!(digs.len() <= 8);
 
-        self.put_byte(compute_int_tag(false, pos, digs.len() as u8));
+        self.put_u8(compute_int_tag(false, pos, digs.len() as u8));
         self.put_slice(&digs);
     }
 
@@ -193,7 +193,7 @@ impl<S: Serializer> SerializerExt for S {
         let digs = u32_to_digits(i as u32);
         debug_assert!(digs.len() <= 4);
 
-        self.put_byte(compute_int_tag(false, pos, digs.len() as u8));
+        self.put_u8(compute_int_tag(false, pos, digs.len() as u8));
         self.put_slice(&digs);
     }
 
@@ -208,7 +208,7 @@ impl<S: Serializer> SerializerExt for S {
         let digs = u16_to_digits(i as u16);
         debug_assert!(digs.len() <= 2);
 
-        self.put_byte(compute_int_tag(false, pos, digs.len() as u8));
+        self.put_u8(compute_int_tag(false, pos, digs.len() as u8));
         self.put_slice(&digs);
     }
 
@@ -223,8 +223,8 @@ impl<S: Serializer> SerializerExt for S {
         let mut tag = TYPE_INT;
         tag |= (pos as u8) << 3;
 
-        self.put_byte(tag);
-        self.put_byte(i as u8);
+        self.put_u8(tag);
+        self.put_u8(i as u8);
     }
 
     fn put_bigint(&mut self, i: &BigInt) {
@@ -241,7 +241,7 @@ impl<S: Serializer> SerializerExt for S {
             if len <= u16::max_value() as usize {
                 let len_digs = u16_to_digits(len as u16);
                 let tag = compute_int_tag(true, pos, len_digs.len() as u8);
-                self.put_byte(tag);
+                self.put_u8(tag);
                 self.put_slice(&len_digs);
                 self.put_slice(&digs);
             } else {
@@ -251,17 +251,17 @@ impl<S: Serializer> SerializerExt for S {
     }
 
     fn put_f16(&mut self, f: f16) {
-        self.put_byte(HALF);
+        self.put_u8(HALF);
         self.put_slice(&u16::to_le_bytes(f.to_bits()));
     }
 
     fn put_f32(&mut self, f: f32) {
-        self.put_byte(SINGLE);
+        self.put_u8(SINGLE);
         self.put_slice(&u32::to_le_bytes(f.to_bits()));
     }
 
     fn put_f64(&mut self, f: f64) {
-        self.put_byte(DOUBLE);
+        self.put_u8(DOUBLE);
         self.put_slice(&u64::to_le_bytes(f.to_bits()));
     }
 
@@ -273,13 +273,13 @@ impl<S: Serializer> SerializerExt for S {
 
     fn put_bool(&mut self, b: bool) {
         if b {
-            self.put_byte(CON_TRUE)
+            self.put_u8(CON_TRUE)
         } else {
-            self.put_byte(CON_FALSE)
+            self.put_u8(CON_FALSE)
         }
     }
 
-    fn put_null(&mut self) { self.put_byte(CON_NULL) }
+    fn put_null(&mut self) { self.put_u8(CON_NULL) }
 
     fn put_arr<T: Ser>(&mut self, v: &[T]) {
         let len_or_digs = len_or_digs!(v);
@@ -319,7 +319,7 @@ fn decr_digs(digs: &mut Vec<u8>) {
 #[cold]
 #[inline]
 fn push_digs<S: Serializer>(pos: bool, digs: &[u8], out: &mut S) {
-    out.put_byte(compute_int_tag(false, pos, digs.len() as u8));
+    out.put_u8(compute_int_tag(false, pos, digs.len() as u8));
     out.put_slice(digs);
 }
 
@@ -327,7 +327,7 @@ fn push_digs<S: Serializer>(pos: bool, digs: &[u8], out: &mut S) {
 #[inline]
 fn u64_digs<S: Serializer>(pos: bool, u: u64, digs: Vec<u8>, out: &mut S) {
     let len_digs = u64_to_digits(u);
-    out.put_byte(compute_int_tag(true, pos, len_digs.len() as u8));
+    out.put_u8(compute_int_tag(true, pos, len_digs.len() as u8));
     out.put_slice(&len_digs);
     out.put_slice(&digs);
 }
