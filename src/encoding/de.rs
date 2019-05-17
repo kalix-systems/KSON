@@ -2,6 +2,7 @@ use super::*;
 use crate::float::Float;
 use failure::*;
 use half::f16;
+use hashbrown::HashMap;
 use num_bigint::{BigInt, Sign};
 use std::{
     convert::TryFrom,
@@ -60,22 +61,21 @@ pub trait DeserializerBytes {
     fn read_uint(&mut self, len: u8) -> Result<u64, Error>;
 }
 
-pub trait DeSeq<D>: Sized {
-    fn start(d: &mut D) -> Result<(Self, usize), Error>;
-    fn take<T: De>(&mut self, d: &mut D) -> Result<T, Error>;
+pub trait DeSeq {
+    type State: Sized;
+    fn read_seq(&mut self) -> Result<(Self::State, usize), Error>;
+    fn take<T: De>(&mut self, s: &mut Self::State) -> Result<T, Error>;
 }
 
-pub trait DeMap<D>: Sized {
-    fn start(d: &mut D) -> Result<(Self, usize), Error>;
-    fn take_key(&mut self, d: &mut D) -> Result<Bytes, Error>;
-    fn take_val<T: De>(&mut self, d: &mut D) -> Result<T, Error>;
+pub trait DeMap {
+    type State: Sized;
+    fn take_map(&mut self) -> Result<(Self::State, usize), Error>;
+    fn take_key(&mut self, s: &mut Self::State) -> Result<Bytes, Error>;
+    fn take_val<T: De>(&mut self, s: &mut Self::State) -> Result<T, Error>;
 }
 
 /// Values that can be deserialized from.
-pub trait Deserializer {
-    // type Seq: DeSeq<Self>;
-    // type Map: DeMap<Self>;
-
+pub trait Deserializer: DeSeq + DeMap {
     /// Read a [`Kson`] value.
     fn read_kson(&mut self) -> Result<Kson, Error>;
 
@@ -110,11 +110,11 @@ pub trait Deserializer {
     /// Read a [`Bytes`].
     fn read_bytes(&mut self) -> Result<Bytes, Error>;
 
-    /// Read a vector.
-    fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error>;
+    // /// Read a vector.
+    // fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error>;
 
-    /// Read a [`VecMap`].
-    fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error>;
+    // /// Read a [`VecMap`].
+    // fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error>;
 }
 
 /// Try to read length from buffer.
@@ -272,7 +272,7 @@ impl<D: DeserializerBytes> Deserializer for D {
                 let len = read_len(self, big, len)?;
                 let mut out = Vec::with_capacity(len);
                 for _ in 0..len {
-                    out.push(Kson::de(self)?);
+                    out.push(self.read_kson()?);
                 }
                 Ok(Array(out))
             }
@@ -420,70 +420,70 @@ impl<D: DeserializerBytes> Deserializer for D {
         }
     }
 
-    #[inline(always)]
-    fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
-        match self.read_tag()? {
-            KArr(big, len) => {
-                let len = read_len(self, big, len)?;
-                let mut out = Vec::with_capacity(len);
-                for _ in 0..len {
-                    out.push(T::de(self)?);
-                }
-                Ok(out)
-            }
-            _ => bail!("bad tag when reading array"),
-        }
-    }
+    // #[inline(always)]
+    // fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
+    //     match self.read_tag()? {
+    //         KArr(big, len) => {
+    //             let len = read_len(self, big, len)?;
+    //             let mut out = Vec::with_capacity(len);
+    //             for _ in 0..len {
+    //                 out.push(T::de(self)?);
+    //             }
+    //             Ok(out)
+    //         }
+    //         _ => bail!("bad tag when reading array"),
+    //     }
+    // }
 
-    #[inline(always)]
-    fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
-        match self.read_tag()? {
-            KMap(big, len) => {
-                let len = read_len(self, big, len)?;
-                let mut out = Vec::with_capacity(len);
-                for _ in 0..len {
-                    out.push((self.read_bytes()?, T::de(self)?));
-                }
-                // doesn't enforce canonicity - maybe it should?
-                Ok(VecMap::from(out))
-            }
-            _ => bail!("bad tag when reading array"),
-        }
-    }
+    // #[inline(always)]
+    // fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
+    //     match self.read_tag()? {
+    //         KMap(big, len) => {
+    //             let len = read_len(self, big, len)?;
+    //             let mut out = Vec::with_capacity(len);
+    //             for _ in 0..len {
+    //                 out.push((self.read_bytes()?, T::de(self)?));
+    //             }
+    //             // doesn't enforce canonicity - maybe it should?
+    //             Ok(VecMap::from(out))
+    //         }
+    //         _ => bail!("bad tag when reading array"),
+    //     }
+    // }
 }
 
-pub struct DeSeqBytes {}
+impl<D: DeserializerBytes> DeSeq for D {
+    type State = ();
 
-impl<D: DeserializerBytes> DeSeq<D> for DeSeqBytes {
-    fn start(d: &mut D) -> Result<(Self, usize), Error> {
-        match d.read_tag()? {
+    fn read_seq(&mut self) -> Result<((), usize), Error> {
+        match self.read_tag()? {
             KArr(big, len) => {
-                let len = read_len(d, big, len)?;
-                Ok((DeSeqBytes {}, len))
+                let len = read_len(self, big, len)?;
+                Ok(((), len))
             }
             _ => bail!("bad tag when starting sequence"),
         }
     }
 
-    fn take<T: De>(&mut self, d: &mut D) -> Result<T, Error> { T::de(d) }
+    fn take<T: De>(&mut self, _: &mut ()) -> Result<T, Error> { T::de(self) }
 }
 
-pub struct DeMapBytes {}
+impl<D: DeserializerBytes> DeMap for D {
+    type State = ();
 
-impl<D: DeserializerBytes> DeMap<D> for DeMapBytes {
-    fn start(d: &mut D) -> Result<(Self, usize), Error> {
-        match d.read_tag()? {
+    fn take_map(&mut self) -> Result<((), usize), Error> {
+        match self.read_tag()? {
             KMap(big, len) => {
-                let len = read_len(d, big, len)?;
-                Ok((DeMapBytes {}, len))
+                let len = read_len(self, big, len)?;
+                Ok(((), len))
             }
             _ => bail!("bad tag when starting map"),
         }
     }
 
-    fn take_key(&mut self, d: &mut D) -> Result<Bytes, Error> { d.read_bytes() }
+    fn take_key(&mut self, _: &mut ()) -> Result<Bytes, Error> { self.read_bytes() }
 
-    fn take_val<T: De>(&mut self, d: &mut D) -> Result<T, Error> { T::de(d) }
+    fn take_val<T: De>(&mut self, _: &mut ()) -> Result<T, Error> { T::de(self) }
 }
 
 impl Deserializer for KContainer {
@@ -580,30 +580,31 @@ impl Deserializer for KContainer {
         }
     }
 
-    #[inline(always)]
-    fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
-        match self.take() {
-            Array(a) => a.into_iter().map(from_kson).collect(),
-            k => bail!("expected array, got {:?}", k),
-        }
-    }
+    //     #[inline(always)]
+    //     fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
+    //         match self.take() {
+    //             Array(a) => a.into_iter().map(from_kson).collect(),
+    //             k => bail!("expected array, got {:?}", k),
+    //         }
+    //     }
 
-    #[inline(always)]
-    fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
-        match self.take() {
-            Map(m) => {
-                let pairs: Result<Vec<(Bytes, T)>, Error> =
-                    m.into_iter().map(|(k, v)| Ok((k, from_kson(v)?))).collect();
-                pairs.map(VecMap::from_sorted)
-            }
-            k => bail!("expected array, got {:?}", k),
-        }
-    }
+    //     #[inline(always)]
+    //     fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
+    //         match self.take() {
+    //             Map(m) => {
+    //                 let pairs: Result<Vec<(Bytes, T)>, Error> =
+    //                     m.into_iter().map(|(k, v)| Ok((k, from_kson(v)?))).collect();
+    //                 pairs.map(VecMap::from_sorted)
+    //             }
+    //             k => bail!("expected array, got {:?}", k),
+    //         }
 }
 
-impl DeSeq<KContainer> for IntoIter<Kson> {
-    fn start(d: &mut KContainer) -> Result<(Self, usize), Error> {
-        match d.take() {
+impl DeSeq for KContainer {
+    type State = IntoIter<Kson>;
+
+    fn read_seq(&mut self) -> Result<(IntoIter<Kson>, usize), Error> {
+        match self.take() {
             Array(a) => {
                 let len = a.len();
                 Ok((a.into_iter(), len))
@@ -612,21 +613,22 @@ impl DeSeq<KContainer> for IntoIter<Kson> {
         }
     }
 
-    fn take<T: De>(&mut self, _: &mut KContainer) -> Result<T, Error> {
-        T::de(&mut KContainer {
-            internal: self.next(),
-        })
+    fn take<T: De>(&mut self, i: &mut IntoIter<Kson>) -> Result<T, Error> {
+        T::de(&mut KContainer { internal: i.next() })
     }
 }
 
+#[derive(Debug)]
 pub struct KDeMap {
     iter: IntoIter<(Bytes, Kson)>,
     val:  Option<Kson>,
 }
 
-impl DeMap<KContainer> for KDeMap {
-    fn start(d: &mut KContainer) -> Result<(Self, usize), Error> {
-        match d.take() {
+impl DeMap for KContainer {
+    type State = KDeMap;
+
+    fn take_map(&mut self) -> Result<(KDeMap, usize), Error> {
+        match self.take() {
             Map(m) => {
                 let len = m.len();
                 let km = KDeMap {
@@ -639,26 +641,24 @@ impl DeMap<KContainer> for KDeMap {
         }
     }
 
-    fn take_key(&mut self, _: &mut KContainer) -> Result<Bytes, Error> {
-        debug_assert!(self.val.is_none());
-        match self.iter.next() {
+    fn take_key(&mut self, s: &mut KDeMap) -> Result<Bytes, Error> {
+        debug_assert!(s.val.is_none());
+        match s.iter.next() {
             Some((k, v)) => {
-                self.val = Some(v);
+                s.val = Some(v);
                 Ok(k)
             }
             _ => bail!("no remaining keys"),
         }
     }
 
-    fn take_val<T: De>(&mut self, _: &mut KContainer) -> Result<T, Error> {
-        match self.val.take() {
+    fn take_val<T: De>(&mut self, s: &mut KDeMap) -> Result<T, Error> {
+        match s.val.take() {
             Some(v) => from_kson(v),
             None => bail!("tried to read val when none was stored - did you read a key first?"),
         }
     }
 }
-
-// impl DeMap<KContainer> for IntoIter<(Bytes, Kson)> {}
 
 /// Values that can be deserialized.
 pub trait De: Sized {
@@ -672,7 +672,25 @@ pub trait De: Sized {
 
 impl<T: De> De for Vec<T> {
     #[inline(always)]
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_arr() }
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+        let (mut s, len) = d.read_seq()?;
+        let mut out = Vec::with_capacity(len);
+        for _ in 0..len {
+            out.push(d.take(&mut s)?);
+        }
+        Ok(out)
+    }
+}
+
+impl<T: De> De for HashMap<Bytes, T> {
+    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+        let (mut s, len) = d.take_map()?;
+        let mut out = HashMap::with_capacity(len);
+        for _ in 0..len {
+            out.insert(d.take_key(&mut s)?, d.take_val(&mut s)?);
+        }
+        Ok(out)
+    }
 }
 
 fn from_kson<T: De>(ks: Kson) -> Result<T, Error> { T::de(&mut KContainer::new_place(ks)) }
@@ -841,18 +859,17 @@ macro_rules! tuple_de {
         impl<$($typ: De),*> De for ($($typ,)*) {
             fn de<Des: Deserializer>(d: &mut Des) -> Result<Self, Error> {
                 let exp_len = $len;
-                let arr: Vec<Kson> = d.read_arr()?;
+                let (mut iter, len) = d.read_seq()?;
 
-                if arr.len() == exp_len {
-                    let mut k_iter = arr.into_iter();
-
-                    let tuple = ($($typ::de(&mut KContainer::new_place(k_iter.next().unwrap()))?,)*);
+                if len == exp_len {
+                    let tuple = ($(d.take::<$typ>(&mut iter).unwrap(),)*);
+                    // let tuple = ($($typ::de(&mut KContainer::new_place(iter.next().unwrap()))?,)*);
                     Ok(tuple)
 
                 } else {
                     bail!("Tuple has wrong number of fields; expected {}, found {}",
                           exp_len,
-                          arr.len()
+                          len
                     )
                 }
             }
