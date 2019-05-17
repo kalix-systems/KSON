@@ -9,7 +9,11 @@
 //! * [`KsonConversionError`] - An error indicating that a value could not be successfully
 //!   converted from [`Kson`](`crate::Kson`).
 
-use std::{error::Error, fmt};
+use std::{
+    error::Error,
+    fmt,
+    io::{Error as IoErr, ErrorKind::*},
+};
 
 //#[derive(Debug, Clone, Default)]
 ///// An error encountered when decoding fails.
@@ -111,4 +115,8 @@ impl fmt::Display for KsonConversionError {
             error = self.0,
         )
     }
+}
+
+impl From<KsonConversionError> for IoErr {
+    fn from(err: KsonConversionError) -> IoErr { IoErr::new(Other, format!("{:?}", err)) }
 }
