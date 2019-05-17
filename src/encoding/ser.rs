@@ -6,27 +6,71 @@ use smallvec::SmallVec;
 /// TODO docstring
 pub trait SerializerBytes {
     /// Add a byte to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `u: u8` - The byte to be added.
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// // intialize buffer
+    /// let buf = &mut Vec::new();
+    ///
+    /// // add byte to ouput
+    /// buf.put_byte(1);
+    /// ```
     fn put_byte(&mut self, u: u8);
     /// Add a slice to the output value.
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    ///
+    /// // initialize buffer
+    /// let buf = &mut Vec::new();
+    ///
+    /// // add byte to output
+    /// buf.put_slice(&[1, 2, 3, 4]);
+    /// ```
     fn put_slice(&mut self, slice: &[u8]);
 }
 
+/// Sequences of serializable values.
 pub trait SerSeq<S> {
+    /// # Arguments
+    ///
+    /// * `start` - TODO
+    /// * `len: usize` - The length of the sequence.
+    ///
+    /// ```
+    /// use kson::prelude::*;
+    /// ```
     fn start(start: &mut S, len: usize) -> Self;
+    /// TODO
     fn put<T: Ser>(&mut self, s: &mut S, t: T);
+    /// TODO
     fn finalize(self, s: &mut S);
 }
 
+/// Maps with serializable values.
 pub trait SerMap<S> {
+    /// # Arguments
+    ///
+    /// * `start` - TODO
+    /// * `len: usize` - The length of the sequence.
     fn start(start: &mut S, len: usize) -> Self;
+    /// TODO
     fn put<T: Ser>(&mut self, s: &mut S, key: &Bytes, t: T);
+    /// TODO
     fn finalize(self, s: &mut S);
 }
 
-/// Convenience methods for [`Serializer`].
+/// TODO
 pub trait Serializer: Sized {
+    /// TODO
     type Seq: SerSeq<Self>;
+    /// TODO
     type Map: SerMap<Self>;
+
     /// Add an [`i8`] to the output value.
     ///
     /// # Arguments
@@ -119,6 +163,7 @@ pub trait Serializer: Sized {
 }
 
 #[inline(always)]
+/// Serialize an arbitrary [`Kson`] object.
 pub fn ser_kson<S: Serializer>(s: &mut S, k: &Kson) {
     match k {
         Null => s.put_null(),
@@ -216,6 +261,8 @@ macro_rules! tag_and_len {
     };
 }
 
+#[derive(Debug, Copy, Clone)]
+/// TODO
 pub struct SerSeqBytes {}
 
 impl<S: SerializerBytes> SerSeq<S> for SerSeqBytes {
@@ -244,6 +291,8 @@ impl<S: SerializerBytes> SerSeq<S> for SerSeqBytes {
     fn finalize(self, _: &mut S) {}
 }
 
+#[derive(Debug, Copy, Clone)]
+/// TODO.
 pub struct SerMapBytes {}
 
 impl<S: SerializerBytes> SerMap<S> for SerMapBytes {
@@ -479,6 +528,7 @@ fn into_kson<T: Ser>(t: T) -> Kson {
     k.take()
 }
 
+#[derive(Debug, Clone)]
 struct KContainer {
     internal: Option<Kson>,
 }
