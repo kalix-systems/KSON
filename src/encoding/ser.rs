@@ -34,8 +34,12 @@ pub trait SerializerBytes {
     fn put_slice(&mut self, slice: &[u8]);
 }
 
-/// Sequences of serializable values.
-pub trait SerSeq<S> {
+// TODO: Baeo I edited this slightly to be more consistent w/De module, should end up
+// clearer
+/// Serializer that is able to accept sequences of values
+pub trait SerSeq {
+    /// Intermediate data for the sequence
+    type State: Sized;
     /// # Arguments
     ///
     /// * `start` - TODO
@@ -44,33 +48,31 @@ pub trait SerSeq<S> {
     /// ```
     /// use kson::prelude::*;
     /// ```
-    fn start(start: &mut S, len: usize) -> Self;
+    fn seq_start(&mut self, len: usize) -> Self::State;
+    // TODO: consider renaming
     /// TODO
-    fn put<T: Ser>(&mut self, s: &mut S, t: T);
+    fn seq_put<T: Ser>(&mut self, s: &mut Self::State, t: T);
     /// TODO
-    fn finalize(self, s: &mut S);
+    fn seq_finalize(&mut self, s: Self::State);
 }
 
-/// Maps with serializable values.
-pub trait SerMap<S> {
+/// Serializer that is able to accept sequences of (key, value) pairs
+pub trait SerMap {
+    type State: Sized;
     /// # Arguments
     ///
     /// * `start` - TODO
     /// * `len: usize` - The length of the sequence.
-    fn start(start: &mut S, len: usize) -> Self;
+    fn map_start(&mut self, len: usize) -> Self::State;
+    // TODO: consider renaming
     /// TODO
-    fn put<T: Ser>(&mut self, s: &mut S, key: &Bytes, t: T);
+    fn map_put<T: Ser>(&mut self, s: &mut Self::State, key: &Bytes, t: T);
     /// TODO
-    fn finalize(self, s: &mut S);
+    fn map_finalize(&mut self, s: Self::State);
 }
 
 /// TODO
-pub trait Serializer: Sized {
-    /// TODO
-    type Seq: SerSeq<Self>;
-    /// TODO
-    type Map: SerMap<Self>;
-
+pub trait Serializer: SerSeq + SerMap + Sized {
     /// Add an [`i8`] to the output value.
     ///
     /// # Arguments
@@ -175,18 +177,18 @@ pub fn ser_kson<S: Serializer>(s: &mut S, k: &Kson) {
         Kfloat(Double(n)) => s.put_f64(f64::from_bits(*n)),
         Byt(bs) => s.put_bytes(bs),
         Array(a) => {
-            let mut b = S::Seq::start(s, a.len());
+            let mut b = s.seq_start(a.len());
             for v in a {
-                b.put(s, v);
+                s.seq_put(&mut b, v);
             }
-            b.finalize(s);
+            s.seq_finalize(b);
         }
         Map(m) => {
-            let mut b = S::Map::start(s, m.len());
+            let mut b = s.map_start(m.len());
             for (k, v) in m.iter() {
-                b.put(s, k, v);
+                s.map_put(&mut b, k, v);
             }
-            b.finalize(s);
+            s.map_finalize(b);
         }
     }
 }
@@ -261,71 +263,60 @@ macro_rules! tag_and_len {
     };
 }
 
-#[derive(Debug, Copy, Clone)]
-/// TODO
-pub struct SerSeqBytes {}
+impl<S: SerializerBytes> SerSeq for S {
+    type State = ();
 
-impl<S: SerializerBytes> SerSeq<S> for SerSeqBytes {
     #[inline(always)]
-    fn start(start: &mut S, len: usize) -> Self {
+    fn seq_start(&mut self, len: usize) {
         // let len_or_digs = len_or_digs!(len);
         // tag_and_len!(TYPE_ARR, len_or_digs, start);
         if len <= MASK_LEN_BITS as usize {
             let tag = TYPE_ARR | len as u8;
-            start.put_byte(tag);
+            self.put_byte(tag);
         } else {
             let len_digs = u64_to_digits(len as u64 - BIGCOL_MIN_LEN);
             let len_len = len_digs.len() as u8 - 1;
             let tag = TYPE_ARR | BIG_BIT | len_len;
-            start.put_byte(tag);
-            start.put_slice(&len_digs);
+            self.put_byte(tag);
+            self.put_slice(&len_digs);
         }
-
-        SerSeqBytes {}
     }
 
     #[inline(always)]
-    fn put<T: Ser>(&mut self, s: &mut S, t: T) { t.ser(s) }
+    fn seq_put<T: Ser>(&mut self, _: &mut (), t: T) { t.ser(self) }
 
     #[inline(always)]
-    fn finalize(self, _: &mut S) {}
+    fn seq_finalize(&mut self, _: ()) {}
 }
 
-#[derive(Debug, Copy, Clone)]
-/// TODO.
-pub struct SerMapBytes {}
+impl<S: SerializerBytes> SerMap for S {
+    type State = ();
 
-impl<S: SerializerBytes> SerMap<S> for SerMapBytes {
     #[inline(always)]
-    fn start(start: &mut S, len: usize) -> Self {
+    fn map_start(&mut self, len: usize) {
         if len <= MASK_LEN_BITS as usize {
             let tag = TYPE_MAP | len as u8;
-            start.put_byte(tag);
+            self.put_byte(tag);
         } else {
             let len_digs = u64_to_digits(len as u64 - BIGCOL_MIN_LEN);
             let len_len = len_digs.len() as u8 - 1;
             let tag = TYPE_MAP | BIG_BIT | len_len;
-            start.put_byte(tag);
-            start.put_slice(&len_digs);
+            self.put_byte(tag);
+            self.put_slice(&len_digs);
         }
-
-        SerMapBytes {}
     }
 
     #[inline(always)]
-    fn put<T: Ser>(&mut self, s: &mut S, key: &Bytes, t: T) {
-        s.put_bytes(key);
-        t.ser(s);
+    fn map_put<T: Ser>(&mut self, _: &mut (), key: &Bytes, t: T) {
+        self.put_bytes(key);
+        t.ser(self);
     }
 
     #[inline(always)]
-    fn finalize(self, _: &mut S) {}
+    fn map_finalize(&mut self, _: ()) {}
 }
 
 impl<S: SerializerBytes> Serializer for S {
-    type Map = SerMapBytes;
-    type Seq = SerSeqBytes;
-
     #[inline]
     fn put_i64(&mut self, mut i: i64) {
         let pos = !i.is_negative();
@@ -490,36 +481,40 @@ impl<S: SerializerBytes> Serializer for S {
 //     internal: Vec<Kson>,
 // }
 
-impl SerSeq<KContainer> for Vec<Kson> {
+impl SerSeq for KContainer {
+    type State = Vec<Kson>;
+
     #[inline(always)]
-    fn start(start: &mut KContainer, len: usize) -> Self {
-        debug_assert!(start.is_none());
+    fn seq_start(&mut self, len: usize) -> Vec<Kson> {
+        debug_assert!(self.is_none());
         Vec::with_capacity(len)
     }
 
     #[inline(always)]
-    fn put<T: Ser>(&mut self, k: &mut KContainer, t: T) {
-        debug_assert!(k.is_none());
-        self.push(into_kson(t))
+    fn seq_put<T: Ser>(&mut self, v: &mut Vec<Kson>, t: T) {
+        debug_assert!(self.is_none());
+        v.push(into_kson(t))
     }
 
     #[inline(always)]
-    fn finalize(self, start: &mut KContainer) { start.place(Kson::from(self)) }
+    fn seq_finalize(&mut self, vec: Vec<Kson>) { self.place(Kson::from(vec)) }
 }
 
-impl SerMap<KContainer> for Vec<(Bytes, Kson)> {
+impl SerMap for KContainer {
+    type State = Vec<(Bytes, Kson)>;
+
     #[inline(always)]
-    fn start(start: &mut KContainer, len: usize) -> Self {
-        debug_assert!(start.is_none());
+    fn map_start(&mut self, len: usize) -> Vec<(Bytes, Kson)> {
+        debug_assert!(self.is_none());
         Vec::with_capacity(len)
     }
 
-    fn put<T: Ser>(&mut self, k: &mut KContainer, key: &Bytes, t: T) {
-        debug_assert!(k.is_none());
-        self.push((key.clone(), into_kson(t)));
+    fn map_put<T: Ser>(&mut self, v: &mut Vec<(Bytes, Kson)>, key: &Bytes, t: T) {
+        debug_assert!(self.is_none());
+        v.push((key.clone(), into_kson(t)));
     }
 
-    fn finalize(self, k: &mut KContainer) { k.place(Kson::from(VecMap::from(self))) }
+    fn map_finalize(&mut self, m: Vec<(Bytes, Kson)>) { self.place(Kson::from(VecMap::from(m))) }
 }
 
 fn into_kson<T: Ser>(t: T) -> Kson {
@@ -529,9 +524,6 @@ fn into_kson<T: Ser>(t: T) -> Kson {
 }
 
 impl Serializer for KContainer {
-    type Map = Vec<(Bytes, Kson)>;
-    type Seq = Vec<Kson>;
-
     fn put_null(&mut self) { self.place(Null); }
 
     fn put_bool(&mut self, b: bool) { self.place(Kson::from(b)); }
