@@ -431,55 +431,7 @@ impl<S: SerializerBytes> Serializer for S {
     }
 
     fn put_null(&mut self) { self.put_byte(CON_NULL) }
-
-    // fn put_seq(&mut self, s: Self::Seq) {
-    //     if s.len <= MASK_LEN_BITS as u64 {
-    //         let tag = TYPE_ARR | s.len as u8;
-    //         self.put_byte(tag);
-    //     } else {
-    //         let len_digs = u64_to_digits(s.len - BIGCOL_MIN_LEN);
-    //         let len_len = len_digs.len() as u8 - 1;
-    //         let tag = TYPE_ARR | BIG_BIT | len_len;
-    //         self.put_byte(tag);
-    //         self.put_slice(&len_digs);
-    //     }
-    //     self.put_slice(&s.buf);
-    // }
-
-    // fn put_map(&mut self, m: Self::Map) {
-    //     if m.len <= MASK_LEN_BITS as u64 {
-    //         let tag = TYPE_MAP | m.len as u8;
-    //         self.put_byte(tag);
-    //     } else {
-    //         let len_digs = u64_to_digits(m.len - BIGCOL_MIN_LEN);
-    //         let len_len = len_digs.len() as u8 - 1;
-    //         let tag = TYPE_MAP | BIG_BIT | len_len;
-    //         self.put_byte(tag);
-    //         self.put_slice(&len_digs);
-    //     }
-    //     self.put_slice(&m.buf);
-    // }
-    // fn put_arr<T: Ser>(&mut self, v: &[T]) {
-    //     let len_or_digs = len_or_digs!(v);
-    //     tag_and_len!(TYPE_ARR, len_or_digs, self);
-    //     for t in v {
-    //         t.ser(self);
-    //     }
-    // }
-
-    // fn put_map<T: Ser>(&mut self, m: &VecMap<Bytes, T>) {
-    //     let len_or_digs = len_or_digs!(m);
-    //     tag_and_len!(TYPE_MAP, len_or_digs, self);
-    //     for (k, v) in m.iter() {
-    //         self.put_bytes(k);
-    //         v.ser(self);
-    //     }
-    // }
 }
-
-// struct KContainerSeq {
-//     internal: Vec<Kson>,
-// }
 
 impl SerSeq for KContainer {
     type State = Vec<Kson>;
