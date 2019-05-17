@@ -351,22 +351,22 @@
 //! | ---  | ---                                 | ---              |
 //! | Type | Half (00), Single (01), Double (10) | Currently Unused |
 
-// #![warn(
-//     missing_docs,
-//     deprecated_in_future,
-//     unsafe_code,
-//     unused_labels,
-//     keyword_idents,
-//     missing_doc_code_examples,
-//     missing_copy_implementations,
-//     missing_debug_implementations,
-//     macro_use_extern_crate,
-//     unreachable_pub,
-//     trivial_casts,
-//     trivial_numeric_casts,
-//     unused_extern_crates,
-//     unused_import_braces
-// )]
+#![warn(
+    missing_docs,
+    deprecated_in_future,
+    unsafe_code,
+    unused_labels,
+    keyword_idents,
+    missing_doc_code_examples,
+    missing_copy_implementations,
+    missing_debug_implementations,
+    macro_use_extern_crate,
+    unreachable_pub,
+    trivial_casts,
+    trivial_numeric_casts,
+    unused_extern_crates,
+    unused_import_braces
+)]
 #![allow(clippy::cast_lossless)]
 
 /// Procedural macros for autoderiving [`KsonRep`].
