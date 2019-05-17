@@ -61,16 +61,58 @@ pub trait DeserializerBytes {
     fn read_uint(&mut self, len: u8) -> Result<u64, Error>;
 }
 
+/// A sequence of values that can be deserialized.
 pub trait DeSeq {
+    /// The state of the sequence. This is idiomatically [`()`] if the sequence doesn't
+    /// need to track intermediate states.
     type State: Sized;
-    fn read_seq(&mut self) -> Result<(Self::State, usize), Error>;
+
+    /// Reads the state of the sequence, returning a tuple of the sequence state and the
+    /// length of the sequence.
+    fn read(&mut self) -> Result<(Self::State, usize), Error>;
+
+    /// Returns the next value in the sequence as `T`.
+    ///
+    /// # Arguments
+    ///
+    /// * `s: &mut Self::State` - A mutable reference to the current state of the
+    ///   sequence.
+    ///
+    /// # Errors
+    ///
+    /// This will return an error if the next element of the sequence cannot be converted
+    /// to `T`.
     fn take<T: De>(&mut self, s: &mut Self::State) -> Result<T, Error>;
 }
 
+/// A map deserializer.
 pub trait DeMap {
+    /// The state of the map deserializer. This is idiomatically [`()`] if the
+    /// deserializer doesn't need to track intermediate states.
     type State: Sized;
+
+    /// Reads the state of the deserializer, returning a tuple of the state and the number
+    /// of entries in the map.
     fn take_map(&mut self) -> Result<(Self::State, usize), Error>;
+
+    /// Reads the next key from the deserializer as [`Bytes`].
+    ///
+    /// # Arguments
+    ///
+    /// * `s: &mut Self::State` - A mutable reference to the current state of the
+    ///   deserializer.
+    ///
+    /// # Errors
+    ///
+    /// This will return an error if no keys are remaining.
     fn take_key(&mut self, s: &mut Self::State) -> Result<Bytes, Error>;
+
+    /// Reads the next value from the serializer as `T`.
+    ///
+    /// # Errors
+    ///
+    /// This will return an error if no values are remaining, or the associated key has
+    /// not yet been read.
     fn take_val<T: De>(&mut self, s: &mut Self::State) -> Result<T, Error>;
 }
 
@@ -455,7 +497,7 @@ impl<D: DeserializerBytes> Deserializer for D {
 impl<D: DeserializerBytes> DeSeq for D {
     type State = ();
 
-    fn read_seq(&mut self) -> Result<((), usize), Error> {
+    fn read(&mut self) -> Result<((), usize), Error> {
         match self.read_tag()? {
             KArr(big, len) => {
                 let len = read_len(self, big, len)?;
@@ -603,7 +645,7 @@ impl Deserializer for KContainer {
 impl DeSeq for KContainer {
     type State = IntoIter<Kson>;
 
-    fn read_seq(&mut self) -> Result<(IntoIter<Kson>, usize), Error> {
+    fn read(&mut self) -> Result<(IntoIter<Kson>, usize), Error> {
         match self.take() {
             Array(a) => {
                 let len = a.len();
@@ -619,6 +661,7 @@ impl DeSeq for KContainer {
 }
 
 #[derive(Debug)]
+/// Deserializes from a sequence of (key, value) pairs.
 pub struct KDeMap {
     iter: IntoIter<(Bytes, Kson)>,
     val:  Option<Kson>,
@@ -655,7 +698,7 @@ impl DeMap for KContainer {
     fn take_val<T: De>(&mut self, s: &mut KDeMap) -> Result<T, Error> {
         match s.val.take() {
             Some(v) => from_kson(v),
-            None => bail!("tried to read val when none was stored - did you read a key first?"),
+            None => bail!("tried to read value when none was stored - did you read a key first?"),
         }
     }
 }
@@ -673,7 +716,7 @@ pub trait De: Sized {
 impl<T: De> De for Vec<T> {
     #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
-        let (mut s, len) = d.read_seq()?;
+        let (mut s, len) = d.read()?;
         let mut out = Vec::with_capacity(len);
         for _ in 0..len {
             out.push(d.take(&mut s)?);
@@ -859,11 +902,10 @@ macro_rules! tuple_de {
         impl<$($typ: De),*> De for ($($typ,)*) {
             fn de<Des: Deserializer>(d: &mut Des) -> Result<Self, Error> {
                 let exp_len = $len;
-                let (mut iter, len) = d.read_seq()?;
+                let (mut iter, len) = d.read()?;
 
                 if len == exp_len {
                     let tuple = ($(d.take::<$typ>(&mut iter).unwrap(),)*);
-                    // let tuple = ($($typ::de(&mut KContainer::new_place(iter.next().unwrap()))?,)*);
                     Ok(tuple)
 
                 } else {

@@ -3,7 +3,7 @@ use half::f16;
 use num_bigint::{BigInt, Sign};
 use smallvec::SmallVec;
 
-/// TODO docstring
+/// Byte-oriented serializer.
 pub trait SerializerBytes {
     /// Add a byte to the output value.
     ///
@@ -34,44 +34,67 @@ pub trait SerializerBytes {
     fn put_slice(&mut self, slice: &[u8]);
 }
 
-// TODO: Baeo I edited this slightly to be more consistent w/De module, should end up
-// clearer
-/// Serializer that is able to accept sequences of values
+/// A serializer that works from sequences of values.
 pub trait SerSeq {
-    /// Intermediate data for the sequence
+    /// The state of the sequence. This is idiomatically [`()`] if the
+    /// deserializer doesn't need to track intermediate states.
+
     type State: Sized;
     /// # Arguments
     ///
-    /// * `start` - TODO
     /// * `len: usize` - The length of the sequence.
     ///
     /// ```
     /// use kson::prelude::*;
     /// ```
+
     fn seq_start(&mut self, len: usize) -> Self::State;
+
     // TODO: consider renaming
-    /// TODO
+    /// Add an element to the sequence.
+    ///
+    /// # Arguments
+    ///
+    /// * `s: &mut Self::State` - A mutable reference to the current state of the
+    ///   serializer.
     fn seq_put<T: Ser>(&mut self, s: &mut Self::State, t: T);
-    /// TODO
+
+    /// Finalize the sequence.
+    ///
+    /// # Arguments
+    ///
+    /// * `s: Self::State` - The current (and final) state of the serializer.
     fn seq_finalize(&mut self, s: Self::State);
 }
 
-/// Serializer that is able to accept sequences of (key, value) pairs
+/// A serializer that is able to accept sequences of (key, value) pairs.
 pub trait SerMap {
+    /// The state of the serializer.
     type State: Sized;
+
     /// # Arguments
     ///
-    /// * `start` - TODO
-    /// * `len: usize` - The length of the sequence.
+    /// * `len: usize` - The number of entries in the map.
     fn map_start(&mut self, len: usize) -> Self::State;
+
     // TODO: consider renaming
-    /// TODO
+    /// Add a key-value entry to the serializer.
+    ///
+    /// # Arguments
+    ///
+    /// * `s: &mut Self::State` - The current state of the serializer.
     fn map_put<T: Ser>(&mut self, s: &mut Self::State, key: &Bytes, t: T);
-    /// TODO
+
+    /// Finalize the map serializer.
+    ///
+    /// # Arguments
+    ///
+    /// * `s: Self::State` - The current (and final) state of the serializer.
     fn map_finalize(&mut self, s: Self::State);
 }
 
-/// TODO
+/// Note: Overriding the provided implementations when possible can often improve
+/// performance.
 pub trait Serializer: SerSeq + SerMap + Sized {
     /// Add an [`i8`] to the output value.
     ///
@@ -80,6 +103,7 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// * `i: i8`  - The value to be added.
     #[inline(always)]
     fn put_i8(&mut self, i: i8) { self.put_i16(i as i16) }
+
     /// Add an [`i16`] to the output value.
     ///
     /// # Arguments
@@ -87,6 +111,7 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// * `i: i16`  - The value to be added.
     #[inline(always)]
     fn put_i16(&mut self, i: i16) { self.put_i32(i as i32) }
+
     /// Add an [`i32`] to the output value.
     ///
     /// # Arguments
@@ -94,6 +119,7 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// * `i: i32`  - The value to be added.
     #[inline(always)]
     fn put_i32(&mut self, i: i32) { self.put_i64(i as i64) }
+
     /// Add an [`i64`] to the output value.
     ///
     /// # Arguments
@@ -101,6 +127,7 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// * `i: i64`  - The value to be added.
     #[inline(always)]
     fn put_i64(&mut self, i: i64) { self.put_bigint(&BigInt::from(i)) }
+
     /// Add a [`BigInt`] to the output value.
     ///
     /// # Arguments
@@ -115,13 +142,14 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// * `b: &Bytes` - The value to be added.
     fn put_bytes(&mut self, b: &Bytes);
 
-    /// Add a [`f16] to the output value.
+    /// Add an [`f16] to the output value.
     ///
     /// # Arguments
     ///
     /// * `f: f16` - The value to be added.
     #[inline(always)]
     fn put_f16(&mut self, f: f16) { self.put_f32(f32::from(f)) }
+
     /// Add an [`f32`] to the output value.
     ///
     /// # Arguments
@@ -129,6 +157,7 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// * `f: f32` - The value to be added.
     #[inline(always)]
     fn put_f32(&mut self, f: f32) { self.put_f64(f64::from(f)) }
+
     /// Add an [`f64`] to the output value.
     ///
     /// # Arguments
@@ -142,24 +171,11 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     ///
     /// * `b: bool` - The value to be added.
     fn put_bool(&mut self, b: bool);
+
     /// Add [`Kson::Null`] to the output value.
     fn put_null(&mut self);
 
-    /// Add a vector to the output value.
-    ///
-    /// # Arguments
-    ///
-    /// * `v` - The value to be added.
-    // fn put_arr<S: Ser>(&mut self, v: &Vec<S>);
-    /// Add a map to the output value.
-    ///
-    /// # Arguments
-    ///
-    /// * `m` - The value to be added.
-    // fn put_map<S: Ser>(&mut self, m: &VecMap<Bytes, S>);
-
-    // this is only here so that we can have Ser do double-duty as KsonRep
-    // most of the time you'll want an associated SerSeq, SerMap, and use the default impl
+    /// Add arbitrary [`Kson`] to the output value.
     #[inline(always)]
     fn put_kson(&mut self, k: Kson) { ser_kson(self, &k) }
 }
@@ -530,7 +546,11 @@ fn u64_digs<S: SerializerBytes>(pos: bool, u: u64, digs: Vec<u8>, out: &mut S) {
 
 /// An value that can be serialized.
 pub trait Ser {
-    /// TODO docstring
+    /// Serializes the value, consuming it.
+    ///
+    /// # Arguments
+    ///
+    /// * `s: &mut S` - A mutable reference to the serializer.
     fn ser<S: Serializer>(self, s: &mut S);
 }
 
@@ -549,3 +569,28 @@ impl Ser for &Bytes {
 impl Ser for Bytes {
     fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(&self) }
 }
+
+// macro_rules! easy_ser {
+//    ($typ:ty, $put:tt) => {
+//        impl Ser for $typ {
+//            #[inline(always)]
+//            fn ser<S: Serializer>(self, s: &mut S) -> Result<Self, Error> {
+//                match Self::try_from(s.$put()?) {
+//                    Err(_) => bail!("Value to big to be `{}`", stringify!(Self)),
+//                    Ok(v) => Ok(v),
+//                }
+//            }
+//        }
+//    };
+//}
+// macro_rules! trivial_ser {
+//    ($typ:ty, $put:tt) => {
+//        impl Ser for $typ {
+//            #[inline(always)]
+//            fn ser<S: Serializer>(s: &mut S) -> Result<Self, Error> { s.$put() }
+//        }
+//    };
+//}
+//
+//// Kson
+// trivial_ser!(Kson, put_kson);

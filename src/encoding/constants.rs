@@ -1,8 +1,8 @@
-/// 0xe0
+/// Tag bits mask, 0xe0
 pub(super) const MASK_TYPE: u8 = 0b1110_0000;
-/// 0x1f
+/// Tag metadata mask, 0x1f
 pub(super) const MASK_META: u8 = 0b0001_1111;
-/// 0x00
+///  0x00
 pub(super) const TYPE_CON: u8 = 0b0000_0000;
 /// Integer type bits, 0x20
 pub(super) const TYPE_INT: u8 = 0b0010_0000;
