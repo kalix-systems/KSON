@@ -109,7 +109,6 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// # Arguments
     ///
     /// * `i: i8`  - The value to be added.
-    #[inline(always)]
     fn put_i8(&mut self, i: i8) { self.put_i16(i as i16) }
 
     /// Add an [`i16`] to the output value.
@@ -117,7 +116,6 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// # Arguments
     ///
     /// * `i: i16`  - The value to be added.
-    #[inline(always)]
     fn put_i16(&mut self, i: i16) { self.put_i32(i as i32) }
 
     /// Add an [`i32`] to the output value.
@@ -125,7 +123,6 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// # Arguments
     ///
     /// * `i: i32`  - The value to be added.
-    #[inline(always)]
     fn put_i32(&mut self, i: i32) { self.put_i64(i as i64) }
 
     /// Add an [`i64`] to the output value.
@@ -133,7 +130,6 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// # Arguments
     ///
     /// * `i: i64`  - The value to be added.
-    #[inline(always)]
     fn put_i64(&mut self, i: i64) { self.put_bigint(&BigInt::from(i)) }
 
     /// Add a [`BigInt`] to the output value.
@@ -155,7 +151,6 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// # Arguments
     ///
     /// * `f: f16` - The value to be added.
-    #[inline(always)]
     fn put_f16(&mut self, f: f16) { self.put_f32(f32::from(f)) }
 
     /// Add an [`f32`] to the output value.
@@ -163,7 +158,6 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// # Arguments
     ///
     /// * `f: f32` - The value to be added.
-    #[inline(always)]
     fn put_f32(&mut self, f: f32) { self.put_f64(f64::from(f)) }
 
     /// Add an [`f64`] to the output value.
