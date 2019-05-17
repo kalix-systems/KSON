@@ -619,6 +619,45 @@ impl DeSeq<KContainer> for IntoIter<Kson> {
     }
 }
 
+pub struct KDeMap {
+    iter: IntoIter<(Bytes, Kson)>,
+    val:  Option<Kson>,
+}
+
+impl DeMap<KContainer> for KDeMap {
+    fn start(d: &mut KContainer) -> Result<(Self, usize), Error> {
+        match d.take() {
+            Map(m) => {
+                let len = m.len();
+                let km = KDeMap {
+                    iter: m.into_iter(),
+                    val:  None,
+                };
+                Ok((km, len))
+            }
+            k => bail!("tried to read map from value: {:?}", k),
+        }
+    }
+
+    fn take_key(&mut self, _: &mut KContainer) -> Result<Bytes, Error> {
+        debug_assert!(self.val.is_none());
+        match self.iter.next() {
+            Some((k, v)) => {
+                self.val = Some(v);
+                Ok(k)
+            }
+            _ => bail!("no remaining keys"),
+        }
+    }
+
+    fn take_val<T: De>(&mut self, _: &mut KContainer) -> Result<T, Error> {
+        match self.val.take() {
+            Some(v) => from_kson(v),
+            None => bail!("tried to read val when none was stored - did you read a key first?"),
+        }
+    }
+}
+
 // impl DeMap<KContainer> for IntoIter<(Bytes, Kson)> {}
 
 /// Values that can be deserialized.
