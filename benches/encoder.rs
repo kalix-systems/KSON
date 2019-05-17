@@ -70,8 +70,8 @@ fn bench_enc_single_alloc(c: &mut Criterion) {
         ),
         move |b| {
             b.iter(|| {
-                let out = Vec::with_capacity(enc_len * 2);
-                encode(black_box(&big_k), out)
+                let mut out = Vec::with_capacity(enc_len * 2);
+                encode(black_box(&big_k), &mut out)
             })
         },
     );
