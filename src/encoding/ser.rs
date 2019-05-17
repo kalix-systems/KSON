@@ -96,6 +96,14 @@ pub trait SerMap {
 /// Note: Overriding the provided implementations when possible can often improve
 /// performance.
 pub trait Serializer: SerSeq + SerMap + Sized {
+    /// Add an [`u8`] to the output value.
+    ///
+    /// # Arguments
+    ///
+    /// * `u: u8`  - The value to be added.
+    #[inline(always)]
+    fn put_u8(&mut self, u: u8) { self.put_i8(i8::from_ne_bytes([u])) }
+
     /// Add an [`i8`] to the output value.
     ///
     /// # Arguments
@@ -570,27 +578,45 @@ impl Ser for Bytes {
     fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(&self) }
 }
 
-// macro_rules! easy_ser {
-//    ($typ:ty, $put:tt) => {
-//        impl Ser for $typ {
-//            #[inline(always)]
-//            fn ser<S: Serializer>(self, s: &mut S) -> Result<Self, Error> {
-//                match Self::try_from(s.$put()?) {
-//                    Err(_) => bail!("Value to big to be `{}`", stringify!(Self)),
-//                    Ok(v) => Ok(v),
-//                }
-//            }
-//        }
-//    };
-//}
-// macro_rules! trivial_ser {
-//    ($typ:ty, $put:tt) => {
-//        impl Ser for $typ {
-//            #[inline(always)]
-//            fn ser<S: Serializer>(s: &mut S) -> Result<Self, Error> { s.$put() }
-//        }
-//    };
-//}
-//
-//// Kson
-// trivial_ser!(Kson, put_kson);
+macro_rules! easy_ser {
+    ($typ:ty, $put:tt) => {
+        impl Ser for $typ {
+            #[inline(always)]
+            fn ser<S: Serializer>(self, s: &mut S) { s.$put(self.into()) }
+        }
+    };
+}
+
+macro_rules! trivial_ser {
+    ($typ:ty, $put:tt) => {
+        impl Ser for $typ {
+            fn ser<S: Serializer>(self, s: &mut S) { s.$put(self) }
+        }
+    };
+}
+
+// TODO many of these are less efficient than they should be
+
+// BigInt
+trivial_ser!(&BigInt, put_bigint);
+
+// unsigned
+trivial_ser!(u8, put_u8);
+easy_ser!(u16, put_i64);
+easy_ser!(u32, put_i64);
+
+// signed
+easy_ser!(i8, put_i8);
+easy_ser!(i16, put_i16);
+easy_ser!(i32, put_i32);
+trivial_ser!(i64, put_i64);
+
+// floats
+trivial_ser!(f16, put_f16);
+trivial_ser!(f32, put_f32);
+trivial_ser!(f64, put_f64);
+
+// Misc
+
+// boolean
+trivial_ser!(bool, put_bool);
