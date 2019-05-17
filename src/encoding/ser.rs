@@ -479,23 +479,6 @@ fn into_kson<T: Ser>(t: T) -> Kson {
     k.take()
 }
 
-struct KContainer {
-    internal: Option<Kson>,
-}
-
-impl KContainer {
-    fn new() -> KContainer { KContainer { internal: None } }
-
-    fn place(&mut self, k: Kson) {
-        assert!(self.internal.is_none());
-        self.internal = Some(k);
-    }
-
-    fn take(self) -> Kson { self.internal.unwrap() }
-
-    fn is_none(&self) -> bool { self.internal.is_none() }
-}
-
 impl Serializer for KContainer {
     type Map = Vec<(Bytes, Kson)>;
     type Seq = Vec<Kson>;

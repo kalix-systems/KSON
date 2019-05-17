@@ -1,11 +1,12 @@
 use super::*;
-use crate::{float::Float, rentable::Rentable};
+use crate::float::Float;
 use failure::*;
 use half::f16;
 use num_bigint::{BigInt, Sign};
 use std::{
     convert::TryFrom,
     net::{Ipv4Addr, SocketAddrV4},
+    vec::IntoIter,
 };
 use KTag::*;
 
@@ -59,8 +60,22 @@ pub trait DeserializerBytes {
     fn read_uint(&mut self, len: u8) -> Result<u64, Error>;
 }
 
+pub trait DeSeq<D>: Sized {
+    fn start(d: &mut D) -> Result<(Self, usize), Error>;
+    fn take<T: De>(&mut self, d: &mut D) -> Result<T, Error>;
+}
+
+pub trait DeMap<D>: Sized {
+    fn start(d: &mut D) -> Result<(Self, usize), Error>;
+    fn take_key(&mut self, d: &mut D) -> Result<Bytes, Error>;
+    fn take_val<T: De>(&mut self, d: &mut D) -> Result<T, Error>;
+}
+
 /// Values that can be deserialized from.
 pub trait Deserializer {
+    // type Seq: DeSeq<Self>;
+    // type Map: DeMap<Self>;
+
     /// Read a [`Kson`] value.
     fn read_kson(&mut self) -> Result<Kson, Error>;
 
@@ -437,18 +452,47 @@ impl<D: DeserializerBytes> Deserializer for D {
     }
 }
 
-impl Deserializer for Rentable<Kson> {
-    #[inline(always)]
-    fn read_kson(&mut self) -> Result<Kson, Error> {
-        let k = self.rent();
-        self.replace(Null);
-        Ok(k)
+pub struct DeSeqBytes {}
+
+impl<D: DeserializerBytes> DeSeq<D> for DeSeqBytes {
+    fn start(d: &mut D) -> Result<(Self, usize), Error> {
+        match d.read_tag()? {
+            KArr(big, len) => {
+                let len = read_len(d, big, len)?;
+                Ok((DeSeqBytes {}, len))
+            }
+            _ => bail!("bad tag when starting sequence"),
+        }
     }
+
+    fn take<T: De>(&mut self, d: &mut D) -> Result<T, Error> { T::de(d) }
+}
+
+pub struct DeMapBytes {}
+
+impl<D: DeserializerBytes> DeMap<D> for DeMapBytes {
+    fn start(d: &mut D) -> Result<(Self, usize), Error> {
+        match d.read_tag()? {
+            KMap(big, len) => {
+                let len = read_len(d, big, len)?;
+                Ok((DeMapBytes {}, len))
+            }
+            _ => bail!("bad tag when starting map"),
+        }
+    }
+
+    fn take_key(&mut self, d: &mut D) -> Result<Bytes, Error> { d.read_bytes() }
+
+    fn take_val<T: De>(&mut self, d: &mut D) -> Result<T, Error> { T::de(d) }
+}
+
+impl Deserializer for KContainer {
+    #[inline(always)]
+    fn read_kson(&mut self) -> Result<Kson, Error> { Ok(self.take()) }
 
     #[inline(always)]
     fn read_null(&mut self) -> Result<(), Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Null => Ok(()),
             k => bail!("expected Null, got {:?}", k),
@@ -457,8 +501,7 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_bool(&mut self) -> Result<bool, Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Bool(b) => Ok(b),
             k => bail!("expected bool, got {:?}", k),
@@ -467,8 +510,7 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_i64(&mut self) -> Result<i64, Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Kint(I64(i)) => Ok(i),
             k => bail!("expected i64, got {:?}", k),
@@ -477,8 +519,7 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_bigint(&mut self) -> Result<BigInt, Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Kint(Int(i)) => Ok(i),
             k => bail!("expected bigint, got {:?}", k),
@@ -487,8 +528,7 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_inum(&mut self) -> Result<Inum, Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Kint(i) => Ok(i),
             k => bail!("expected inum, got {:?}", k),
@@ -497,8 +537,7 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_f16(&mut self) -> Result<f16, Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Kfloat(Half(u)) => Ok(f16::from_bits(u)),
             k => bail!("expected half-precision float, got {:?}", k),
@@ -507,8 +546,7 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_f32(&mut self) -> Result<f32, Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Kfloat(Single(u)) => Ok(f32::from_bits(u)),
             k => bail!("expected single-precision float, got {:?}", k),
@@ -517,8 +555,7 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_f64(&mut self) -> Result<f64, Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Kfloat(Double(u)) => Ok(f64::from_bits(u)),
             k => bail!("expected double-precision float, got {:?}", k),
@@ -527,8 +564,7 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_float(&mut self) -> Result<Float, Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Kfloat(f) => Ok(f),
             k => bail!("expected float, got {:?}", k),
@@ -537,8 +573,7 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_bytes(&mut self) -> Result<Bytes, Error> {
-        let k = self.rent();
-        self.replace(Null);
+        let k = self.take();
         match k {
             Byt(b) => Ok(b),
             k => bail!("expected bytes, got {:?}", k),
@@ -547,34 +582,44 @@ impl Deserializer for Rentable<Kson> {
 
     #[inline(always)]
     fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
-        let k = self.rent();
-        self.replace(Null);
-        match k {
-            Array(a) => {
-                a.into_iter()
-                    .map(|k| T::de(&mut Rentable::new(k)))
-                    .collect()
-            }
+        match self.take() {
+            Array(a) => a.into_iter().map(from_kson).collect(),
             k => bail!("expected array, got {:?}", k),
         }
     }
 
     #[inline(always)]
     fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
-        let k = self.rent();
-        self.replace(Null);
-        match k {
+        match self.take() {
             Map(m) => {
-                let pairs: Result<Vec<(Bytes, T)>, Error> = m
-                    .into_iter()
-                    .map(|(k, v)| Ok((k, T::de(&mut Rentable::new(v))?)))
-                    .collect();
+                let pairs: Result<Vec<(Bytes, T)>, Error> =
+                    m.into_iter().map(|(k, v)| Ok((k, from_kson(v)?))).collect();
                 pairs.map(VecMap::from_sorted)
             }
             k => bail!("expected array, got {:?}", k),
         }
     }
 }
+
+impl DeSeq<KContainer> for IntoIter<Kson> {
+    fn start(d: &mut KContainer) -> Result<(Self, usize), Error> {
+        match d.take() {
+            Array(a) => {
+                let len = a.len();
+                Ok((a.into_iter(), len))
+            }
+            k => bail!("tried to read array from value: {:?}", k),
+        }
+    }
+
+    fn take<T: De>(&mut self, _: &mut KContainer) -> Result<T, Error> {
+        T::de(&mut KContainer {
+            internal: self.next(),
+        })
+    }
+}
+
+// impl DeMap<KContainer> for IntoIter<(Bytes, Kson)> {}
 
 /// Values that can be deserialized.
 pub trait De: Sized {
@@ -590,6 +635,8 @@ impl<T: De> De for Vec<T> {
     #[inline(always)]
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.read_arr() }
 }
+
+fn from_kson<T: De>(ks: Kson) -> Result<T, Error> { T::de(&mut KContainer::new_place(ks)) }
 
 // Implementations for primitive types
 macro_rules! easy_de {
@@ -714,7 +761,7 @@ impl<T: De> De for Option<T> {
                 let mut iter = v.into_iter();
                 let val = &mut match iter.next() {
                     None => bail!("Value is not an `Option`"),
-                    Some(v) => Rentable::new(v),
+                    Some(v) => KContainer::new_place(v),
                 };
 
                 if iter.next().is_none() {
@@ -760,7 +807,7 @@ macro_rules! tuple_de {
                 if arr.len() == exp_len {
                     let mut k_iter = arr.into_iter();
 
-                    let tuple = ($($typ::de(&mut Rentable::new(k_iter.next().unwrap()))?,)*);
+                    let tuple = ($($typ::de(&mut KContainer::new_place(k_iter.next().unwrap()))?,)*);
                     Ok(tuple)
 
                 } else {
