@@ -5,7 +5,7 @@ authors = ["Jack Gallagher <jack@gallabytes.com>", "Baeo Maltinsky <baeo@kalix.i
 edition = "2018"
 
 [dependencies]
-# pyo3 = "0.6.0"
+pyo3 = "0.6.0"
 hashbrown = "0.2"
 half = "1.3"
 num-traits = "0.2"
