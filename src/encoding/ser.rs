@@ -487,7 +487,7 @@ impl SerMap for KContainer {
     fn map_finalize(&mut self, m: Vec<(Bytes, Kson)>) { self.place(Kson::from(VecMap::from(m))) }
 }
 
-fn into_kson<T: Ser>(t: T) -> Kson {
+pub fn into_kson<T: Ser>(t: T) -> Kson {
     let mut k = KContainer::new();
     t.ser(&mut k);
     k.take()

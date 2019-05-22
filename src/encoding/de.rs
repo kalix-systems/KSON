@@ -736,7 +736,7 @@ impl<T: De> De for HashMap<Bytes, T> {
     }
 }
 
-fn from_kson<T: De>(ks: Kson) -> Result<T, Error> { T::de(&mut KContainer::new_place(ks)) }
+pub fn from_kson<T: De>(ks: Kson) -> Result<T, Error> { T::de(&mut KContainer::new_place(ks)) }
 
 // Implementations for primitive types
 macro_rules! easy_de {

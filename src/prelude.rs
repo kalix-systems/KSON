@@ -1,7 +1,10 @@
 //! Things you probably want in scope when working with KSON.
 
 pub use crate::{
-    encoding::{decode, decode_full, encode, encode_full, ser::SerializerBytes},
+    encoding::{
+        de, decode, decode_full, encode, encode_full,
+        ser::{self, SerializerBytes},
+    },
     errors::*,
     float::Float,
     inum::Inum,
