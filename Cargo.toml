@@ -19,7 +19,7 @@ failure = "0.1"
 smallvec = {version = "0.6", features = ["union"]}
 kson_macro = {path = "../kson_macro"}
 
-pyo3 = {version = "0.6", optional = true}
+pyo3 = {version =  "0.7.0-alpha.1", optional = true}
 rlua = {version = "0.16", optional = true}
 
 [dev-dependencies]
