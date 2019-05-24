@@ -377,10 +377,12 @@ pub mod errors;
 pub mod float;
 pub mod inum;
 pub mod prelude;
-pub mod python;
 pub mod rep;
 mod util;
 pub mod vecmap;
+
+#[cfg(feature = "lua")] pub mod lua;
+#[cfg(feature = "python")] pub mod python;
 
 use bytes::{buf::FromBuf, Bytes, IntoBuf};
 use errors::KsonConversionError;
