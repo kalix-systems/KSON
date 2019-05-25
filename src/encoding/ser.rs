@@ -611,6 +611,32 @@ trivial_ser!(f32, put_f32);
 trivial_ser!(f64, put_f64);
 
 // Misc
+impl Ser for () {
+    fn ser<S: Serializer>(self, s: &mut S) { s.put_null() }
+}
 
 // boolean
 trivial_ser!(bool, put_bool);
+
+impl<T> Ser for &VecMap<Bytes, T>
+where
+    for<'a> &'a T: Ser,
+{
+    fn ser<S: Serializer>(self, s: &mut S) {
+        let mut b = s.map_start(self.len());
+        for (k, v) in self.iter() {
+            s.map_put(&mut b, k, v);
+        }
+        s.map_finalize(b);
+    }
+}
+
+impl<T: Ser> Ser for VecMap<Bytes, T> {
+    fn ser<S: Serializer>(self, s: &mut S) {
+        let mut b = s.map_start(self.len());
+        for (k, v) in self.into_iter() {
+            s.map_put(&mut b, &k, v);
+        }
+        s.map_finalize(b);
+    }
+}
