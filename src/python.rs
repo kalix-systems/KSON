@@ -1,14 +1,17 @@
 #![allow(non_snake_case)]
 use crate::{
+    prelude::*,
     vecmap::*,
+    Float::{self, *},
     Inum::{self, *},
     Kson::{self, *},
 };
 use bytes::Bytes;
+use half::f16;
 use num_bigint::{BigInt, Sign::*};
 use pyo3::{
     prelude::*,
-    types::{IntoPyDict, PyAny, PyBool, PyBytes, PyDict, PyLong},
+    types::{IntoPyDict, PyAny, PyBool, PyBytes, PyDict, PyFloat, PyLong},
 };
 
 impl ToPyObject for Kson {
@@ -18,6 +21,7 @@ impl ToPyObject for Kson {
             Bool(b) => PyBool::new(py, *b).into_object(py),
             Byt(s) => PyBytes::new(py, s).into_object(py),
             Kint(val) => val.to_object(py),
+            Kfloat(val) => val.to_object(py),
             Array(vector) => vector.to_object(py),
             Map(vmap) => vmap.to_object(py),
         }
@@ -34,6 +38,7 @@ impl IntoPyObject for Kson {
             Bool(b) => PyBool::new(py, b).into_object(py),
             Byt(s) => PyBytes::new(py, &s).into_object(py),
             Kint(val) => val.into_object(py),
+            Kfloat(val) => val.into_object(py),
             Array(vector) => vector.into_object(py),
             Map(vmap) => vmap.into_object(py),
         }
@@ -49,6 +54,7 @@ impl<'source> FromPyObject<'source> for Kson {
                 .map(Bool)
                 .or_else(|_| ob.extract().and_then(bytes_from_any).map(Byt))
                 .or_else(|_| ob.extract().map(Kint))
+                .or_else(|_| ob.extract().map(Kfloat))
                 .or_else(|_| ob.extract().map(Array))
                 .or_else(|_| ob.extract().and_then(pydict_to_kson))
         }
@@ -82,6 +88,27 @@ struct PyInt {
     sign: bool,
     /// little-endian digits
     digits: Vec<u8>,
+}
+
+impl ToPyObject for Float {
+    fn to_object(&self, py: Python) -> PyObject {
+        match self {
+            Half(u) => PyFloat::new(py, f64::from(f16::from_bits(*u))).to_object(py),
+            Single(u) => PyFloat::new(py, f32::from_bits(*u) as f64).to_object(py),
+            Double(u) => PyFloat::new(py, f64::from_bits(*u)).to_object(py),
+        }
+    }
+}
+
+impl IntoPyObject for Float {
+    fn into_object(self, py: Python) -> PyObject { self.to_object(py) }
+}
+
+impl<'source> FromPyObject<'source> for Float {
+    fn extract(ob: &'source PyAny) -> PyResult<Float> {
+        let num: &'source PyFloat = ob.try_into_exact()?;
+        Ok(Double(f64::to_bits(num.value())))
+    }
 }
 
 impl ToPyObject for Inum {

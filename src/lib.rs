@@ -381,6 +381,9 @@ pub mod rep;
 mod util;
 pub mod vecmap;
 
+#[cfg(feature = "lua")] pub mod lua;
+#[cfg(feature = "python")] pub mod python;
+
 use bytes::{buf::FromBuf, Bytes, IntoBuf};
 use errors::KsonConversionError;
 use float::*;
