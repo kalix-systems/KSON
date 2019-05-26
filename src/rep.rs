@@ -2,6 +2,7 @@
 
 use crate::*;
 use bytes::{buf::Buf, Bytes};
+use failure::*;
 use hashbrown::HashMap;
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
@@ -49,7 +50,7 @@ pub trait KsonRep: Clone + Sized {
     /// // should be equal
     /// assert_eq!(String::from_kson(ks).unwrap(), "foo");
     /// ```
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError>;
+    fn from_kson(ks: Kson) -> Result<Self, Error>;
 
     /// Converts value from [`Kson`].
     ///
@@ -67,7 +68,7 @@ pub trait KsonRep: Clone + Sized {
     /// // should be equal
     /// assert_eq!(String::from_kson_ref(&ks).unwrap(), "foo");
     /// ```
-    fn from_kson_ref(ks: &Kson) -> Result<Self, KsonConversionError> { Self::from_kson(ks.clone()) }
+    fn from_kson_ref(ks: &Kson) -> Result<Self, Error> { Self::from_kson(ks.clone()) }
 }
 
 // TryFrom<Kson> implementations
@@ -132,15 +133,10 @@ macro_rules! try_from_kson_rep {
 
             fn into_kson(self) -> Kson { self.into() }
 
-            fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+            fn from_kson(ks: Kson) -> Result<Self, Error> {
                 match ks.try_into() {
                     Ok(v) => Ok(v),
-                    Err(_) => {
-                        Err(KsonConversionError::new(&format!(
-                            "Could not convert `Kson` to `{}`",
-                            stringify!($t)
-                        )))
-                    }
+                    Err(_) => bail!("Could not convert `Kson` to `{}`", stringify!($t)),
                 }
             }
         }
@@ -222,7 +218,7 @@ macro_rules! tuple_kson {
                 vec![ $(self.$idx.into_kson()),* ].into_kson()
             }
 
-            fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+            fn from_kson(ks: Kson) -> Result<Self, Error> {
                 let exp_len = $len;
                 let arr = ks.into_vec()?;
 
@@ -236,11 +232,11 @@ macro_rules! tuple_kson {
                     Ok(tuple)
 
                 } else {
-                    Err(KsonConversionError::new(&format!(
+                    bail!(
                                 "Tuple has wrong number of fields; expected {}, found {}",
                                 exp_len,
                                 arr.len()
-                    )))
+                    )
                 }
             }
         }
@@ -311,7 +307,7 @@ impl KsonRep for String {
 
     fn to_kson(&self) -> Kson { Kson::from_buf(self) }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         let bs = Bytes::from_kson(ks)?;
 
         match String::from_utf8(bs.to_vec()) {
@@ -331,11 +327,7 @@ impl KsonRep for String {
                 // try to read
                 match String::from_utf16(&chars) {
                     Ok(s) => Ok(s),
-                    Err(_) => {
-                        Err(KsonConversionError::new(
-                            "Bytestring was neither valid utf-8 nor utf-16",
-                        ))
-                    }
+                    Err(_) => bail!("Bytestring was neither valid utf-8 nor utf-16"),
                 }
             }
         }
@@ -347,20 +339,16 @@ impl KsonRep for char {
 
     fn to_kson(&self) -> Kson { Kson::from_buf(self.to_string()) }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         let mut s = String::from_kson(ks)?;
 
         match s.pop() {
-            None => {
-                Err(KsonConversionError::new(
-                    "Tried to get character from empty string",
-                ))
-            }
+            None => bail!("Tried to get character from empty string"),
             Some(c) => {
                 if s.is_empty() {
                     Ok(c)
                 } else {
-                    Err(KsonConversionError::new("More than one character found"))
+                    bail!("More than one character found")
                 }
             }
         }
@@ -372,7 +360,7 @@ impl<T: KsonRep> KsonRep for Vec<T> {
 
     fn to_kson(&self) -> Kson { Array(self.iter().map(T::to_kson).collect()) }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         ks.into_vec()?.into_iter().map(T::from_kson).collect()
     }
 }
@@ -386,7 +374,7 @@ impl<T: KsonRep> KsonRep for VecMap<Bytes, T> {
 
     fn to_kson(&self) -> Kson { Map(self.iter().map(|(k, v)| (k.clone(), v.to_kson())).collect()) }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         let vm = ks.into_vecmap()?;
         let mut out = Vec::with_capacity(vm.len());
         for (k, v) in vm {
@@ -401,7 +389,7 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for Hash
 
     fn to_kson(&self) -> Kson { Map(self.iter().map(|(k, v)| (k.clone(), v.to_kson())).collect()) }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         let vmap = ks.into_vecmap()?;
 
         let mut pairs: Vec<(Bytes, T)> = Vec::with_capacity(vmap.len());
@@ -429,14 +417,16 @@ impl<T: KsonRep, S: ::std::hash::BuildHasher + Default + Clone> KsonRep for Hash
             .collect())
     }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         let vmap = ks.into_vecmap()?;
 
         let mut pairs: Vec<(String, T)> = Vec::with_capacity(vmap.len());
 
         for (k, v) in vmap.into_iter() {
-            let str_key = String::from_utf8(k.to_vec())
-                .map_err(|e| KsonConversionError::new(&e.to_string()))?;
+            let str_key = match String::from_utf8(k.to_vec()) {
+                Ok(v) => v,
+                Err(e) => bail!("{}", &e.to_string()),
+            };
             pairs.push((str_key, T::from_kson(v)?));
         }
 
@@ -449,16 +439,16 @@ impl KsonRep for () {
 
     fn into_kson(self) -> Kson { Array(vec![]) }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         let v = ks.into_vec()?;
 
         if v.is_empty() {
             Ok(())
         } else {
-            Err(KsonConversionError::new(&format!(
+            bail!(
                 "Value is not 'nil', but rather a vector of length {}",
                 v.len()
-            )))
+            )
         }
     }
 }
@@ -478,21 +468,22 @@ impl<T: KsonRep> KsonRep for Option<T> {
         }
     }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         match ks {
             Null => Ok(None),
             Array(v) => {
                 let mut iter = v.into_iter();
-                let val = iter
-                    .next()
-                    .ok_or_else(|| KsonConversionError::new("Value is not an `Option`"))?;
+                let val = match iter.next() {
+                    None => bail!("Value is not an `Option`"),
+                    Some(v) => v,
+                };
                 if iter.next().is_none() {
                     Ok(Some(T::from_kson(val)?))
                 } else {
-                    Err(KsonConversionError::new("Value is not an `Option`"))
+                    bail!("Value is not an `Option`")
                 }
             }
-            _ => Err(KsonConversionError::new("Value is not an `Option`")),
+            _ => bail!("Value is not an `Option`"),
         }
     }
 }
@@ -510,15 +501,15 @@ impl KsonRep for Ipv4Addr {
         Bytes::from(octs).into_kson()
     }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         let bs: Bytes = KsonRep::from_kson(ks)?;
         if bs.len() == 4 {
             Ok(Self::new(bs[0], bs[1], bs[2], bs[3]))
         } else {
-            Err(KsonConversionError::new(&format!(
+            bail!(
                 "Value is {} bytes long, an `Ipv4Addr` should be 4 bytes long",
                 bs.len(),
-            )))
+            )
         }
     }
 }
@@ -528,7 +519,7 @@ impl KsonRep for SocketAddrV4 {
 
     fn into_kson(self) -> Kson { (*self.ip(), self.port()).into_kson() }
 
-    fn from_kson(ks: Kson) -> Result<Self, KsonConversionError> {
+    fn from_kson(ks: Kson) -> Result<Self, Error> {
         let (ip, port) = KsonRep::from_kson(ks)?;
         Ok(Self::new(ip, port))
     }
@@ -554,9 +545,9 @@ impl KsonRep for SocketAddrV4 {
 /// // should be 1
 /// assert_eq!(first, 1);
 /// ```
-pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Result<T, KsonConversionError> {
+pub fn pop_kson<T: KsonRep>(iter: &mut IntoIter<Kson>) -> Result<T, Error> {
     match iter.next() {
-        None => Err(KsonConversionError::new("Iterator is empty or exhausted")),
+        None => bail!("Iterator is empty or exhausted"),
         Some(v) => T::from_kson(v),
     }
 }

@@ -207,7 +207,7 @@
 //!         }
 //!     }
 //!
-//!     fn from_kson(ks: Kson) -> Result<SillyEnum, KsonConversionError> {
+//!     fn from_kson(ks: Kson) -> Result<SillyEnum, Error> {
 //!         let ks_iter = &mut ks.into_vec()?.into_iter();
 //!         
 //!         let name: String = pop_kson(ks_iter)?;
@@ -219,7 +219,7 @@
 //!                     Ok(SillyEnum::Foo)
 //!                 } else {
 //!                     // if it *does*, presumably something went wrong
-//!                     Err(KsonConversionError::new("Unit-like variants shouldn't have fields!"))
+//!                     bail!("Unit-like variants shouldn't have fields!")
 //!                 }
 //!             }
 //!             "Bar" => {
@@ -230,7 +230,7 @@
 //!                 if ks_iter.len() == 0 {
 //!                     Ok(SillyEnum::Bar(n, s))
 //!                 } else {
-//!                     Err(KsonConversionError::new("Found too many fields!"))
+//!                     bail!("Found too many fields!")
 //!                 }
 //!             }
 //!             "Baz" => {
@@ -238,22 +238,22 @@
 //!                 
 //!                 // there should be exactly two fields
 //!                 if fields.len() != 2 {
-//!                     return Err(KsonConversionError::new("Found the wrong number of fields!"))
+//!                     bail!("Found the wrong number of fields!")
 //!                 }
 //!                 
 //!                 // and ks_iter should be exhausted
 //!                 if ks_iter.len() > 0 {
-//!                     return Err(KsonConversionError::new("Found too many fields!"))
+//!                     bail!("Found too many fields!")
 //!                 }
 //!
 //!                 // get the fields
-//!                 let x = i32::from_kson(fields.remove(&Bytes::from("x")).ok_or(KsonConversionError::new("Field not found"))?)?;
+//!                 let x = i32::from_kson(fields.remove(&Bytes::from("x")).ok_or(format_err!("Field not found"))?)?;
 //!                 let y =
-//!                 f32::from_kson(fields.remove(&Bytes::from("y")).ok_or(KsonConversionError::new("Field not found"))?)?;
+//!                 f32::from_kson(fields.remove(&Bytes::from("y")).ok_or(format_err!("Field not found"))?)?;
 //!
 //!                 Ok(SillyEnum::Baz { x, y})                 
 //!             }
-//!             _ => Err(KsonConversionError::new("This isn't a variant")) // catch-all
+//!             _ => bail!("This isn't a variant") // catch-all
 //!         }
 //!     }
 //! }
@@ -373,7 +373,6 @@
 pub extern crate kson_macro;
 
 pub mod encoding;
-pub mod errors;
 pub mod float;
 pub mod inum;
 pub mod prelude;
@@ -385,7 +384,8 @@ pub mod vecmap;
 #[cfg(feature = "python")] pub mod python;
 
 use bytes::{buf::FromBuf, Bytes, IntoBuf};
-use errors::KsonConversionError;
+// use errors::Error;
+use failure::*;
 use float::*;
 use half::f16;
 use hashbrown::HashMap;
@@ -499,7 +499,7 @@ use Kson::*;
 
 impl Kson {
     /// Converts a [`Kson`] value to a vector of [`Kson`].
-    /// This will return a [`KsonConversionError`] if the value is not a [`Kson::Array`].
+    /// This will return a [`Error`] if the value is not a [`Kson::Array`].
     ///
     /// # Example
     ///
@@ -515,15 +515,15 @@ impl Kson {
     /// // get a vec of `Kson` values
     /// let k_numbers = ks.to_vec().unwrap();
     /// ```
-    pub fn to_vec(&self) -> Result<&Vec<Kson>, KsonConversionError> {
+    pub fn to_vec(&self) -> Result<&Vec<Kson>, Error> {
         match self {
             Array(a) => Ok(a),
-            _ => Err(KsonConversionError::new("This value is not an `Array`")),
+            _ => bail!("This value is not an `Array`"),
         }
     }
 
     /// Consumes a [`Kson`] value, converting it into a vector of [`Kson`] values.
-    /// This will return a [`KsonConversionError`] if the value is not a [`Kson::Array`].
+    /// This will return a [`Error`] if the value is not a [`Kson::Array`].
     ///
     /// # Example
     ///
@@ -539,13 +539,15 @@ impl Kson {
     /// // get a vec of `Kson` values
     /// let k_numbers = ks.into_vec().unwrap();
     /// ```
-    pub fn into_vec(self) -> Result<Vec<Kson>, KsonConversionError> {
-        self.try_into()
-            .map_err(|_| KsonConversionError::new("This value is not an `Array`"))
+    pub fn into_vec(self) -> Result<Vec<Kson>, Error> {
+        match self.try_into() {
+            Ok(v) => Ok(v),
+            Err(e) => bail!("This value is not an `Array`"),
+        }
     }
 
     /// Converts a [`Kson`] value to a [`VecMap`].
-    /// This will return a [`KsonConversionError`] if the value is a not a [`Kson`] map.
+    /// This will return a [`Error`] if the value is a not a [`Kson`] map.
     ///
     /// # Example
     ///
@@ -563,15 +565,15 @@ impl Kson {
     /// // convert `Kson` to `VecMap`
     /// let vmap = k_map.to_vecmap();
     /// ```
-    pub fn to_vecmap(&self) -> Result<&VecMap<Bytes, Kson>, KsonConversionError> {
+    pub fn to_vecmap(&self) -> Result<&VecMap<Bytes, Kson>, Error> {
         match self {
             Map(vmap) => Ok(vmap),
-            _ => Err(KsonConversionError::new("This value is not a `Map`")),
+            _ => bail!("This value is not a `Map`"),
         }
     }
 
     /// Consumes a [`Kson`] value, converting it into a [`HashMap`].
-    /// This will return a [`KsonConversionError`] if the value is a not a `Kson` map.
+    /// This will return a [`Error`] if the value is a not a `Kson` map.
     ///
     /// # Example
     ///
@@ -589,13 +591,15 @@ impl Kson {
     /// // convert `Kson` into `VecMap`.
     /// let vmap = k_map.into_vecmap();
     /// ```
-    pub fn into_vecmap(self) -> Result<VecMap<Bytes, Kson>, KsonConversionError> {
-        self.try_into()
-            .map_err(|_| errors::KsonConversionError::new("This value is not a `Map`"))
+    pub fn into_vecmap(self) -> Result<VecMap<Bytes, Kson>, Error> {
+        match self.try_into() {
+            Ok(v) => Ok(v),
+            Err(e) => bail!("This value is not a `Map`"),
+        }
     }
 
     /// Consumes a [`Kson`] value, converting it into a [`HashMap`].
-    /// This will return a [`KsonConversionError`] if the value is a not a [`Kson::Map`].
+    /// This will return a [`Error`] if the value is a not a [`Kson::Map`].
     ///
     /// # Example
     ///
@@ -613,7 +617,7 @@ impl Kson {
     /// // convert `Kson` into `HashMap`
     /// let vmap = k_map.into_map();
     /// ```
-    pub fn into_map(self) -> Result<HashMap<Bytes, Kson>, errors::KsonConversionError> {
+    pub fn into_map(self) -> Result<HashMap<Bytes, Kson>, Error> {
         Ok(self.into_vecmap()?.into_hashmap())
     }
 
@@ -633,7 +637,7 @@ impl Kson {
     /// // should be equal
     /// assert_eq!(num, 1);
     /// ```
-    pub fn into_rep<T: KsonRep>(self) -> Result<T, KsonConversionError> { T::from_kson(self) }
+    pub fn into_rep<T: KsonRep>(self) -> Result<T, Error> { T::from_kson(self) }
 
     /// Converts a bytestring literal to [`Kson`].
     ///
@@ -672,7 +676,7 @@ impl Kson {
     }
 
     /// Tries to convert a value to an [`Inum`].
-    /// This will return a [`KsonConversionError`] if the value is not an [`Inum`].
+    /// This will return a [`Error`] if the value is not an [`Inum`].
     ///
     /// # Example
     ///
@@ -685,19 +689,15 @@ impl Kson {
     ///
     /// assert_eq!(n, 1);
     /// ```
-    pub fn to_inum(&self) -> Result<&Inum, KsonConversionError> {
+    pub fn to_inum(&self) -> Result<&Inum, Error> {
         match self {
             Kint(i) => Ok(i),
-            _ => {
-                Err(KsonConversionError::new(
-                    "Value is not `Kint`, cannot convert to `Inum`",
-                ))
-            }
+            _ => bail!("Value is not `Kint`, cannot convert to `Inum`"),
         }
     }
 
     /// Consumes the value, converting it to an [`Inum`].
-    /// This will return a [`KsonConversionError`] if the value is not an [`Inum`].
+    /// This will return a [`Error`] if the value is not an [`Inum`].
     ///
     /// ```
     /// use kson::prelude::*;
@@ -708,19 +708,15 @@ impl Kson {
     ///
     /// assert_eq!(n, 1);
     /// ```
-    pub fn into_inum(self) -> Result<Inum, KsonConversionError> {
+    pub fn into_inum(self) -> Result<Inum, Error> {
         match self {
             Kint(i) => Ok(i),
-            _ => {
-                Err(KsonConversionError::new(
-                    "Value is not `Kint`, cannot convert to `Inum`",
-                ))
-            }
+            _ => bail!("Value is not `Kint`, cannot convert to `Inum`"),
         }
     }
 
     /// Tries to convert a value to a [`bool`].
-    /// This will return a [`KsonConversionError`] if the value is not a [`Kson::Bool`].
+    /// This will return a [`Error`] if the value is not a [`Kson::Bool`].
     ///
     /// # Example
     ///
@@ -732,15 +728,15 @@ impl Kson {
     /// // should be `true`
     /// assert!(b.to_bool().unwrap());
     /// ```
-    pub fn to_bool(&self) -> Result<bool, KsonConversionError> {
+    pub fn to_bool(&self) -> Result<bool, Error> {
         match self {
             Bool(b) => Ok(*b),
-            _ => Err(KsonConversionError::new("Value is not `Bool`")),
+            _ => bail!("Value is not `Bool`"),
         }
     }
 
     /// Tries to convert a value to `Bytes`.
-    /// This will return a [`KsonConversionError`] if the value is not a `Kson`
+    /// This will return a [`Error`] if the value is not a `Kson`
     /// bytestring.
     ///
     /// # Example
@@ -752,10 +748,10 @@ impl Kson {
     ///
     /// let foo_bytes = foo.to_bytes().unwrap();
     /// ```
-    pub fn to_bytes(&self) -> Result<&Bytes, KsonConversionError> {
+    pub fn to_bytes(&self) -> Result<&Bytes, Error> {
         match self {
             Byt(s) => Ok(s),
-            _ => Err(KsonConversionError::new("Value is not a bytestring")),
+            _ => bail!("Value is not a bytestring"),
         }
     }
 }

@@ -5,7 +5,6 @@ pub use crate::{
         de, decode, decode_full, encode, encode_full,
         ser::{self, SerializerBytes},
     },
-    errors::*,
     float::Float,
     inum::Inum,
     kson_macro::*,
@@ -13,6 +12,7 @@ pub use crate::{
     Kson,
 };
 pub use bytes::{buf::FromBuf, Bytes, IntoBuf};
+pub use failure::*;
 pub use half::f16;
 pub use num_bigint::BigInt;
 pub use num_traits::Num;
