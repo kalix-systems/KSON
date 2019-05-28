@@ -352,7 +352,7 @@
 //! | Type | Half (00), Single (01), Double (10) | Currently Unused |
 
 #![warn(
-    missing_docs,
+//    missing_docs,
     deprecated_in_future,
     unsafe_code,
     unused_labels,
@@ -384,7 +384,6 @@ pub mod vecmap;
 #[cfg(feature = "python")] pub mod python;
 
 use bytes::{buf::FromBuf, Bytes, IntoBuf};
-// use errors::Error;
 use failure::*;
 use float::*;
 use half::f16;
@@ -542,7 +541,7 @@ impl Kson {
     pub fn into_vec(self) -> Result<Vec<Kson>, Error> {
         match self.try_into() {
             Ok(v) => Ok(v),
-            Err(e) => bail!("This value is not an `Array`"),
+            Err(_e) => bail!("This value is not an `Array`"),
         }
     }
 
@@ -594,7 +593,7 @@ impl Kson {
     pub fn into_vecmap(self) -> Result<VecMap<Bytes, Kson>, Error> {
         match self.try_into() {
             Ok(v) => Ok(v),
-            Err(e) => bail!("This value is not a `Map`"),
+            Err(_e) => bail!("This value is not a `Map`"),
         }
     }
 
