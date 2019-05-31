@@ -1,4 +1,5 @@
 use super::*;
+use bytes::buf::FromBuf;
 use half::f16;
 use num_bigint::{BigInt, Sign};
 use smallvec::SmallVec;
@@ -556,23 +557,49 @@ pub trait Ser {
     fn ser<S: Serializer>(self, s: &mut S);
 }
 
+// Kson
 impl Ser for &Kson {
     fn ser<S: Serializer>(self, s: &mut S) { ser_kson(s, self) }
 }
-
 impl Ser for Kson {
     fn ser<S: Serializer>(self, s: &mut S) { s.put_kson(self) }
 }
 
+// Bytes
 impl Ser for &Bytes {
     fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(self) }
 }
-
 impl Ser for Bytes {
     fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(&self) }
 }
 
-macro_rules! easy_ser {
+// BigInt
+impl Ser for &BigInt {
+    fn ser<S: Serializer>(self, s: &mut S) { s.put_bigint(self) }
+}
+impl Ser for BigInt {
+    fn ser<S: Serializer>(self, s: &mut S) { s.put_bigint(&self) }
+}
+
+// Inum
+impl Ser for Inum {
+    fn ser<S: Serializer>(self, s: &mut S) {
+        match self {
+            I64(i) => s.put_i64(i),
+            Int(i) => s.put_bigint(&i),
+        }
+    }
+}
+impl Ser for &Inum {
+    fn ser<S: Serializer>(self, s: &mut S) {
+        match self {
+            I64(i) => s.put_i64(*i),
+            Int(i) => s.put_bigint(i),
+        }
+    }
+}
+
+macro_rules! easy_ser_copy {
     ($typ:ty, $put:tt) => {
         impl Ser for $typ {
             #[inline(always)]
@@ -581,7 +608,16 @@ macro_rules! easy_ser {
     };
 }
 
-macro_rules! trivial_ser {
+macro_rules! inum_ser_copy {
+    ($typ:ty) => {
+        impl Ser for $typ {
+            #[inline(always)]
+            fn ser<S: Serializer>(self, s: &mut S) { Inum::ser(self.into(), s) }
+        }
+    };
+}
+
+macro_rules! trivial_ser_copy {
     ($typ:ty, $put:tt) => {
         impl Ser for $typ {
             fn ser<S: Serializer>(self, s: &mut S) { s.$put(self) }
@@ -591,32 +627,60 @@ macro_rules! trivial_ser {
 
 // TODO many of these are less efficient than they should be
 
-// BigInt
-trivial_ser!(&BigInt, put_bigint);
+// sizes
+impl Ser for isize {
+    fn ser<S: Serializer>(self, s: &mut S) { i64::ser(self as i64, s) }
+}
 
-// unsigned
-trivial_ser!(u8, put_u8);
-easy_ser!(u16, put_i64);
-easy_ser!(u32, put_i64);
+impl Ser for usize {
+    fn ser<S: Serializer>(self, s: &mut S) { u64::ser(self as u64, s) }
+}
 
-// signed
-easy_ser!(i8, put_i8);
-easy_ser!(i16, put_i16);
-easy_ser!(i32, put_i32);
-trivial_ser!(i64, put_i64);
+// 8-bit ints
+trivial_ser_copy!(u8, put_u8);
+easy_ser_copy!(i8, put_i8);
+
+// 16-bit ints
+easy_ser_copy!(u16, put_i64);
+easy_ser_copy!(i16, put_i16);
+
+// 32-bit ints
+easy_ser_copy!(u32, put_i64);
+easy_ser_copy!(i32, put_i32);
+
+// 64-bit ints
+trivial_ser_copy!(i64, put_i64);
+inum_ser_copy!(u64);
+
+// 128-bit ints
+inum_ser_copy!(i128);
+inum_ser_copy!(u128);
 
 // floats
-trivial_ser!(f16, put_f16);
-trivial_ser!(f32, put_f32);
-trivial_ser!(f64, put_f64);
+trivial_ser_copy!(f16, put_f16);
+trivial_ser_copy!(f32, put_f32);
+trivial_ser_copy!(f64, put_f64);
 
-// Misc
+// boolean
+trivial_ser_copy!(bool, put_bool);
+
 impl Ser for () {
     fn ser<S: Serializer>(self, s: &mut S) { s.put_null() }
 }
 
-// boolean
-trivial_ser!(bool, put_bool);
+// Strings
+impl Ser for String {
+    fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(&Bytes::from_buf(self)) }
+}
+
+impl Ser for &str {
+    fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(&Bytes::from_buf(self)) }
+}
+
+// chars
+impl Ser for char {
+    fn ser<S: Serializer>(self, s: &mut S) { String::ser(self.to_string(), s) }
+}
 
 impl<T> Ser for &VecMap<Bytes, T>
 where

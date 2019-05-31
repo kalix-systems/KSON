@@ -151,12 +151,6 @@ pub trait Deserializer: DeSeq + DeMap {
 
     /// Read a [`Bytes`].
     fn read_bytes(&mut self) -> Result<Bytes, Error>;
-
-    // /// Read a vector.
-    // fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error>;
-
-    // /// Read a [`VecMap`].
-    // fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error>;
 }
 
 /// Try to read length from buffer.
@@ -461,37 +455,6 @@ impl<D: DeserializerBytes> Deserializer for D {
             _ => bail!("bad tag when reading float"),
         }
     }
-
-    // #[inline(always)]
-    // fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
-    //     match self.read_tag()? {
-    //         KArr(big, len) => {
-    //             let len = read_len(self, big, len)?;
-    //             let mut out = Vec::with_capacity(len);
-    //             for _ in 0..len {
-    //                 out.push(T::de(self)?);
-    //             }
-    //             Ok(out)
-    //         }
-    //         _ => bail!("bad tag when reading array"),
-    //     }
-    // }
-
-    // #[inline(always)]
-    // fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
-    //     match self.read_tag()? {
-    //         KMap(big, len) => {
-    //             let len = read_len(self, big, len)?;
-    //             let mut out = Vec::with_capacity(len);
-    //             for _ in 0..len {
-    //                 out.push((self.read_bytes()?, T::de(self)?));
-    //             }
-    //             // doesn't enforce canonicity - maybe it should?
-    //             Ok(VecMap::from(out))
-    //         }
-    //         _ => bail!("bad tag when reading array"),
-    //     }
-    // }
 }
 
 impl<D: DeserializerBytes> DeSeq for D {
@@ -771,20 +734,28 @@ trivial_de!(Inum, read_inum);
 // BigInt
 trivial_de!(BigInt, read_bigint);
 
-// unsigned
-easy_de!(u8, read_i64);
-easy_de!(u16, read_i64);
-easy_de!(u32, read_i64);
-easy_de!(u64, read_inum);
+// sizes
 easy_de!(usize, read_inum);
-easy_de!(u128, read_inum);
-
-// signed
-easy_de!(i8, read_i64);
-easy_de!(i16, read_i64);
-easy_de!(i32, read_i64);
-trivial_de!(i64, read_i64);
 easy_de!(isize, read_i64);
+
+// 8-bit ints
+easy_de!(u8, read_i64);
+easy_de!(i8, read_i64);
+
+// 16-bit ints
+easy_de!(u16, read_i64);
+easy_de!(i16, read_i64);
+
+// 32-bit ints
+easy_de!(u32, read_i64);
+easy_de!(i32, read_i64);
+
+// 64-bit ints
+easy_de!(u64, read_inum);
+trivial_de!(i64, read_i64);
+
+// 128-bit ints
+easy_de!(u128, read_inum);
 easy_de!(i128, read_inum);
 
 // Floats
