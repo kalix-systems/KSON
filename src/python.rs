@@ -1,6 +1,5 @@
 #![allow(non_snake_case)]
 use crate::{
-    prelude::*,
     vecmap::*,
     Float::{self, *},
     Inum::{self, *},
