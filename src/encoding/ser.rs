@@ -1,9 +1,13 @@
 use super::*;
 use bytes::buf::{FromBuf, IntoBuf};
 use half::f16;
+use hashbrown::HashMap;
 use num_bigint::{BigInt, Sign};
 use smallvec::SmallVec;
-use std::net::{Ipv4Addr, SocketAddrV4};
+use std::{
+    hash::{BuildHasher, Hash},
+    net::{Ipv4Addr, SocketAddrV4},
+};
 
 /// Byte-oriented serializer.
 pub trait SerializerBytes {
@@ -707,11 +711,41 @@ impl Ser for char {
     fn ser<S: Serializer>(self, s: &mut S) { String::ser(self.to_string(), s) }
 }
 
-impl<K, T> Ser for &VecMap<K, T>
+impl<T: Ser> Ser for Option<T> {
+    fn ser<S: Serializer>(self, s: &mut S) {
+        match self {
+            None => s.put_null(),
+            Some(t) => vec![t].ser(s),
+        }
+    }
+}
+
+impl<'a, T> Ser for &'a Vec<T>
+where
+    &'a T: Ser,
+{
+    fn ser<S: Serializer>(self, s: &mut S) {
+        let mut bs = s.seq_start(self.len());
+        for t in self {
+            s.seq_put(&mut bs, t);
+        }
+    }
+}
+
+impl<T: Ser> Ser for Vec<T> {
+    fn ser<S: Serializer>(self, s: &mut S) {
+        let mut bs = s.seq_start(self.len());
+        for t in self {
+            s.seq_put(&mut bs, t);
+        }
+    }
+}
+
+impl<'a, K, T> Ser for &'a VecMap<K, T>
 where
     K: Ord,
-    for<'a> &'a K: IntoBuf,
-    for<'a> &'a T: Ser,
+    &'a K: IntoBuf,
+    &'a T: Ser,
 {
     fn ser<S: Serializer>(self, s: &mut S) {
         let mut b = s.map_start(self.len());
@@ -730,6 +764,10 @@ impl<K: Ord + IntoBuf, T: Ser> Ser for VecMap<K, T> {
         }
         s.map_finalize(b);
     }
+}
+
+impl<K: Hash + Ord + IntoBuf, T: Ser, S: BuildHasher + Default + Clone> Ser for HashMap<K, T, S> {
+    fn ser<Se: Serializer>(self, s: &mut Se) { VecMap::from(self).ser(s) }
 }
 
 impl Ser for Ipv4Addr {
@@ -770,12 +808,3 @@ tuple_ser!(9, A, B, C, D, E, F, G, H, I);
 tuple_ser!(10, A, B, C, D, E, F, G, H, I, J);
 tuple_ser!(11, A, B, C, D, E, F, G, H, I, J, K);
 tuple_ser!(12, A, B, C, D, E, F, G, H, I, J, K, L);
-
-impl<T: Ser> Ser for Option<T> {
-    fn ser<S: Serializer>(self, s: &mut S) {
-        match self {
-            None => s.put_null(),
-            Some(t) => vec![t].ser(s),
-        }
-    }
-}
