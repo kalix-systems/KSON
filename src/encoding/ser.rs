@@ -35,7 +35,7 @@ pub trait SerializerBytes {
     /// let buf = &mut Vec::new();
     ///
     /// // add byte to output
-    /// buf.put_buf(&[1, 2, 3, 4]);
+    /// buf.put_buf([1, 2, 3, 4].into_buf());
     /// ```
     fn put_buf<B: Buf>(&mut self, buf: B) {
         for b in buf.iter() {
