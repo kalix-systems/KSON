@@ -1,8 +1,9 @@
 use super::*;
-use bytes::buf::FromBuf;
+use bytes::buf::{FromBuf, IntoBuf};
 use half::f16;
 use num_bigint::{BigInt, Sign};
 use smallvec::SmallVec;
+use std::net::{Ipv4Addr, SocketAddrV4};
 
 /// Byte-oriented serializer.
 pub trait SerializerBytes {
@@ -30,9 +31,13 @@ pub trait SerializerBytes {
     /// let buf = &mut Vec::new();
     ///
     /// // add byte to output
-    /// buf.put_slice(&[1, 2, 3, 4]);
+    /// buf.put_buf(&[1, 2, 3, 4]);
     /// ```
-    fn put_slice(&mut self, slice: &[u8]);
+    fn put_buf<B: Buf>(&mut self, buf: B) {
+        for b in buf.iter() {
+            self.put_byte(b)
+        }
+    }
 }
 
 /// A serializer that works from sequences of values.
@@ -84,7 +89,7 @@ pub trait SerMap {
     /// # Arguments
     ///
     /// * `s: &mut Self::State` - The current state of the serializer.
-    fn map_put<T: Ser>(&mut self, s: &mut Self::State, key: &Bytes, t: T);
+    fn map_put<K: Ord + IntoBuf, T: Ser>(&mut self, s: &mut Self::State, key: K, t: T);
 
     /// Finalize the map serializer.
     ///
@@ -145,7 +150,7 @@ pub trait Serializer: SerSeq + SerMap + Sized {
     /// # Arguments
     ///
     /// * `b: &Bytes` - The value to be added.
-    fn put_bytes(&mut self, b: &Bytes);
+    fn put_bytes<B: IntoBuf>(&mut self, b: B);
 
     /// Add an [`f16] to the output value.
     ///
@@ -233,13 +238,27 @@ use LenOrDigs::*;
 impl SerializerBytes for Vec<u8> {
     fn put_byte(&mut self, u: u8) { self.push(u) }
 
-    fn put_slice(&mut self, slice: &[u8]) { self.extend_from_slice(slice) }
+    fn put_buf<B: Buf>(&mut self, mut buf: B) {
+        while buf.remaining() > 0 {
+            let slice = buf.bytes();
+            self.extend_from_slice(slice);
+            let len = slice.len();
+            buf.advance(len);
+        }
+    }
 }
 
 impl SerializerBytes for Bytes {
     fn put_byte(&mut self, u: u8) { self.extend_from_slice(&[u]) }
 
-    fn put_slice(&mut self, slice: &[u8]) { self.extend_from_slice(slice) }
+    fn put_buf<B: Buf>(&mut self, mut buf: B) {
+        while buf.remaining() > 0 {
+            let slice = buf.bytes();
+            self.extend_from_slice(slice);
+            let len = slice.len();
+            buf.advance(len);
+        }
+    }
 }
 
 macro_rules! len_or_digs {
@@ -278,7 +297,7 @@ macro_rules! tag_and_len {
         let len_digs;
         len_or_tag!(tag, len_digs, $len_or_digs);
         $out.put_byte(tag);
-        $out.put_slice(&len_digs);
+        $out.put_buf(len_digs.into_buf());
     };
 }
 
@@ -297,7 +316,7 @@ impl<S: SerializerBytes> SerSeq for S {
             let len_len = len_digs.len() as u8 - 1;
             let tag = TYPE_ARR | BIG_BIT | len_len;
             self.put_byte(tag);
-            self.put_slice(&len_digs);
+            self.put_buf(len_digs.into_buf());
         }
     }
 
@@ -321,12 +340,12 @@ impl<S: SerializerBytes> SerMap for S {
             let len_len = len_digs.len() as u8 - 1;
             let tag = TYPE_MAP | BIG_BIT | len_len;
             self.put_byte(tag);
-            self.put_slice(&len_digs);
+            self.put_buf(len_digs.into_buf());
         }
     }
 
     #[inline(always)]
-    fn map_put<T: Ser>(&mut self, _: &mut (), key: &Bytes, t: T) {
+    fn map_put<K: Ord + IntoBuf, T: Ser>(&mut self, _: &mut Self::State, key: K, t: T) {
         self.put_bytes(key);
         t.ser(self);
     }
@@ -349,7 +368,7 @@ impl<S: SerializerBytes> Serializer for S {
         debug_assert!(digs.len() <= 8);
 
         self.put_byte(compute_int_tag(false, pos, digs.len() as u8));
-        self.put_slice(&digs);
+        self.put_buf(digs.into_buf());
     }
 
     fn put_i32(&mut self, mut i: i32) {
@@ -364,7 +383,7 @@ impl<S: SerializerBytes> Serializer for S {
         debug_assert!(digs.len() <= 4);
 
         self.put_byte(compute_int_tag(false, pos, digs.len() as u8));
-        self.put_slice(&digs);
+        self.put_buf(digs.into_buf());
     }
 
     fn put_i16(&mut self, mut i: i16) {
@@ -379,7 +398,7 @@ impl<S: SerializerBytes> Serializer for S {
         debug_assert!(digs.len() <= 2);
 
         self.put_byte(compute_int_tag(false, pos, digs.len() as u8));
-        self.put_slice(&digs);
+        self.put_buf(digs.into_buf());
     }
 
     fn put_i8(&mut self, mut i: i8) {
@@ -412,8 +431,8 @@ impl<S: SerializerBytes> Serializer for S {
                 let len_digs = u16_to_digits(len as u16);
                 let tag = compute_int_tag(true, pos, len_digs.len() as u8);
                 self.put_byte(tag);
-                self.put_slice(&len_digs);
-                self.put_slice(&digs);
+                self.put_buf(len_digs.into_buf());
+                self.put_buf(digs.into_buf());
             } else {
                 u64_digs(pos, len as u64, digs, self)
             }
@@ -422,23 +441,24 @@ impl<S: SerializerBytes> Serializer for S {
 
     fn put_f16(&mut self, f: f16) {
         self.put_byte(HALF);
-        self.put_slice(&u16::to_le_bytes(f.to_bits()));
+        self.put_buf(u16::to_le_bytes(f.to_bits()).into_buf());
     }
 
     fn put_f32(&mut self, f: f32) {
         self.put_byte(SINGLE);
-        self.put_slice(&u32::to_le_bytes(f.to_bits()));
+        self.put_buf(u32::to_le_bytes(f.to_bits()).into_buf());
     }
 
     fn put_f64(&mut self, f: f64) {
         self.put_byte(DOUBLE);
-        self.put_slice(&u64::to_le_bytes(f.to_bits()));
+        self.put_buf(u64::to_le_bytes(f.to_bits()).into_buf());
     }
 
-    fn put_bytes(&mut self, b: &Bytes) {
-        let len_or_digs = len_or_digs!(b.len());
+    fn put_bytes<B: IntoBuf>(&mut self, b: B) {
+        let buf = b.into_buf();
+        let len_or_digs = len_or_digs!(buf.remaining());
         tag_and_len!(TYPE_BYT, len_or_digs, self);
-        self.put_slice(b);
+        self.put_buf(buf);
     }
 
     fn put_bool(&mut self, b: bool) {
@@ -480,12 +500,14 @@ impl SerMap for KContainer {
         Vec::with_capacity(len)
     }
 
-    fn map_put<T: Ser>(&mut self, v: &mut Vec<(Bytes, Kson)>, key: &Bytes, t: T) {
+    #[inline(always)]
+    fn map_put<K: Ord + IntoBuf, T: Ser>(&mut self, s: &mut Self::State, key: K, t: T) {
         debug_assert!(self.is_none());
-        v.push((key.clone(), into_kson(t)));
+        s.push((Bytes::from_buf(key), into_kson(t)));
     }
 
-    fn map_finalize(&mut self, m: Vec<(Bytes, Kson)>) { self.place(Kson::from(VecMap::from(m))) }
+    #[inline(always)]
+    fn map_finalize(&mut self, m: Self::State) { self.place(Kson::from(VecMap::from(m))) }
 }
 
 pub fn into_kson<T: Ser>(t: T) -> Kson {
@@ -509,7 +531,9 @@ impl Serializer for KContainer {
 
     fn put_f64(&mut self, f: f64) { self.place(Kson::from(f)); }
 
-    fn put_bytes(&mut self, b: &Bytes) { self.place(Kson::from(b.clone())); }
+    fn put_bytes<B: IntoBuf>(&mut self, b: B) {
+        self.place(Kson::from(Bytes::from_buf(b.into_buf())));
+    }
 
     fn put_kson(&mut self, k: Kson) { self.place(k) }
 }
@@ -535,7 +559,7 @@ fn decr_digs(digs: &mut Vec<u8>) {
 #[inline]
 fn push_digs<S: SerializerBytes>(pos: bool, digs: &[u8], out: &mut S) {
     out.put_byte(compute_int_tag(false, pos, digs.len() as u8));
-    out.put_slice(digs);
+    out.put_buf(digs.into_buf());
 }
 
 #[cold]
@@ -543,8 +567,8 @@ fn push_digs<S: SerializerBytes>(pos: bool, digs: &[u8], out: &mut S) {
 fn u64_digs<S: SerializerBytes>(pos: bool, u: u64, digs: Vec<u8>, out: &mut S) {
     let len_digs = u64_to_digits(u);
     out.put_byte(compute_int_tag(true, pos, len_digs.len() as u8));
-    out.put_slice(&len_digs);
-    out.put_slice(&digs);
+    out.put_buf(len_digs.into_buf());
+    out.put_buf(digs.into_buf());
 }
 
 /// An value that can be serialized.
@@ -569,6 +593,7 @@ impl Ser for Kson {
 impl Ser for &Bytes {
     fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(self) }
 }
+
 impl Ser for Bytes {
     fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(&self) }
 }
@@ -682,8 +707,10 @@ impl Ser for char {
     fn ser<S: Serializer>(self, s: &mut S) { String::ser(self.to_string(), s) }
 }
 
-impl<T> Ser for &VecMap<Bytes, T>
+impl<K, T> Ser for &VecMap<K, T>
 where
+    K: Ord,
+    for<'a> &'a K: IntoBuf,
     for<'a> &'a T: Ser,
 {
     fn ser<S: Serializer>(self, s: &mut S) {
@@ -695,12 +722,60 @@ where
     }
 }
 
-impl<T: Ser> Ser for VecMap<Bytes, T> {
+impl<K: Ord + IntoBuf, T: Ser> Ser for VecMap<K, T> {
     fn ser<S: Serializer>(self, s: &mut S) {
         let mut b = s.map_start(self.len());
         for (k, v) in self.into_iter() {
-            s.map_put(&mut b, &k, v);
+            s.map_put(&mut b, k, v);
         }
         s.map_finalize(b);
+    }
+}
+
+impl Ser for Ipv4Addr {
+    fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(Bytes::from(self.octets().to_vec())) }
+}
+
+impl Ser for &Ipv4Addr {
+    fn ser<S: Serializer>(self, s: &mut S) { s.put_bytes(Bytes::from(self.octets().to_vec())) }
+}
+
+impl Ser for SocketAddrV4 {
+    fn ser<S: Serializer>(self, s: &mut S) { (self.ip(), self.port()).ser(s) }
+}
+
+macro_rules! tuple_ser {
+    ($len:expr, $($typ:ident),*) => {
+        impl<$($typ: Ser),*> Ser for ($($typ,)*) {
+            #[allow(non_snake_case)]
+            #[inline(always)]
+            fn ser<Se: Serializer>(self, s: &mut Se) {
+                let mut bs = s.seq_start($len);
+                let ($($typ,)*) = self;
+                $(s.seq_put(&mut bs, $typ);)*
+            }
+        }
+    };
+}
+
+tuple_ser!(1, A);
+tuple_ser!(2, A, B);
+tuple_ser!(3, A, B, C);
+tuple_ser!(4, A, B, C, D);
+tuple_ser!(5, A, B, C, D, E);
+tuple_ser!(6, A, B, C, D, E, F);
+tuple_ser!(7, A, B, C, D, E, F, G);
+tuple_ser!(8, A, B, C, D, E, F, G, H);
+tuple_ser!(9, A, B, C, D, E, F, G, H, I);
+tuple_ser!(10, A, B, C, D, E, F, G, H, I, J);
+tuple_ser!(11, A, B, C, D, E, F, G, H, I, J, K);
+tuple_ser!(12, A, B, C, D, E, F, G, H, I, J, K, L);
+
+impl<T: Ser> Ser for Option<T> {
+    fn ser<S: Serializer>(self, s: &mut S) {
+        match self {
+            None => s.put_null(),
+            Some(t) => vec![t].ser(s),
+        }
     }
 }

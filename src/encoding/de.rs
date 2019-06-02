@@ -869,14 +869,14 @@ impl De for SocketAddrV4 {
 }
 
 macro_rules! tuple_de {
-    ($len:expr, $($idx:tt : $typ:ident),*) => {
+    ($len:expr, $($typ:ident),*) => {
         impl<$($typ: De),*> De for ($($typ,)*) {
             fn de<Des: Deserializer>(d: &mut Des) -> Result<Self, Error> {
                 let exp_len = $len;
                 let (mut iter, len) = d.read()?;
 
                 if len == exp_len {
-                    let tuple = ($(d.take::<$typ>(&mut iter).unwrap(),)*);
+                    let tuple = ($(d.take::<$typ>(&mut iter)?,)*);
                     Ok(tuple)
 
                 } else {
@@ -890,12 +890,15 @@ macro_rules! tuple_de {
     }
 }
 
-tuple_de!(1, 0: A);
-tuple_de!(2, 0: A, 1: B);
-tuple_de!(3, 0: A, 1: B, 2: C);
-tuple_de!(4, 0: A, 1: B, 2: C, 3: D);
-tuple_de!(5, 0: A, 1: B, 2: C, 3: D, 4: E);
-tuple_de!(6, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F);
-tuple_de!(7, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G);
-tuple_de!(8, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H);
-tuple_de!(9, 0: A, 1: B, 2: C, 3: D, 4: E, 5: F, 6: G, 7: H, 8: I);
+tuple_de!(1, A);
+tuple_de!(2, A, B);
+tuple_de!(3, A, B, C);
+tuple_de!(4, A, B, C, D);
+tuple_de!(5, A, B, C, D, E);
+tuple_de!(6, A, B, C, D, E, F);
+tuple_de!(7, A, B, C, D, E, F, G);
+tuple_de!(8, A, B, C, D, E, F, G, H);
+tuple_de!(9, A, B, C, D, E, F, G, H, I);
+tuple_de!(10, A, B, C, D, E, F, G, H, I, J);
+tuple_de!(11, A, B, C, D, E, F, G, H, I, J, K);
+tuple_de!(12, A, B, C, D, E, F, G, H, I, J, K, L);
