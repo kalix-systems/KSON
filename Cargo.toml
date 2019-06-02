@@ -49,3 +49,8 @@ harness=false
 [[bench]]
 name="comparisons"
 harness=false
+
+[profile.release]
+debug = true
+
+

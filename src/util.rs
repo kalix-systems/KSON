@@ -41,7 +41,9 @@ pub(crate) fn u16_to_digits(num: u16) -> SmallVec<[u8; 2]> {
 
 #[cold]
 fn coldvec8() -> SmallVec<[u8; 8]> { smallvec![0] }
+#[cold]
 fn coldvec4() -> SmallVec<[u8; 4]> { smallvec![0] }
+#[cold]
 fn coldvec2() -> SmallVec<[u8; 2]> { smallvec![0] }
 
 #[macro_export]
