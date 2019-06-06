@@ -30,6 +30,9 @@ criterion = "0.2"
 filebuffer = "0.4"
 common_utils = {path = "../common_utils"}
 
+[profile.dev]
+lto = false
+
 [[bench]]
 name="encoder"
 harness=false
