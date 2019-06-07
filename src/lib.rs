@@ -756,13 +756,24 @@ impl Kson {
 }
 
 fn fmt_bytes(bytes: &Bytes) -> String {
-    let mut bytes_string: String = "\"".to_owned();
-    bytes
-        .iter()
-        .for_each(|c| bytes_string.push_str(&format!("{:x}", c)));
-    bytes_string.push_str("\"");
+    match String::from_utf8(Vec::from_buf(bytes.into_buf())) {
+        Ok(s) => {
+            let mut string: String = "\"".to_owned();
+            string.push_str(&s);
+            string.push_str("\"");
 
-    bytes_string
+            string
+        }
+        Err(_) => {
+            let mut bytes_string: String = "b\"".to_owned();
+            bytes
+                .iter()
+                .for_each(|c| bytes_string.push_str(&format!("{:x}", c)));
+            bytes_string.push_str("\"");
+
+            bytes_string
+        }
+    }
 }
 
 // TODO make the display nicer for recursive structures
