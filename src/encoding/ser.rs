@@ -576,7 +576,7 @@ fn u64_digs<S: SerializerBytes>(pos: bool, u: u64, digs: Vec<u8>, out: &mut S) {
 }
 
 /// An value that can be serialized.
-pub trait Ser {
+pub trait Ser: Clone {
     /// Serializes the value, consuming it.
     ///
     /// # Arguments
@@ -756,7 +756,7 @@ where
     }
 }
 
-impl<K: Ord + IntoBuf, T: Ser> Ser for VecMap<K, T> {
+impl<K: Ord + IntoBuf + Clone, T: Ser> Ser for VecMap<K, T> {
     fn ser<S: Serializer>(self, s: &mut S) {
         let mut b = s.map_start(self.len());
         for (k, v) in self.into_iter() {
@@ -766,7 +766,9 @@ impl<K: Ord + IntoBuf, T: Ser> Ser for VecMap<K, T> {
     }
 }
 
-impl<K: Hash + Ord + IntoBuf, T: Ser, S: BuildHasher + Default + Clone> Ser for HashMap<K, T, S> {
+impl<K: Hash + Ord + IntoBuf + Clone, T: Ser, S: BuildHasher + Default + Clone> Ser
+    for HashMap<K, T, S>
+{
     fn ser<Se: Serializer>(self, s: &mut Se) { VecMap::from(self).ser(s) }
 }
 
