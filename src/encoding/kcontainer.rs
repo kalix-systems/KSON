@@ -1,4 +1,4 @@
-use crate::Kson;
+use crate::{womp, Kson};
 
 pub(crate) struct KContainer {
     pub(crate) internal: Option<Kson>,
@@ -14,7 +14,8 @@ impl KContainer {
 
     pub(crate) fn new_place(k: Kson) -> KContainer { KContainer { internal: Some(k) } }
 
-    pub(crate) fn take(&mut self) -> Kson { self.internal.take().unwrap() }
+    // TODO can this return a result?
+    pub(crate) fn take(&mut self) -> Kson { self.internal.take().expect(womp!()) }
 
     pub(crate) fn is_none(&self) -> bool { self.internal.is_none() }
 }

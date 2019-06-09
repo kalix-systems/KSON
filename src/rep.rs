@@ -588,7 +588,7 @@ mod tests {
 
     #[test]
     // Test `KsonRep` autoderive for named-tuple struct
-    fn tuple() {
+    fn tuple_struct() {
         #[derive(KsonRep, Clone, Debug)]
         struct Foo(u8, String);
 

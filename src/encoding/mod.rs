@@ -65,7 +65,7 @@ pub(crate) use kcontainer::*;
 /// # Arguments
 ///
 /// * `ks: &Kson` - A reference to the [`Kson`] value to be encoded.
-/// * `out: &mut Vec<u8>` - A mutable reference to [`Bytes`] where the encoder output will
+/// * `out: &mut Vec<u8>` - A buffer where the encoder output will
 ///   be stored.
 ///
 /// # Example

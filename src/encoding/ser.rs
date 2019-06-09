@@ -788,9 +788,10 @@ macro_rules! tuple_ser {
             #[allow(non_snake_case)]
             #[inline(always)]
             fn ser<Se: Serializer>(self, s: &mut Se) {
-                let mut bs = s.seq_start($len);
+                let mut state = s.seq_start($len);
                 let ($($typ,)*) = self;
-                $(s.seq_put(&mut bs, $typ);)*
+                $(s.seq_put(&mut state, $typ);)*
+                s.seq_finalize(state);
             }
         }
     };
@@ -808,3 +809,68 @@ tuple_ser!(9, A, B, C, D, E, F, G, H, I);
 tuple_ser!(10, A, B, C, D, E, F, G, H, I, J);
 tuple_ser!(11, A, B, C, D, E, F, G, H, I, J, K);
 tuple_ser!(12, A, B, C, D, E, F, G, H, I, J, K, L);
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::prelude::*;
+    // extern crate kson_derive;
+    use kson_derive::*;
+
+    #[test]
+    // Test `KsonRep` auto-derive for unit-like struct
+    fn unit_struct() {
+        #[derive(KSerDe, KsonRep, Clone)]
+        struct UnitStruct;
+
+        //// to_kson
+        // match UnitStruct::from_kson(UnitStruct.to_kson()) {
+        //    Ok(UnitStruct) => {}
+        //    Err(_e) => panic!("Couldn't retrieve unit struct"),
+        //}
+
+        // into_kson
+        match UnitStruct::from_kson(into_kson(UnitStruct)) {
+            Ok(UnitStruct) => (),
+            Err(_e) => panic!("Couldn't retrieve unit struct"),
+        }
+    }
+
+    #[test]
+    // Test `KsonRep` autoderive for named-tuple struct
+    fn tuple_struct() {
+        #[derive(KSerDe, KsonRep, Clone, Debug)]
+        struct Foo(u8, String);
+
+        match Foo::from_kson(into_kson(Foo(1, "hello".to_string()))) {
+            Ok(Foo(num, s)) => {
+                assert_eq!(num, 1);
+                assert_eq!(s, "hello".to_string());
+            }
+            _ => panic!("No Foo"),
+        }
+    }
+
+    #[test]
+    // Test `KsonRep` auto-derive for C-style struct
+    fn c_struct() {
+        #[derive(KSerDe, KsonRep, Clone)]
+        struct CStruct {
+            fu: u8,
+        };
+
+        let c_struct = CStruct { fu: 1 };
+
+        // to_kson
+        // match CStruct::from_kson(c_struct.to_kson()) {
+        //    Ok(CStruct { fu }) => assert_eq!(fu, 1),
+        //    Err(_e) => panic!("Couldn't retrieve c-type struct"),
+        //}
+
+        // into_kson
+        match CStruct::from_kson(into_kson(c_struct)) {
+            Ok(CStruct { fu }) => assert_eq!(fu, 1),
+            Err(_e) => panic!("Couldn't retrieve c-type struct"),
+        }
+    }
+}

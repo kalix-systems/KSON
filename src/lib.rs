@@ -393,6 +393,7 @@ use num_bigint::BigInt;
 use rep::KsonRep;
 use std::convert::{TryFrom, TryInto};
 use vecmap::*;
+pub(crate) use womp::womp;
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug)]
 /// [`Kson`] and its variants.

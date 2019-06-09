@@ -17,7 +17,9 @@ num-bigint = "0.2"
 bytes = "0.4"
 failure = "0.1"
 smallvec = {version = "0.6", features = ["union"]}
+womp = {path = "../womp"}
 kson_macro = {path = "../kson_macro"}
+kson_derive = {path = "../kson_derive"}
 
 pyo3 = {version =  "0.7.0-alpha.1", optional = true}
 rlua = {version = "0.16", optional = true}
