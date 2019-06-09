@@ -941,37 +941,37 @@ mod tests {
     }
 
     // Test `KsonRep` auto-derive for enum of C-style structs
-    //#[test]
-    // fn c_style_enum() {
-    //    #[derive(KSerDe, KsonRep, Clone, Debug)]
-    //    enum CStyle {
-    //        Foo { num: u8, string: String },
-    //        Bar,
-    //    }
+    #[test]
+    fn c_style_enum() {
+        #[derive(KSerDe, KsonRep, Clone, Debug)]
+        enum CStyle {
+            Foo { num: u8, string: String },
+            Bar,
+        }
 
-    //    use CStyle::*;
+        use CStyle::*;
 
-    //    let fu = Foo {
-    //        num:    1,
-    //        string: "hello".to_string(),
-    //    };
+        let fu = Foo {
+            num:    1,
+            string: "hello".to_string(),
+        };
 
-    //    // to_kson
-    //    match CStyle::from_kson(fu.to_kson()) {
-    //        Ok(Foo { num, string }) => {
-    //            assert_eq!(num, 1);
-    //            assert_eq!(&string, "hello");
-    //        }
-    //        _ => panic!("Couldn't retrieve tuple variant"),
-    //    }
+        // to_kson
+        match CStyle::from_kson(fu.to_kson()) {
+            Ok(Foo { num, string }) => {
+                assert_eq!(num, 1);
+                assert_eq!(&string, "hello");
+            }
+            _ => panic!("Couldn't retrieve tuple variant"),
+        }
 
-    //    // into_kson
-    //    match CStyle::from_kson(fu.into_kson()) {
-    //        Ok(Foo { num, string }) => {
-    //            assert_eq!(num, 1);
-    //            assert_eq!(&string, "hello");
-    //        }
-    //        _ => panic!("Couldn't retrieve tuple variant"),
-    //    }
-    //}
+        // into_kson
+        // match CStyle::from_kson(fu.into_kson()) {
+        //    Ok(Foo { num, string }) => {
+        //        assert_eq!(num, 1);
+        //        assert_eq!(&string, "hello");
+        //    }
+        //    _ => panic!("Couldn't retrieve tuple variant"),
+        //}
+    }
 }
