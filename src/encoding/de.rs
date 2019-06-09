@@ -1,5 +1,5 @@
 use super::*;
-use crate::float::Float;
+use crate::{float::Float, prelude::*};
 use failure::*;
 use half::f16;
 use hashbrown::HashMap;
@@ -26,6 +26,18 @@ pub enum KTag {
     KMap(bool, u8),
     /// Float tag.
     KFloat(u8),
+}
+
+pub fn check_entry<T: De>(key: Bytes, value: T, field: &str) -> Result<T, Error> {
+    if key == Bytes::from_buf(field) {
+        Ok(value)
+    } else {
+        bail!(
+            "Expected field `{:?}`, found a field named `{:?}`",
+            field,
+            key,
+        )
+    }
 }
 
 // TODO: error-chain based handling
