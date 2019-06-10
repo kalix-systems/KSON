@@ -700,10 +700,10 @@ impl<T: De> De for Vec<T> {
     }
 }
 
-impl<T: De> De for HashMap<Bytes, T> {
+impl<T: De, S: ::std::hash::BuildHasher + Default> De for HashMap<Bytes, T, S> {
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
         let (mut s, len) = d.take_map()?;
-        let mut out = HashMap::with_capacity(len);
+        let mut out = HashMap::with_capacity_and_hasher(len, Default::default());
         for _ in 0..len {
             out.insert(d.take_key(&mut s)?, d.take_val(&mut s)?);
         }
