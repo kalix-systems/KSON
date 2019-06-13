@@ -45,7 +45,7 @@ pub fn kson_ser(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
             let ident_string = name.to_string();
 
             let impl_ser = {
-                let kargs = (0..seq_len - 1)
+                let kargs = (0..fields.len())
                     .map(Literal::usize_unsuffixed)
                     .map(|index| quote! {self.#index});
 
@@ -67,7 +67,6 @@ pub fn kson_ser(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
         Fields::Unit => {
             let ident_string = name.to_string();
 
-            // ser
             let impl_ser = {
                 quote! {
                     #ident_string.ser(s)
