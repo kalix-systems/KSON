@@ -14,7 +14,7 @@
 //! ```
 //! use kson::prelude::*;
 //!
-//! #[derive(Clone, Debug, KsonRep, PartialEq)]
+//! #[derive(Clone, Debug, KSerDe, PartialEq)]
 //! /// A silly enum, we shall make an example of it.
 //! enum SillyEnum {
 //!     Foo,
@@ -24,11 +24,11 @@
 //!
 //! let silly_example = SillyEnum::Bar(1, "hello".to_string());
 //!
-//! // encode
-//! let encoded = &mut encode_full(&silly_example.to_kson()).into_buf();
+//! // encode TODO implement KSerDe for references
+//! let encoded = &mut encode_full(silly_example.clone()).into_buf();
 //!
 //! // and then immediately decode, because this is a silly example
-//! let decoded = SillyEnum::from_kson(decode(encoded).unwrap()).unwrap();
+//! let decoded: SillyEnum = decode(encoded).unwrap();
 //!
 //! assert_eq!(silly_example, decoded);
 //! ```
