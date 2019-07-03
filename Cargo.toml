@@ -17,7 +17,7 @@ num-bigint = "0.2"
 bytes = "0.4"
 failure = "0.1"
 smallvec = {version = "0.6", features = ["union"]}
-womp = {path = "../womp"}
+womp = {git = "https://github.com/kalix-systems/womp.git"}
 kson_macro = {path = "./kson_macro"}
 kson_derive = {path = "./kson_derive"}
 
@@ -30,7 +30,7 @@ serde = "1.0"
 serde_json = "1.0"
 criterion = "0.2"
 filebuffer = "0.4"
-common_utils = {path = "../common_utils"}
+kson_strategy = {git = "https://github.com/kalix-systems/kson_strategy.git"}
 
 [profile.dev]
 lto = false
