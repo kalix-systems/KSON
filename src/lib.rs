@@ -370,9 +370,6 @@
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::expect_fun_call)]
 
-/// Procedural macros for autoderiving [`KsonRep`].
-pub extern crate kson_macro;
-
 pub mod encoding;
 pub mod float;
 pub mod inum;
