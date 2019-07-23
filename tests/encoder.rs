@@ -1,6 +1,6 @@
 use bytes::buf::IntoBuf;
-use common_utils::kson_strategy::*;
-use kson::encoding::*;
+use kson::{encoding::*, prelude::*};
+use kson_strategy::*;
 use proptest::prelude::*;
 
 proptest! {
@@ -10,9 +10,9 @@ proptest! {
     fn encode_decode(k in arb_kson()) {
         println!("trying to encode {}", k);
         let enc = encode_full(&k);
-        //println!("encoded as {:x?}", &enc);
+
         let dec = decode(&mut enc.into_buf()).ok();
-        //println!("decoded as {:?}", dec);
+
         if dec != Some(k.clone()) {
             panic!("assertion failed")
         }

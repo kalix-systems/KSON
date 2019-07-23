@@ -1,5 +1,5 @@
-use common_utils::kson_strategy::*;
 use kson::{encoding::*, *};
+use kson_strategy::*;
 use proptest::prelude::*;
 
 proptest! {

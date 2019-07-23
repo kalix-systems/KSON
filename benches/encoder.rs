@@ -1,7 +1,5 @@
-#[macro_use]
-extern crate criterion;
+#[macro_use] extern crate criterion;
 
-extern crate common_utils;
 extern crate kson;
 
 use bytes::Bytes;

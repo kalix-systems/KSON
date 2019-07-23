@@ -1,0 +1,12 @@
+[package]
+name = "kson_strategy"
+version = "0.1.1"
+authors = ["Baeo Maltinksy <baeo.maltinsky@gmail.com>"]
+edition = "2018"
+
+[dependencies]
+kson = {path = "../"}
+bytes = "0.4"
+proptest = "0.9"
+num-bigint = "0.2"
+num-traits = "0.2"

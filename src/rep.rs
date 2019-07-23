@@ -565,7 +565,7 @@ impl KsonNotNull for () {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::kson_macro::*;
+    use crate::prelude::*;
 
     #[test]
     // Test `KsonRep` auto-derive for unit-like struct
