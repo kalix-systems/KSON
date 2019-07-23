@@ -122,7 +122,7 @@
 //! representation.
 //!
 //! ```
-//! use hashbrown::HashMap;
+//! use std::collections::HashMap;
 //! use kson::prelude::*;
 //!
 //! let mut a_map = HashMap::new();
@@ -141,7 +141,7 @@
 //!
 //! ```
 //! use kson::prelude::*;
-//! use hashbrown::HashMap;
+//! use std::collections::HashMap;
 //!
 //! #[derive(Clone)]
 //! /// This is, again, a silly enum.
@@ -385,11 +385,13 @@ use bytes::{buf::FromBuf, Bytes, IntoBuf};
 use failure::*;
 use float::*;
 use half::f16;
-use hashbrown::HashMap;
 use inum::*;
 use num_bigint::BigInt;
 use rep::KsonRep;
-use std::convert::{TryFrom, TryInto};
+use std::{
+    collections::HashMap,
+    convert::{TryFrom, TryInto},
+};
 use vecmap::*;
 pub(crate) use womp::womp;
 
@@ -550,7 +552,7 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use hashbrown::HashMap;
+    /// use std::collections::HashMap;
     /// use kson::prelude::*;
     ///
     /// // intialize `HashMap` and insert one key-value pair
@@ -576,7 +578,7 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use hashbrown::HashMap;
+    /// use std::collections::HashMap;
     /// use kson::prelude::*;
     ///
     /// // initialize `HashMap` and insert one key-value pair
@@ -602,7 +604,7 @@ impl Kson {
     /// # Example
     ///
     /// ```
-    /// use hashbrown::HashMap;
+    /// use std::collections::HashMap;
     /// use kson::prelude::*;
     ///
     /// // intialize `HashMap` and insert one key-value pair

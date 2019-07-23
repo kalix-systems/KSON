@@ -1,10 +1,10 @@
 use super::*;
 use bytes::buf::{FromBuf, IntoBuf};
 use half::f16;
-use hashbrown::HashMap;
 use num_bigint::{BigInt, Sign};
 use smallvec::SmallVec;
 use std::{
+    collections::HashMap,
     hash::{BuildHasher, Hash},
     net::{Ipv4Addr, SocketAddrV4},
 };

@@ -6,11 +6,7 @@
 //! # Example
 //!
 //! ```
-//! // Note that we use a different hash map than the one in Rust's
-//! // standard library. For those unfamiliar, the implementation in
-//! // `hashbrown` is API compatible with the one in the standard library
-//! // and will replace the standard implementation when 1.36 is released.
-//! use hashbrown::HashMap;
+//! use std::collections::HashMap;
 //! use kson::prelude::*;
 //! use std::collections::BTreeMap;
 //!
@@ -42,8 +38,13 @@
 //! let vec_vm = VecMap::from_sorted(entries);
 //! ```
 
-use hashbrown::HashMap;
-use std::{collections::BTreeMap, hash::*, iter::FromIterator, slice::Iter, vec::IntoIter};
+use std::{
+    collections::{BTreeMap, HashMap},
+    hash::*,
+    iter::FromIterator,
+    slice::Iter,
+    vec::IntoIter,
+};
 
 #[derive(Eq, PartialEq, Ord, PartialOrd, Clone, Hash, Debug, Default)]
 /// A map implemented as a sorted [`Vec`] of pairs.
@@ -149,15 +150,10 @@ impl<K: Ord, V> VecMap<K, V> {
 impl<K: Ord + Hash, V> VecMap<K, V> {
     /// Consumes a [`VecMap`], producing a [`HashMap`] from the entries.
     ///
-    /// Note that we use a different hash map than the one in Rust's
-    /// standard library. For those unfamiliar, the implementation in
-    /// [`hashbrown`] is API compatible with the one in the standard library
-    /// and will replace the standard implementation when 1.36 is released.
-    ///
     /// # Example
     ///
     /// ```
-    /// use hashbrown::HashMap;
+    /// use std::collections::HashMap;
     /// use kson::prelude::*;
     ///
     /// // create `VecMap`

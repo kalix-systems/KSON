@@ -10,7 +10,6 @@ python = ["pyo3"]
 lua = ["rlua"]
 
 [dependencies]
-hashbrown = "0.2"
 half = "1.3"
 num-traits = "0.2"
 num-bigint = "0.2"

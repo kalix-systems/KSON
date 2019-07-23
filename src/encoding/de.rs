@@ -2,9 +2,9 @@ use super::*;
 use crate::{float::Float, prelude::*};
 use failure::*;
 use half::f16;
-use hashbrown::HashMap;
 use num_bigint::{BigInt, Sign};
 use std::{
+    collections::HashMap,
     convert::TryFrom,
     net::{Ipv4Addr, SocketAddrV4},
     vec::IntoIter,

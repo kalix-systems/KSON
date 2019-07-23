@@ -344,7 +344,6 @@ dependencies = [
  "failure 0.1.5 (registry+https://github.com/rust-lang/crates.io-index)",
  "filebuffer 0.4.0 (registry+https://github.com/rust-lang/crates.io-index)",
  "half 1.3.0 (registry+https://github.com/rust-lang/crates.io-index)",
- "hashbrown 0.2.2 (registry+https://github.com/rust-lang/crates.io-index)",
  "kson_derive 0.1.0",
  "kson_macro 0.1.0",
  "kson_strategy 0.1.0 (git+https://github.com/kalix-systems/kson_strategy.git)",

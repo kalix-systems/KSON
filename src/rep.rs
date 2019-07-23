@@ -3,8 +3,8 @@
 use crate::*;
 use bytes::{buf::Buf, Bytes};
 use failure::*;
-use hashbrown::HashMap;
 use std::{
+    collections::HashMap,
     net::{Ipv4Addr, SocketAddrV4},
     vec::IntoIter,
 };
