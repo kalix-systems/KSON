@@ -60,9 +60,10 @@ pub(crate) mod kcontainer;
 pub(crate) use kcontainer::*;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
+#[repr(u8)]
 pub enum Size {
-    Big,
-    Small,
+    Big = BIG_BIT,
+    Small = SMALL_BIT,
 }
 
 // TODO: replace len vecs w/ heapless vec of size at most 8

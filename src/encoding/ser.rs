@@ -222,9 +222,8 @@ pub fn ser_kson<S: Serializer>(s: &mut S, k: &Kson) {
 }
 
 #[inline(always)]
-// TODO enum annotation for moar performance
 fn compute_int_tag(size: Size, pos: bool, len: u8) -> u8 {
-    TYPE_INT | (((size == Size::Big) as u8) << 4) | ((pos as u8) << 3) | (len - 1)
+    TYPE_INT | (size as u8) | ((pos as u8) << 3) | (len - 1)
 }
 
 #[derive(Clone, Debug)]
