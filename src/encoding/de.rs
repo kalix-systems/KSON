@@ -17,13 +17,13 @@ pub enum KTag {
     /// Constant tag.
     KCon(u8),
     /// Integer tag.
-    KInt(bool, bool, u8),
+    KInt(Size, bool, u8),
     /// Bytestring tag.
-    KByt(bool, u8),
+    KByt(Size, u8),
     /// Array tag.
-    KArr(bool, u8),
+    KArr(Size, u8),
     /// Map tag.
-    KMap(bool, u8),
+    KMap(Size, u8),
     /// Float tag.
     KFloat(u8),
 }
@@ -166,22 +166,25 @@ pub trait Deserializer: DeSeq + DeMap {
 }
 
 /// Try to read length from buffer.
-fn read_len<D: DeserializerBytes>(data: &mut D, big: bool, len: u8) -> Result<usize, Error> {
-    if big {
-        Ok(data.read_uint(len + 1)? as usize + BIGCOL_MIN_LEN as usize)
-    } else {
-        Ok(len as usize)
+fn read_len<D: DeserializerBytes>(data: &mut D, size: Size, len: u8) -> Result<usize, Error> {
+    match size {
+        Size::Big => Ok(data.read_uint(len + 1)? as usize + BIGCOL_MIN_LEN as usize),
+        Size::Small => Ok(len as usize),
     }
 }
 
-macro_rules! big_and_len {
+macro_rules! size_and_len {
     ($ctor:expr, $mask:expr, $byte:ident) => {{
-        let big = $byte & BIG_BIT == BIG_BIT;
+        let size = if $byte & BIG_BIT == BIG_BIT {
+            Size::Big
+        } else {
+            Size::Small
+        };
         let len = $byte & $mask;
-        Ok($ctor(big, len))
+        Ok($ctor(size, len))
     }};
     ($ctor:expr, $byte:ident) => {
-        big_and_len!($ctor, MASK_LEN_BITS, $byte)
+        size_and_len!($ctor, MASK_LEN_BITS, $byte)
     };
 }
 
@@ -194,15 +197,19 @@ impl<B: Buf> DeserializerBytes for B {
             match byte & MASK_TYPE {
                 TYPE_CON => Ok(KCon(byte & MASK_META)),
                 TYPE_INT => {
-                    let big = byte & BIG_BIT == BIG_BIT;
+                    let size = if byte & BIG_BIT == BIG_BIT {
+                        Size::Big
+                    } else {
+                        Size::Small
+                    };
                     let pos = byte & INT_POSITIVE == INT_POSITIVE;
                     let len = byte & MASK_INT_LEN_BITS;
                     debug_assert!(len <= MASK_INT_LEN_BITS);
-                    Ok(KInt(big, pos, len + 1))
+                    Ok(KInt(size, pos, len + 1))
                 }
-                TYPE_BYT => big_and_len!(KByt, byte),
-                TYPE_ARR => big_and_len!(KArr, byte),
-                TYPE_MAP => big_and_len!(KMap, byte),
+                TYPE_BYT => size_and_len!(KByt, byte),
+                TYPE_ARR => size_and_len!(KArr, byte),
+                TYPE_MAP => size_and_len!(KMap, byte),
                 TYPE_FLOAT => Ok(KFloat(byte)),
                 unknown => bail!("found unknown tag: {:b}", unknown),
             }
@@ -292,13 +299,14 @@ impl<D: DeserializerBytes> Deserializer for D {
             KCon(CON_NULL) => Ok(Null),
             KCon(CON_TRUE) => Ok(Bool(true)),
             KCon(CON_FALSE) => Ok(Bool(false)),
-            KInt(big, pos, len) => {
+            KInt(size, pos, len) => {
                 let val = self.read_uint(len)?;
-                let mut i = if !big {
-                    Inum::from(val)
-                } else {
-                    let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
-                    Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs))
+                let mut i = match size {
+                    Size::Small => Inum::from(val),
+                    Size::Big => {
+                        let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
+                        Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs))
+                    }
                 };
 
                 if !pos {
@@ -311,13 +319,13 @@ impl<D: DeserializerBytes> Deserializer for D {
             KFloat(SINGLE) => self.read_u32().map(Single).map(Kfloat),
             KFloat(DOUBLE) => self.read_u64().map(Double).map(Kfloat),
 
-            KByt(big, len) => {
-                let len = read_len(self, big, len)?;
+            KByt(size, len) => {
+                let len = read_len(self, size, len)?;
                 self.read_many(len).map(Bytes::from).map(Byt)
             }
 
-            KArr(big, len) => {
-                let len = read_len(self, big, len)?;
+            KArr(size, len) => {
+                let len = read_len(self, size, len)?;
                 let mut out = Vec::with_capacity(len);
                 for _ in 0..len {
                     out.push(self.read_kson()?);
@@ -325,8 +333,8 @@ impl<D: DeserializerBytes> Deserializer for D {
                 Ok(Array(out))
             }
 
-            KMap(big, len) => {
-                let len = read_len(self, big, len)?;
+            KMap(size, len) => {
+                let len = read_len(self, size, len)?;
                 let mut out = Vec::with_capacity(len);
                 for _ in 0..len {
                     out.push((self.read_bytes()?, self.read_kson()?));
@@ -341,8 +349,8 @@ impl<D: DeserializerBytes> Deserializer for D {
     #[inline(always)]
     fn read_bytes(&mut self) -> Result<Bytes, Error> {
         match self.read_tag()? {
-            KByt(big, len) => {
-                let len = read_len(self, big, len)?;
+            KByt(size, len) => {
+                let len = read_len(self, size, len)?;
                 self.read_many(len).map(Bytes::from)
             }
             _ => bail!("bad tag"),
@@ -352,7 +360,7 @@ impl<D: DeserializerBytes> Deserializer for D {
     #[inline(always)]
     fn read_i64(&mut self) -> Result<i64, Error> {
         match self.read_tag()? {
-            KInt(false, pos, len) if len <= 8 => {
+            KInt(Size::Small, pos, len) if len <= 8 => {
                 let val = self.read_uint(len)?;
                 if val <= i64::max_value() as u64 {
                     if pos {
@@ -371,16 +379,16 @@ impl<D: DeserializerBytes> Deserializer for D {
     #[inline(always)]
     fn read_bigint(&mut self) -> Result<BigInt, Error> {
         match self.read_tag()? {
-            KInt(big, pos, len) => {
-                debug_assert!((big && len <= 8) || (!big && len >= 8));
+            KInt(size, pos, len) => {
+                debug_assert!(len <= 8 || size == Size::Small);
                 let val = self.read_uint(len)?;
 
-                let mut i = if !big {
-                    BigInt::from(val)
-                } else {
-                    let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
-                    let sign = if big { Sign::Plus } else { Sign::Minus };
-                    BigInt::from_bytes_le(sign, &digs)
+                let mut i = match size {
+                    Size::Small => BigInt::from(val),
+                    Size::Big => {
+                        let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
+                        BigInt::from_bytes_le(Sign::Plus, &digs)
+                    }
                 };
 
                 if !pos {
@@ -396,15 +404,17 @@ impl<D: DeserializerBytes> Deserializer for D {
     #[inline(always)]
     fn read_inum(&mut self) -> Result<Inum, Error> {
         match self.read_tag()? {
-            KInt(big, pos, len) => {
-                debug_assert!((big && len <= 8) || (!big && len >= 8));
+            KInt(size, pos, len) => {
+                debug_assert!(len <= 8 || size == Size::Small);
+
                 let val = self.read_uint(len)?;
 
-                let mut i = if !big {
-                    Inum::from(val)
-                } else {
-                    let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
-                    Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs))
+                let mut i = match size {
+                    Size::Small => Inum::from(val),
+                    Size::Big => {
+                        let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
+                        Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs))
+                    }
                 };
 
                 if !pos {
@@ -474,8 +484,8 @@ impl<D: DeserializerBytes> DeSeq for D {
 
     fn read(&mut self) -> Result<((), usize), Error> {
         match self.read_tag()? {
-            KArr(big, len) => {
-                let len = read_len(self, big, len)?;
+            KArr(size, len) => {
+                let len = read_len(self, size, len)?;
                 Ok(((), len))
             }
             _ => bail!("bad tag when starting sequence"),
@@ -490,8 +500,8 @@ impl<D: DeserializerBytes> DeMap for D {
 
     fn take_map(&mut self) -> Result<((), usize), Error> {
         match self.read_tag()? {
-            KMap(big, len) => {
-                let len = read_len(self, big, len)?;
+            KMap(size, len) => {
+                let len = read_len(self, size, len)?;
                 Ok(((), len))
             }
             _ => bail!("bad tag when starting map"),
@@ -720,7 +730,7 @@ macro_rules! easy_de {
             #[inline(always)]
             fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
                 match Self::try_from(d.$read()?) {
-                    Err(_) => bail!("Value to big to be `{}`", stringify!(Self)),
+                    Err(_) => bail!("Value too big to be `{}`", stringify!(Self)),
                     Ok(v) => Ok(v),
                 }
             }

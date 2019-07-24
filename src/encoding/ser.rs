@@ -222,8 +222,9 @@ pub fn ser_kson<S: Serializer>(s: &mut S, k: &Kson) {
 }
 
 #[inline(always)]
-fn compute_int_tag(big: bool, pos: bool, len: u8) -> u8 {
-    TYPE_INT | ((big as u8) << 4) | ((pos as u8) << 3) | (len - 1)
+// TODO enum annotation for moar performance
+fn compute_int_tag(size: Size, pos: bool, len: u8) -> u8 {
+    TYPE_INT | (((size == Size::Big) as u8) << 4) | ((pos as u8) << 3) | (len - 1)
 }
 
 #[derive(Clone, Debug)]
@@ -371,7 +372,7 @@ impl<S: SerializerBytes> Serializer for S {
         let digs = u64_to_digits(i as u64);
         debug_assert!(digs.len() <= 8);
 
-        self.put_byte(compute_int_tag(false, pos, digs.len() as u8));
+        self.put_byte(compute_int_tag(Size::Small, pos, digs.len() as u8));
         self.put_buf(digs.into_buf());
     }
 
@@ -386,7 +387,7 @@ impl<S: SerializerBytes> Serializer for S {
         let digs = u32_to_digits(i as u32);
         debug_assert!(digs.len() <= 4);
 
-        self.put_byte(compute_int_tag(false, pos, digs.len() as u8));
+        self.put_byte(compute_int_tag(Size::Small, pos, digs.len() as u8));
         self.put_buf(digs.into_buf());
     }
 
@@ -401,7 +402,7 @@ impl<S: SerializerBytes> Serializer for S {
         let digs = u16_to_digits(i as u16);
         debug_assert!(digs.len() <= 2);
 
-        self.put_byte(compute_int_tag(false, pos, digs.len() as u8));
+        self.put_byte(compute_int_tag(Size::Small, pos, digs.len() as u8));
         self.put_buf(digs.into_buf());
     }
 
@@ -433,7 +434,7 @@ impl<S: SerializerBytes> Serializer for S {
             let len = digs.len() - BIGINT_MIN_LEN as usize;
             if len <= u16::max_value() as usize {
                 let len_digs = u16_to_digits(len as u16);
-                let tag = compute_int_tag(true, pos, len_digs.len() as u8);
+                let tag = compute_int_tag(Size::Big, pos, len_digs.len() as u8);
                 self.put_byte(tag);
                 self.put_buf(len_digs.into_buf());
                 self.put_buf(digs.into_buf());
@@ -562,7 +563,7 @@ fn decr_digs(digs: &mut Vec<u8>) {
 #[cold]
 #[inline]
 fn push_digs<S: SerializerBytes>(pos: bool, digs: &[u8], out: &mut S) {
-    out.put_byte(compute_int_tag(false, pos, digs.len() as u8));
+    out.put_byte(compute_int_tag(Size::Small, pos, digs.len() as u8));
     out.put_buf(digs.into_buf());
 }
 
@@ -570,7 +571,7 @@ fn push_digs<S: SerializerBytes>(pos: bool, digs: &[u8], out: &mut S) {
 #[inline]
 fn u64_digs<S: SerializerBytes>(pos: bool, u: u64, digs: Vec<u8>, out: &mut S) {
     let len_digs = u64_to_digits(u);
-    out.put_byte(compute_int_tag(true, pos, len_digs.len() as u8));
+    out.put_byte(compute_int_tag(Size::Big, pos, len_digs.len() as u8));
     out.put_buf(len_digs.into_buf());
     out.put_buf(digs.into_buf());
 }

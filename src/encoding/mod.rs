@@ -59,6 +59,12 @@ use constants::*;
 pub(crate) mod kcontainer;
 pub(crate) use kcontainer::*;
 
+#[derive(PartialEq, Copy, Clone, Debug)]
+pub enum Size {
+    Big,
+    Small,
+}
+
 // TODO: replace len vecs w/ heapless vec of size at most 8
 /// Encode [`Kson`] into its binary representation, storing output in `out`.
 ///
