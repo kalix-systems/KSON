@@ -14,8 +14,6 @@ pub(super) const TYPE_ARR: u8 = 0b0110_0000;
 pub(super) const TYPE_MAP: u8 = 0b1000_0000;
 /// Large indicator bit, 0x10
 pub(super) const BIG_BIT: u8 = 0b0001_0000;
-/// Small indicator bit, 0x0
-pub(super) const SMALL_BIT: u8 = 0b0000_0000;
 /// Integer sign bit, 0x0f
 pub(super) const INT_POSITIVE: u8 = 0b0000_1000;
 

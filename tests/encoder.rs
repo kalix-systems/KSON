@@ -1,5 +1,5 @@
 use bytes::buf::IntoBuf;
-use kson::{encoding::*, prelude::*};
+use kson::encoding::*;
 use kson_strategy::*;
 use proptest::prelude::*;
 

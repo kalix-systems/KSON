@@ -17,7 +17,7 @@ pub enum KTag {
     /// Constant tag.
     KCon(u8),
     /// Integer tag.
-    KInt(Size, bool, u8),
+    KInt(Size, KSign, u8),
     /// Bytestring tag.
     KByt(Size, u8),
     /// Array tag.
@@ -202,10 +202,16 @@ impl<B: Buf> DeserializerBytes for B {
                     } else {
                         Size::Small
                     };
-                    let pos = byte & INT_POSITIVE == INT_POSITIVE;
+
+                    let sign = if byte & INT_POSITIVE == INT_POSITIVE {
+                        KSign::Pos
+                    } else {
+                        KSign::Neg
+                    };
+
                     let len = byte & MASK_INT_LEN_BITS;
                     debug_assert!(len <= MASK_INT_LEN_BITS);
-                    Ok(KInt(size, pos, len + 1))
+                    Ok(KInt(size, sign, len + 1))
                 }
                 TYPE_BYT => size_and_len!(KByt, byte),
                 TYPE_ARR => size_and_len!(KArr, byte),
@@ -299,7 +305,7 @@ impl<D: DeserializerBytes> Deserializer for D {
             KCon(CON_NULL) => Ok(Null),
             KCon(CON_TRUE) => Ok(Bool(true)),
             KCon(CON_FALSE) => Ok(Bool(false)),
-            KInt(size, pos, len) => {
+            KInt(size, sign, len) => {
                 let val = self.read_uint(len)?;
                 let mut i = match size {
                     Size::Small => Inum::from(val),
@@ -309,7 +315,7 @@ impl<D: DeserializerBytes> Deserializer for D {
                     }
                 };
 
-                if !pos {
+                if sign == KSign::Neg {
                     i = -i - I64(1);
                 }
                 Ok(Kint(i))
@@ -360,13 +366,12 @@ impl<D: DeserializerBytes> Deserializer for D {
     #[inline(always)]
     fn read_i64(&mut self) -> Result<i64, Error> {
         match self.read_tag()? {
-            KInt(Size::Small, pos, len) if len <= 8 => {
+            KInt(Size::Small, sign, len) if len <= 8 => {
                 let val = self.read_uint(len)?;
                 if val <= i64::max_value() as u64 {
-                    if pos {
-                        Ok(val as i64)
-                    } else {
-                        Ok(-(val as i64) - 1)
+                    match sign {
+                        KSign::Pos => Ok(val as i64),
+                        KSign::Neg => Ok(-(val as i64) - 1),
                     }
                 } else {
                     bail!("int too large to be i64")
@@ -379,7 +384,7 @@ impl<D: DeserializerBytes> Deserializer for D {
     #[inline(always)]
     fn read_bigint(&mut self) -> Result<BigInt, Error> {
         match self.read_tag()? {
-            KInt(size, pos, len) => {
+            KInt(size, sign, len) => {
                 debug_assert!(len <= 8 || size == Size::Small);
                 let val = self.read_uint(len)?;
 
@@ -391,10 +396,11 @@ impl<D: DeserializerBytes> Deserializer for D {
                     }
                 };
 
-                if !pos {
+                if sign == KSign::Neg {
                     i *= -1;
                     i += -1;
                 }
+
                 Ok(i)
             }
             _ => bail!("Bad tag when reading BigInt"),
@@ -404,7 +410,7 @@ impl<D: DeserializerBytes> Deserializer for D {
     #[inline(always)]
     fn read_inum(&mut self) -> Result<Inum, Error> {
         match self.read_tag()? {
-            KInt(size, pos, len) => {
+            KInt(size, sign, len) => {
                 debug_assert!(len <= 8 || size == Size::Small);
 
                 let val = self.read_uint(len)?;
@@ -417,7 +423,7 @@ impl<D: DeserializerBytes> Deserializer for D {
                     }
                 };
 
-                if !pos {
+                if sign == KSign::Neg {
                     i *= -1;
                     i += -1;
                 }

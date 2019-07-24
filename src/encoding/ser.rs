@@ -222,8 +222,8 @@ pub fn ser_kson<S: Serializer>(s: &mut S, k: &Kson) {
 }
 
 #[inline(always)]
-fn compute_int_tag(size: Size, pos: bool, len: u8) -> u8 {
-    TYPE_INT | (size as u8) | ((pos as u8) << 3) | (len - 1)
+fn compute_int_tag(size: Size, pos: KSign, len: u8) -> u8 {
+    TYPE_INT | (size as u8) | (pos as u8) | (len - 1)
 }
 
 #[derive(Clone, Debug)]
@@ -361,26 +361,32 @@ impl<S: SerializerBytes> SerMap for S {
 impl<S: SerializerBytes> Serializer for S {
     #[inline]
     fn put_i64(&mut self, mut i: i64) {
-        let pos = !i.is_negative();
-        if !pos {
+        let sign = if i.is_negative() {
             i += 1;
             i *= -1;
-        }
+            KSign::Neg
+        } else {
+            KSign::Pos
+        };
+
         debug_assert!(i >= 0);
 
         let digs = u64_to_digits(i as u64);
         debug_assert!(digs.len() <= 8);
 
-        self.put_byte(compute_int_tag(Size::Small, pos, digs.len() as u8));
+        self.put_byte(compute_int_tag(Size::Small, sign, digs.len() as u8));
         self.put_buf(digs.into_buf());
     }
 
     fn put_i32(&mut self, mut i: i32) {
-        let pos = !i.is_negative();
-        if !pos {
+        let pos = if i.is_negative() {
             i += 1;
             i *= -1;
-        }
+            KSign::Neg
+        } else {
+            KSign::Pos
+        };
+
         debug_assert!(i >= 0);
 
         let digs = u32_to_digits(i as u32);
@@ -391,11 +397,14 @@ impl<S: SerializerBytes> Serializer for S {
     }
 
     fn put_i16(&mut self, mut i: i16) {
-        let pos = !i.is_negative();
-        if !pos {
+        let pos = if i.is_negative() {
             i += 1;
             i *= -1;
-        }
+            KSign::Neg
+        } else {
+            KSign::Pos
+        };
+
         debug_assert!(i >= 0);
 
         let digs = u16_to_digits(i as u16);
@@ -422,23 +431,28 @@ impl<S: SerializerBytes> Serializer for S {
 
     fn put_bigint(&mut self, i: &BigInt) {
         let (sign, mut digs) = i.to_bytes_le();
-        let pos = sign != Sign::Minus;
-        debug_assert!(digs.len() >= 8);
-        if !pos {
-            decr_digs(&mut digs)
+
+        let sign = match sign {
+            Sign::Minus => {
+                decr_digs(&mut digs);
+                KSign::Neg
+            }
+            _ => KSign::Pos,
         };
+        debug_assert!(digs.len() >= 8);
+
         if digs.len() == 8 {
-            push_digs(pos, &digs, self);
+            push_digs(sign, &digs, self);
         } else {
             let len = digs.len() - BIGINT_MIN_LEN as usize;
             if len <= u16::max_value() as usize {
                 let len_digs = u16_to_digits(len as u16);
-                let tag = compute_int_tag(Size::Big, pos, len_digs.len() as u8);
+                let tag = compute_int_tag(Size::Big, sign, len_digs.len() as u8);
                 self.put_byte(tag);
                 self.put_buf(len_digs.into_buf());
                 self.put_buf(digs.into_buf());
             } else {
-                u64_digs(pos, len as u64, digs, self)
+                u64_digs(sign, len as u64, digs, self)
             }
         }
     }
@@ -561,16 +575,16 @@ fn decr_digs(digs: &mut Vec<u8>) {
 
 #[cold]
 #[inline]
-fn push_digs<S: SerializerBytes>(pos: bool, digs: &[u8], out: &mut S) {
-    out.put_byte(compute_int_tag(Size::Small, pos, digs.len() as u8));
+fn push_digs<S: SerializerBytes>(sign: KSign, digs: &[u8], out: &mut S) {
+    out.put_byte(compute_int_tag(Size::Small, sign, digs.len() as u8));
     out.put_buf(digs.into_buf());
 }
 
 #[cold]
 #[inline]
-fn u64_digs<S: SerializerBytes>(pos: bool, u: u64, digs: Vec<u8>, out: &mut S) {
+fn u64_digs<S: SerializerBytes>(sign: KSign, u: u64, digs: Vec<u8>, out: &mut S) {
     let len_digs = u64_to_digits(u);
-    out.put_byte(compute_int_tag(Size::Big, pos, len_digs.len() as u8));
+    out.put_byte(compute_int_tag(Size::Big, sign, len_digs.len() as u8));
     out.put_buf(len_digs.into_buf());
     out.put_buf(digs.into_buf());
 }
@@ -879,7 +893,7 @@ mod tests {
         // into_kson
         assert_eq!(c_struct.to_kson(), into_kson(c_struct.clone()));
         match crate::encoding::de::from_kson(into_kson(c_struct)) {
-            Ok(CStruct { fu, bar: _, baz: _ }) => assert_eq!(fu, 1),
+            Ok(CStruct { fu, .. }) => assert_eq!(fu, 1),
             Err(_e) => panic!("Couldn't retrieve c-type struct"),
         }
     }
