@@ -1,5 +1,8 @@
 use super::*;
-use crate::{float::Float, prelude::*};
+use crate::{
+    float::Float::{self, *},
+    prelude::*,
+};
 use failure::*;
 use half::f16;
 use num_bigint::{BigInt, Sign};
@@ -7,7 +10,6 @@ use std::{
     collections::HashMap,
     convert::TryFrom,
     net::{Ipv4Addr, SocketAddrV4},
-    vec::IntoIter,
 };
 use KTag::*;
 

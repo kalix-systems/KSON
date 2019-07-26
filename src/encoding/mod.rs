@@ -41,9 +41,8 @@
 
 #![allow(clippy::inconsistent_digit_grouping)]
 use crate::{
+    inum::Inum::{self, *},
     util::*,
-    Float::*,
-    Inum::{self, *},
 };
 use bytes::{Buf, Bytes, IntoBuf};
 use failure::Error;
