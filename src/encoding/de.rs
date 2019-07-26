@@ -130,9 +130,6 @@ pub trait DeMap {
 
 /// Values that can be deserialized from.
 pub trait Deserializer: DeSeq + DeMap {
-    /// Read a [`Kson`] value.
-    fn read_kson(&mut self) -> Result<Kson, Error>;
-
     /// Read a  [`Kson::Null`]. Returns `Ok(())` if successful, otherwise returns an
     /// error.
     fn read_null(&mut self) -> Result<(), Error>;
@@ -300,59 +297,6 @@ impl<B: Buf> DeserializerBytes for B {
 }
 impl<D: DeserializerBytes> Deserializer for D {
     #[inline(always)]
-    fn read_kson(&mut self) -> Result<Kson, Error> {
-        match self.read_tag()? {
-            KCon(CON_NULL) => Ok(Null),
-            KCon(CON_TRUE) => Ok(Bool(true)),
-            KCon(CON_FALSE) => Ok(Bool(false)),
-            KInt(size, sign, len) => {
-                let val = self.read_uint(len)?;
-                let mut i = match size {
-                    Size::Small => Inum::from(val),
-                    Size::Big => {
-                        let digs = self.read_many(val as usize + BIGINT_MIN_LEN as usize)?;
-                        Inum::from(BigInt::from_bytes_le(Sign::Plus, &digs))
-                    }
-                };
-
-                if sign == KSign::Neg {
-                    i = -i - I64(1);
-                }
-                Ok(Kint(i))
-            }
-
-            KFloat(HALF) => self.read_u16().map(Half).map(Kfloat),
-            KFloat(SINGLE) => self.read_u32().map(Single).map(Kfloat),
-            KFloat(DOUBLE) => self.read_u64().map(Double).map(Kfloat),
-
-            KByt(size, len) => {
-                let len = read_len(self, size, len)?;
-                self.read_many(len).map(Bytes::from).map(Byt)
-            }
-
-            KArr(size, len) => {
-                let len = read_len(self, size, len)?;
-                let mut out = Vec::with_capacity(len);
-                for _ in 0..len {
-                    out.push(self.read_kson()?);
-                }
-                Ok(Array(out))
-            }
-
-            KMap(size, len) => {
-                let len = read_len(self, size, len)?;
-                let mut out = Vec::with_capacity(len);
-                for _ in 0..len {
-                    out.push((self.read_bytes()?, self.read_kson()?));
-                }
-                // doesn't enforce canonicity - maybe it should?
-                Ok(Map(VecMap::from(out)))
-            }
-            k => bail!("bad tag when reading Kson: {:?}", k),
-        }
-    }
-
-    #[inline(always)]
     fn read_bytes(&mut self) -> Result<Bytes, Error> {
         match self.read_tag()? {
             KByt(size, len) => {
@@ -498,7 +442,9 @@ impl<D: DeserializerBytes> DeSeq for D {
         }
     }
 
-    fn take<T: De>(&mut self, _: &mut ()) -> Result<T, Error> { T::de(self) }
+    fn take<T: De>(&mut self, _: &mut ()) -> Result<T, Error> {
+        T::de(self)
+    }
 }
 
 impl<D: DeserializerBytes> DeMap for D {
@@ -514,183 +460,12 @@ impl<D: DeserializerBytes> DeMap for D {
         }
     }
 
-    fn take_key(&mut self, _: &mut ()) -> Result<Bytes, Error> { self.read_bytes() }
-
-    fn take_val<T: De>(&mut self, _: &mut ()) -> Result<T, Error> { T::de(self) }
-}
-
-impl Deserializer for KContainer {
-    #[inline(always)]
-    fn read_kson(&mut self) -> Result<Kson, Error> { Ok(self.take()) }
-
-    #[inline(always)]
-    fn read_null(&mut self) -> Result<(), Error> {
-        let k = self.take();
-        match k {
-            Null => Ok(()),
-            k => bail!("expected Null, got {:?}", k),
-        }
+    fn take_key(&mut self, _: &mut ()) -> Result<Bytes, Error> {
+        self.read_bytes()
     }
 
-    #[inline(always)]
-    fn read_bool(&mut self) -> Result<bool, Error> {
-        let k = self.take();
-        match k {
-            Bool(b) => Ok(b),
-            k => bail!("expected bool, got {:?}", k),
-        }
-    }
-
-    #[inline(always)]
-    fn read_i64(&mut self) -> Result<i64, Error> {
-        let k = self.take();
-        match k {
-            Kint(I64(i)) => Ok(i),
-            k => bail!("expected i64, got {:?}", k),
-        }
-    }
-
-    #[inline(always)]
-    fn read_bigint(&mut self) -> Result<BigInt, Error> {
-        let k = self.take();
-        match k {
-            Kint(Int(i)) => Ok(i),
-            k => bail!("expected bigint, got {:?}", k),
-        }
-    }
-
-    #[inline(always)]
-    fn read_inum(&mut self) -> Result<Inum, Error> {
-        let k = self.take();
-        match k {
-            Kint(i) => Ok(i),
-            k => bail!("expected inum, got {:?}", k),
-        }
-    }
-
-    #[inline(always)]
-    fn read_f16(&mut self) -> Result<f16, Error> {
-        let k = self.take();
-        match k {
-            Kfloat(Half(u)) => Ok(f16::from_bits(u)),
-            k => bail!("expected half-precision float, got {:?}", k),
-        }
-    }
-
-    #[inline(always)]
-    fn read_f32(&mut self) -> Result<f32, Error> {
-        let k = self.take();
-        match k {
-            Kfloat(Single(u)) => Ok(f32::from_bits(u)),
-            k => bail!("expected single-precision float, got {:?}", k),
-        }
-    }
-
-    #[inline(always)]
-    fn read_f64(&mut self) -> Result<f64, Error> {
-        let k = self.take();
-        match k {
-            Kfloat(Double(u)) => Ok(f64::from_bits(u)),
-            k => bail!("expected double-precision float, got {:?}", k),
-        }
-    }
-
-    #[inline(always)]
-    fn read_float(&mut self) -> Result<Float, Error> {
-        let k = self.take();
-        match k {
-            Kfloat(f) => Ok(f),
-            k => bail!("expected float, got {:?}", k),
-        }
-    }
-
-    #[inline(always)]
-    fn read_bytes(&mut self) -> Result<Bytes, Error> {
-        let k = self.take();
-        match k {
-            Byt(b) => Ok(b),
-            k => bail!("expected bytes, got {:?}", k),
-        }
-    }
-
-    //     #[inline(always)]
-    //     fn read_arr<T: De>(&mut self) -> Result<Vec<T>, Error> {
-    //         match self.take() {
-    //             Array(a) => a.into_iter().map(from_kson).collect(),
-    //             k => bail!("expected array, got {:?}", k),
-    //         }
-    //     }
-
-    //     #[inline(always)]
-    //     fn read_map<T: De>(&mut self) -> Result<VecMap<Bytes, T>, Error> {
-    //         match self.take() {
-    //             Map(m) => {
-    //                 let pairs: Result<Vec<(Bytes, T)>, Error> =
-    //                     m.into_iter().map(|(k, v)| Ok((k, from_kson(v)?))).collect();
-    //                 pairs.map(VecMap::from_sorted)
-    //             }
-    //             k => bail!("expected array, got {:?}", k),
-    //         }
-}
-
-impl DeSeq for KContainer {
-    type State = IntoIter<Kson>;
-
-    fn read(&mut self) -> Result<(IntoIter<Kson>, usize), Error> {
-        match self.take() {
-            Array(a) => {
-                let len = a.len();
-                Ok((a.into_iter(), len))
-            }
-            k => bail!("tried to read array from value: {:?}", k),
-        }
-    }
-
-    fn take<T: De>(&mut self, i: &mut IntoIter<Kson>) -> Result<T, Error> {
-        T::de(&mut KContainer { internal: i.next() })
-    }
-}
-
-#[derive(Debug)]
-/// Deserializes from a sequence of (key, value) pairs.
-pub struct KDeMap {
-    iter: IntoIter<(Bytes, Kson)>,
-    val:  Option<Kson>,
-}
-
-impl DeMap for KContainer {
-    type State = KDeMap;
-
-    fn take_map(&mut self) -> Result<(KDeMap, usize), Error> {
-        match self.take() {
-            Map(m) => {
-                let len = m.len();
-                let km = KDeMap {
-                    iter: m.into_iter(),
-                    val:  None,
-                };
-                Ok((km, len))
-            }
-            k => bail!("tried to read map from value: {:?}", k),
-        }
-    }
-
-    fn take_key(&mut self, s: &mut KDeMap) -> Result<Bytes, Error> {
-        debug_assert!(s.val.is_none());
-        match s.iter.next() {
-            Some((k, v)) => {
-                s.val = Some(v);
-                Ok(k)
-            }
-            _ => bail!("no remaining keys"),
-        }
-    }
-
-    fn take_val<T: De>(&mut self, s: &mut KDeMap) -> Result<T, Error> {
-        match s.val.take() {
-            Some(v) => from_kson(v),
-            None => bail!("tried to read value when none was stored - did you read a key first?"),
-        }
+    fn take_val<T: De>(&mut self, _: &mut ()) -> Result<T, Error> {
+        T::de(self)
     }
 }
 
@@ -727,8 +502,6 @@ impl<T: De, S: ::std::hash::BuildHasher + Default> De for HashMap<Bytes, T, S> {
     }
 }
 
-pub fn from_kson<T: De>(ks: Kson) -> Result<T, Error> { T::de(&mut KContainer::new_place(ks)) }
-
 // Implementations for primitive types
 macro_rules! easy_de {
     ($typ:ty, $read:tt) => {
@@ -748,13 +521,12 @@ macro_rules! trivial_de {
     ($typ:ty, $read:tt) => {
         impl De for $typ {
             #[inline(always)]
-            fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.$read() }
+            fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+                d.$read()
+            }
         }
     };
 }
-
-// Kson
-trivial_de!(Kson, read_kson);
 
 // Inum
 trivial_de!(Inum, read_inum);
@@ -852,27 +624,27 @@ impl De for char {
     }
 }
 
-impl<T: De> De for Option<T> {
-    fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
-        match d.read_kson()? {
-            Null => Ok(None),
-            Array(v) => {
-                let mut iter = v.into_iter();
-                let val = &mut match iter.next() {
-                    None => bail!("Value is not an `Option`"),
-                    Some(v) => KContainer::new_place(v),
-                };
+// impl<T: De> De for Option<T> {
+//     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
+//         match d.read_kson()? {
+//             Null => Ok(None),
+//             Array(v) => {
+//                 let mut iter = v.into_iter();
+//                 let val = &mut match iter.next() {
+//                     None => bail!("Value is not an `Option`"),
+//                     Some(v) => KContainer::new_place(v),
+//                 };
 
-                if iter.next().is_none() {
-                    Ok(Some(T::de(val)?))
-                } else {
-                    bail!("Value is not an `Option`")
-                }
-            }
-            _ => bail!("Value is not an `Option`"),
-        }
-    }
-}
+//                 if iter.next().is_none() {
+//                     Ok(Some(T::de(val)?))
+//                 } else {
+//                     bail!("Value is not an `Option`")
+//                 }
+//             }
+//             _ => bail!("Value is not an `Option`"),
+//         }
+//     }
+// }
 
 impl De for Ipv4Addr {
     fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {

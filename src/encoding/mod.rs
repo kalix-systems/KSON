@@ -42,10 +42,8 @@
 #![allow(clippy::inconsistent_digit_grouping)]
 use crate::{
     util::*,
-    vecmap::VecMap,
     Float::*,
     Inum::{self, *},
-    Kson::{self, *},
 };
 use bytes::{Buf, Bytes, IntoBuf};
 use failure::Error;
@@ -56,8 +54,6 @@ pub mod de;
 pub use de::*;
 mod constants;
 use constants::*;
-pub(crate) mod kcontainer;
-pub(crate) use kcontainer::*;
 
 #[derive(PartialEq, Copy, Clone, Debug)]
 #[repr(u8)]
@@ -95,7 +91,9 @@ pub enum KSign {
 /// // encode value
 /// encode(&ks, out);
 /// ```
-pub fn encode<T: Ser>(t: T, out: &mut Vec<u8>) { t.ser(out) }
+pub fn encode<T: Ser>(t: T, out: &mut Vec<u8>) {
+    t.ser(out)
+}
 
 /// Tries to decode a buffer into [`Kson`].
 ///
@@ -120,7 +118,9 @@ pub fn encode<T: Ser>(t: T, out: &mut Vec<u8>) { t.ser(out) }
 /// // should be equal
 /// assert_eq!(dec, Kson::Null);
 /// ```
-pub fn decode<D: Deserializer, T: De>(data: &mut D) -> Result<T, Error> { T::de(data) }
+pub fn decode<D: Deserializer, T: De>(data: &mut D) -> Result<T, Error> {
+    T::de(data)
+}
 
 /// Encodes a [`Kson`] object into a vector of bytes.
 ///
@@ -162,7 +162,9 @@ pub fn encode_full<T: Ser>(t: T) -> Vec<u8> {
 /// // decode value
 /// let dec: Result<Kson, failure::Error> = decode_full(&bs);
 /// ```
-pub fn decode_full<B: IntoBuf, T: De>(bs: B) -> Result<T, Error> { decode(&mut bs.into_buf()) }
+pub fn decode_full<B: IntoBuf, T: De>(bs: B) -> Result<T, Error> {
+    decode(&mut bs.into_buf())
+}
 
 #[cfg(test)]
 mod tests {
