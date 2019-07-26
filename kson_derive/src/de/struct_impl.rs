@@ -2,6 +2,8 @@ use quote::quote;
 use syn::*;
 
 pub fn kson_de(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
+    let name_string = name.to_string();
+
     let impl_de = match data.fields {
         // C-style structs
         Fields::Named(fields) => {
@@ -18,28 +20,23 @@ pub fn kson_de(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
 
             let exp_len = field_names.len();
 
-            // de
-            let impl_de = {
-                let ident_string = name.to_string();
-                quote! {
-                    let (mut state, len) = d.take_map()?;
-                    if len == #exp_len {
-                        let strct = #name {
-                            #(#field_names: de::check_entry(d.take_key(&mut state)?, d.take_val(&mut state)?, #field_strings)?,)*
-                        };
-                        Ok(strct)
-                    }
-                    else {
-                        bail!("`{}` has {} fields, found {}",
-                              #ident_string,
-                              #exp_len,
-                              len,
-                              )
-                    }
-
+            quote! {
+                let (mut state, len) = d.take_map()?;
+                if len == #exp_len {
+                    let strct = #name {
+                        #(#field_names: de::check_entry(d.take_key(&mut state)?, d.take_val(&mut state)?, #field_strings)?,)*
+                    };
+                    Ok(strct)
                 }
-            };
-            impl_de
+                else {
+                    bail!("`{}` has {} fields, found {}",
+                          #name_string,
+                          #exp_len,
+                          len,
+                          )
+                }
+
+            }
         }
         // Tuple structs
         Fields::Unnamed(fields) => {
@@ -47,59 +44,48 @@ pub fn kson_de(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
                 .iter()
                 .map(|field| field.ty.clone())
                 .collect();
-            let fields_len: usize = fields.len();
 
-            let ident_string = name.to_string();
+            let exp_len: usize = fields.len();
 
-            // de
-            let impl_de = {
-                let exp_len = fields_len;
-
-                let match_string = quote! { match d.take::<String>(&mut iter) {
+            let match_string = quote! {
+                match d.take::<String>(&mut iter) {
                     Ok(s) => s,
                     Err(e) => bail!("Missing name of tuple-like struct: {}", e),
-                }.as_str()};
+                }.as_str()
+            };
 
-                let out = quote! {
-                    Ok(#name(#(d.take::<#fields>(&mut iter)?,)*))
-                };
+            let out_struct = quote! {
+                Ok(#name(#(d.take::<#fields>(&mut iter)?,)*))
+            };
 
-                quote! {
-                    let (mut iter, len) = d.read()?;
-                    if len - 1 != #exp_len {
-                        bail!("`{}` has {} fields, found {}",
-                              #ident_string,
-                              #exp_len,
-                              len - 1,
-                        )
-                    }
+            quote! {
+                let (mut iter, len) = d.read()?;
+                if len - 1 != #exp_len {
+                    bail!("`{}` has {} fields, found {}",
+                          #name_string,
+                          #exp_len,
+                          len - 1,
+                    )
+                }
 
-                    match #match_string {
-                        #ident_string => #out,
-                        unknown => {
-                            bail!("Expected `{}`, found `{}`", #ident_string, unknown)
-                        }
+                match #match_string {
+                    #name_string => #out_struct,
+                    unknown => {
+                        bail!("Expected `{}`, found `{}`", #name_string, unknown)
                     }
                 }
-            };
-            impl_de
+            }
         }
         // Unit-like structs
         Fields::Unit => {
-            let ident_string = name.to_string();
-
-            // de
-            let impl_de = {
-                quote! {
-                    match String::de(d)?.as_str() {
-                        #ident_string => Ok(Self),
-                        unknown => {
-                            bail!("`{}` is not the name of this struct", unknown)
-                        }
+            quote! {
+                match String::de(d)?.as_str() {
+                    #name_string => Ok(Self),
+                    unknown => {
+                        bail!("`{}` is not the name of this struct", unknown)
                     }
                 }
-            };
-            impl_de
+            }
         }
     };
 

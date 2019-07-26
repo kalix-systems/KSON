@@ -2,7 +2,7 @@ use proc_macro2::Literal;
 use quote::quote;
 use syn::*;
 
-pub fn kson_ser(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
+pub fn kson_ser_ref(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
     let impl_ser = match data.fields {
         // C-style structs
         Fields::Named(fields) => {
@@ -15,9 +15,10 @@ pub fn kson_ser(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
             field_stuff.sort_unstable_by(|(_, k1), (_, k2)| k1.cmp(k2));
 
             let length = field_stuff.len();
+
             let pairs = field_stuff
                 .into_iter()
-                .map(|(ident, ident_string)| quote! { #ident_string, self.#ident });
+                .map(|(ident, ident_string)| quote! { #ident_string, &(self.#ident) });
 
             quote! {
                 let mut state = s.map_start(#length);
@@ -33,15 +34,13 @@ pub fn kson_ser(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
                 .iter()
                 .map(|field| field.ty.clone())
                 .collect();
-
-            // fields, plus one for the name
             let seq_len: usize = fields.len() + 1;
 
             let ident_string = name.to_string();
 
             let kargs = (0..fields.len())
                 .map(Literal::usize_unsuffixed)
-                .map(|index| quote! {self.#index});
+                .map(|index| quote! {&(self.#index)});
 
             quote! {
                 let mut state = s.seq_start(#seq_len);
@@ -65,7 +64,7 @@ pub fn kson_ser(name: Ident, data: DataStruct) -> proc_macro2::TokenStream {
     };
 
     quote! {
-        impl Ser for #name {
+        impl Ser for &#name {
             fn ser<S: Serializer>(self, s: &mut S) {
                 #impl_ser
             }

@@ -12,11 +12,13 @@ use syn::*;
 
 fn struct_impl(name: Ident, sd: DataStruct) -> TokenStream {
     let kser = ser::struct_impl::kson_ser(name.clone(), sd.clone());
+    let kser_ref = ser::struct_ref_impl::kson_ser_ref(name.clone(), sd.clone());
     let kde = de::struct_impl::kson_de(name, sd);
 
     let imp = quote! {
         #kser
         #kde
+        #kser_ref
     };
 
     imp.into()
