@@ -1,23 +1,6 @@
 //! # Integers
 //!
 //! Integers behave more or less as expected.
-//!
-//! # Example
-//!
-//! ```
-//! use kson::prelude::*;
-//!
-//! // a big number
-//! let n = Inum::from_str_radix("zzzzzzzzzzzzzzzzzzzzzzzzzzzzzz", 36).unwrap();
-//! // a small number
-//! let m = Inum::from(22);
-//!
-//! // some arithmetic
-//! let sum = n + m;
-//!
-//! // convert into `Kson`
-//! let ks = sum.into_kson();
-//! ```
 
 use crate::{from_as, from_fn};
 use num_bigint::{BigInt, ParseBigIntError};

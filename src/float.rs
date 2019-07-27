@@ -47,122 +47,9 @@
 //! assert!((sum - 4f32).abs() < 0.00000000001);
 //! ```
 //!
-//! Half-precision floats can easily be converted to and from [`Kson`]:
-//!
-//! ```
-//! use kson::prelude::*;
-//!
-//! // create the float
-//! let half = f16::from_f32(1.);
-//!
-//! // convert to `Kson`
-//! let ks = half.to_kson();
-//!
-//! // convert from `Kson`
-//! let half2 = f16::from_kson(ks).unwrap();
-//!
-//! // they are the same
-//! assert_eq!(half, half2);
-//! ```
-//!
-//! Or, alternatively:
-//!
-//! ```
-//! use kson::prelude::*;
-//!
-//! // create the float
-//! let half = f16::from_f32(1.);
-//!
-//! // convert to `Kson`
-//! let ks = Kson::from(half);
-//!
-//! // convert from `Kson`
-//! let half2 = f16::try_from(ks).unwrap();
-//!
-//! // they are the same
-//! assert_eq!(half, half2);
-//! ```
-//!
-//! ## Single-Precision
-//!
-//! Single-precision floats behave as expected.
-//!
-//! They are easily converted to and from `Kson`:
-//!
-//! ```
-//! use kson::prelude::*;
-//!
-//! // create the float
-//! let single = 1f32;
-//!
-//! // convert to `Kson`
-//! let ks = single.to_kson();
-//!
-//! // convert from `Kson`
-//! let single2 = f32::from_kson(ks).unwrap();
-//!
-//! // they are the same
-//! assert_eq!(single, single2);
-//! ```
-//!
-//! Or, alternatively:
-//!
-//! ```
-//! use kson::prelude::*;
-//!
-//! // create the float
-//! let single = 1f32;
-//!
-//! // convert to `Kson`
-//! let ks = Kson::from(single);
-//!
-//! // convert from `Kson`
-//! let single2 = f32::try_from(ks).unwrap();
-//!
-//! // they are the same
-//! assert_eq!(single, single2);
-//! ```
-//!
 //! ## Double-Precision
 //!
 //! Double-precision floats behave as expected.
-//!
-//! They are easily converted to and from `Kson`:
-//!  
-//! ```
-//! use kson::prelude::*;
-//!
-//! // create the float
-//! let double = 1f64;
-//!
-//! // convert to `Kson`
-//! let ks = double.to_kson();
-//!
-//! // convert from `Kson`
-//! let double2 = f64::from_kson(ks).unwrap();
-//!
-//! // they are the same
-//! assert_eq!(double, double2);
-//! ```
-//!
-//! Or, alternatively:
-//!
-//! ```
-//! use kson::prelude::*;
-//!
-//! // create the float
-//! let double = 1f64;
-//!
-//! // convert to `Kson`
-//! let ks = Kson::from(double);
-//!
-//! // convert from `Kson`
-//! let double2 = f64::try_from(ks).unwrap();
-//!
-//! // they are the same
-//! assert_eq!(double, double2);
-//! ```
-
 use half::f16;
 use std::{cmp::Ordering, convert::TryFrom};
 
@@ -173,34 +60,10 @@ use std::{cmp::Ordering, convert::TryFrom};
 /// Floating point numbers. See also: [`float`](`crate::float`).
 pub enum Float {
     /// Half precision float
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use kson::prelude::*;
-    ///
-    /// let half = Float::from(f16::from_f32(1f32));
-    /// ```
     Half(u16),
     /// Single precision float
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use kson::prelude::*;
-    ///
-    /// let single = Float::from(1f32);
-    /// ```
     Single(u32),
     /// Double precision float
-    ///
-    /// # Example
-    ///
-    /// ```
-    /// use kson::prelude::*;
-    ///
-    /// let double = Float::from(1f64);
-    /// ```
     Double(u64),
 }
 

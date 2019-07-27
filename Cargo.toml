@@ -27,7 +27,7 @@ serde = "1.0"
 serde_json = "1.0"
 criterion = "0.2"
 filebuffer = "0.4"
-kson_strategy = {path = "./kson_strategy"}
+# kson_strategy = {path = "./kson_strategy"}
 
 [profile.dev]
 lto = false

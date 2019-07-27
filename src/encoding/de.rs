@@ -444,9 +444,7 @@ impl<D: DeserializerBytes> DeSeq for D {
         }
     }
 
-    fn take<T: De>(&mut self, _: &mut ()) -> Result<T, Error> {
-        T::de(self)
-    }
+    fn take<T: De>(&mut self, _: &mut ()) -> Result<T, Error> { T::de(self) }
 }
 
 impl<D: DeserializerBytes> DeMap for D {
@@ -462,13 +460,9 @@ impl<D: DeserializerBytes> DeMap for D {
         }
     }
 
-    fn take_key(&mut self, _: &mut ()) -> Result<Bytes, Error> {
-        self.read_bytes()
-    }
+    fn take_key(&mut self, _: &mut ()) -> Result<Bytes, Error> { self.read_bytes() }
 
-    fn take_val<T: De>(&mut self, _: &mut ()) -> Result<T, Error> {
-        T::de(self)
-    }
+    fn take_val<T: De>(&mut self, _: &mut ()) -> Result<T, Error> { T::de(self) }
 }
 
 /// Values that can be deserialized.
@@ -523,9 +517,7 @@ macro_rules! trivial_de {
     ($typ:ty, $read:tt) => {
         impl De for $typ {
             #[inline(always)]
-            fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> {
-                d.$read()
-            }
+            fn de<D: Deserializer>(d: &mut D) -> Result<Self, Error> { d.$read() }
         }
     };
 }
