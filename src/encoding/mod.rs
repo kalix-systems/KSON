@@ -171,31 +171,32 @@ mod tests {
         assert_eq!(out.len(), 1);
     }
 
-    // TODO This should probably pass
-    //#[test]
-    // fn small_string() {
-    //    let small_bs = b"w";
+    #[test]
+    fn small_string() {
+        let small = "w";
 
-    //    let out = encode_full(small_bs);
+        let out = encode_full(small);
 
-    //    // tag
-    //    assert_eq!(out[0], 0b010_0_0001);
-    //    // characters
-    //    assert_eq!(out[1], 119);
-    //}
-    //    #[test]
-    //    fn large_string() {
-    //        let large_bs = Kson::from_static(&[b'w'; 140]);
-    //
-    //        let out = encode_full(&large_bs);
-    //
-    //        // tag
-    //        assert_eq!(out[0], 0b010_1_0000);
-    //        // length
-    //        assert_eq!(out[1], 140 - BIG_BIT);
-    //        // bytes
-    //        assert_eq!(out[2..].to_vec(), vec![b'w'; 140]);
-    //    }
+        // tag
+        assert_eq!(out[0], 0b010_0_0001);
+        // characters
+        assert_eq!(out[1], 119);
+    }
+    #[test]
+    fn large_string() -> Result<(), Error> {
+        let large = String::from_utf8(vec![b'w'; 140])?;
+
+        let out = encode_full(large);
+
+        // tag
+        assert_eq!(out[0], 0b010_1_0000);
+        // length
+        assert_eq!(out[1], 140 - BIG_BIT);
+        // bytes
+        assert_eq!(out[2..].to_vec(), vec![b'w'; 140]);
+
+        Ok(())
+    }
 
     #[test]
     fn small_vec() {
@@ -230,66 +231,66 @@ mod tests {
         assert_eq!(out_vals, vec![&0; 140]);
     }
 
-    // TODO Fix this
-    // #[test]
-    // fn small_map() {
-    //     let small_map = Kson::from(VecMap::from_sorted(vec![(
-    //         Bytes::from_static(b"a"),
-    //         Bytes::from_static(b"b"),
-    //     )]));
+    #[test]
+    fn small_map() {
+        use std::collections::HashMap;
+        let mut small_map: HashMap<String, u8> = HashMap::new();
+        small_map.insert("a".into(), 10);
 
-    //     let out = encode_full(&small_map);
+        let out = encode_full(small_map);
 
-    //     // tag
-    //     assert_eq!(out[0], 0b100_0_0001);
-    //     // element tags
-    //     assert_eq!(vec![out[1], out[3]], vec![0b010_0_0001, 0b010_0_0001]);
-    //     // check that the values are right
-    //     assert_eq!(vec![out[2], out[4]], vec![b'a', b'b']);
-    // }
+        // tag
+        assert_eq!(out[0], TYPE_MAP | 1);
+        // element tags
+        assert_eq!(
+            vec![out[1], out[3]],
+            vec![TYPE_BYT | 1, TYPE_INT | INT_POSITIVE]
+        );
+        // check that the values are right
+        assert_eq!((out[2], out[4]), (b'a', 10));
+    }
 
-    // TODO Fix this
-    //#[test]
-    // fn large_map() {
-    //    let large_map = Kson::from(VecMap::from_sorted(
-    //        (0..140)
-    //            .map(|x| (Bytes::from(vec![x as u8]), Bytes::from(vec![x as u8])))
-    //            .collect(),
-    //    ));
+    #[test]
+    fn large_map() {
+        use std::collections::HashMap;
 
-    //    let out = encode_full(&large_map);
+        let large_map: HashMap<Bytes, Bytes> = (0..140)
+            .map(|x| (Bytes::from(vec![x as u8]), Bytes::from(vec![x as u8])))
+            .collect();
 
-    //    // tag
-    //    assert_eq!(out[0], 0b100_1_0000);
-    //    // length
-    //    assert_eq!(out[1], 140 - BIG_BIT);
+        let out = encode_full(&large_map);
 
-    //    // key tags
-    //    out[2..]
-    //        .iter()
-    //        .step_by(4)
-    //        .for_each(|x| assert_eq!(*x, 0b010_0_0001));
+        // tag
+        assert_eq!(out[0], 0b100_1_0000);
+        // length
+        assert_eq!(out[1], 140 - BIG_BIT);
 
-    //    // val tags
-    //    out[4..]
-    //        .iter()
-    //        .step_by(4)
-    //        .for_each(|x| assert_eq!(*x, 0b010_0_0001));
+        // key tags
+        out[2..]
+            .iter()
+            .step_by(4)
+            .for_each(|x| assert_eq!(*x, 0b010_0_0001));
 
-    //    // keys
-    //    out[3..]
-    //        .iter()
-    //        .step_by(4)
-    //        .enumerate()
-    //        .for_each(|(i, x)| assert_eq!(*x as usize, i));
+        // val tags
+        out[4..]
+            .iter()
+            .step_by(4)
+            .for_each(|x| assert_eq!(*x, 0b010_0_0001));
 
-    //    // values
-    //    out[5..]
-    //        .iter()
-    //        .step_by(4)
-    //        .enumerate()
-    //        .for_each(|(i, x)| assert_eq!(*x as usize, i));
-    //}
+        // keys
+        out[3..]
+            .iter()
+            .step_by(4)
+            .enumerate()
+            .for_each(|(i, x)| assert_eq!(*x as usize, i));
+
+        // values
+        out[5..]
+            .iter()
+            .step_by(4)
+            .enumerate()
+            .for_each(|(i, x)| assert_eq!(*x as usize, i));
+    }
 
     #[test]
     fn half_float() {
