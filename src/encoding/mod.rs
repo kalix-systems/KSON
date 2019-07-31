@@ -56,7 +56,7 @@ mod tests {
         let out = encode_full(n);
 
         // tag
-        assert_eq!(out[0], 0b001_0_1_000);
+        assert_eq!(out[0], TYPE_INT | INT_POSITIVE);
         // digit, should be 0
         assert_eq!(out[1], 0);
     }
@@ -67,7 +67,7 @@ mod tests {
         let out = encode_full(small_pos);
 
         // tag
-        assert_eq!(out[0], 0b001_0_1_000);
+        assert_eq!(out[0], TYPE_INT | INT_POSITIVE);
         // digit, should be 1
         assert_eq!(out[1], 1);
     }
@@ -78,7 +78,7 @@ mod tests {
         let out = encode_full(small_pos);
 
         // tag
-        assert_eq!(out[0], 0b001_0_1_001);
+        assert_eq!(out[0], TYPE_INT | INT_POSITIVE | (2 - 1));
         // LSD, should be 1
         assert_eq!(out[1], 1);
         // MSD, should be 1
@@ -90,7 +90,7 @@ mod tests {
         let small_pos = i64::max_value();
         let out = encode_full(small_pos);
 
-        assert_eq!(out[0], 0b001_0_1_111);
+        assert_eq!(out[0], TYPE_INT | INT_POSITIVE | (8 - 1));
         assert_eq!(out[1..], [255, 255, 255, 255, 255, 255, 255, 127]);
     }
 
@@ -100,7 +100,7 @@ mod tests {
         let out = encode_full(small_neg);
 
         // tag
-        assert_eq!(out[0], 0b0010_0_000);
+        assert_eq!(out[0], TYPE_INT);
         // should be 0
         assert_eq!(out[1], 1);
     }
@@ -111,7 +111,7 @@ mod tests {
         let out = encode_full(small_neg);
 
         // tag
-        assert_eq!(out[0], 0b001_0_0_001);
+        assert_eq!(out[0], TYPE_INT | (2 - 1));
         // LSD, should be 0
         assert_eq!(out[1], 0);
         // MSD, should be 1
@@ -124,7 +124,7 @@ mod tests {
         let out = encode_full(small_neg);
 
         // tag
-        assert_eq!(out[0], 0b001_0_0_111);
+        assert_eq!(out[0], TYPE_INT | (8 - 1));
         assert_eq!(out[1..], [255, 255, 255, 255, 255, 255, 255, 127]);
     }
 
@@ -134,7 +134,7 @@ mod tests {
         let out = encode_full(big_pos);
 
         // tag
-        assert_eq!(out[0], 0b001_1_1_000,);
+        assert_eq!(out[0], TYPE_INT | BIG_BIT | INT_POSITIVE);
         // length in bytes
         assert_eq!(out[1], 0);
         // digits
@@ -147,7 +147,7 @@ mod tests {
         let out = encode_full(big_neg);
 
         // tag
-        assert_eq!(out[0], 0b0011_0000);
+        assert_eq!(out[0], TYPE_INT | BIG_BIT);
         // length in bytes
         assert_eq!(out[1], 0);
         // digits
@@ -178,7 +178,7 @@ mod tests {
         let out = encode_full(small);
 
         // tag
-        assert_eq!(out[0], 0b010_0_0001);
+        assert_eq!(out[0], TYPE_BYT | 1);
         // characters
         assert_eq!(out[1], 119);
     }
@@ -189,7 +189,7 @@ mod tests {
         let out = encode_full(large);
 
         // tag
-        assert_eq!(out[0], 0b010_1_0000);
+        assert_eq!(out[0], TYPE_BYT | BIG_BIT);
         // length
         assert_eq!(out[1], 140 - BIG_BIT);
         // bytes
@@ -205,9 +205,9 @@ mod tests {
         let out = encode_full(small_vec);
 
         // tag
-        assert_eq!(out[0], 0b011_0_0001);
+        assert_eq!(out[0], TYPE_ARR | 1);
         // element tag
-        assert_eq!(out[1], 0b001_0_1_000);
+        assert_eq!(out[1], TYPE_INT | INT_POSITIVE);
         // check that the value is right
         assert_eq!(out[2], 0);
     }
@@ -219,13 +219,13 @@ mod tests {
         let out = encode_full(large_vec);
 
         // tag
-        assert_eq!(out[0], 0b011_1_0000);
+        assert_eq!(out[0], TYPE_ARR | BIG_BIT);
         // length
         assert_eq!(out[1], 140 - BIG_BIT);
 
         // element tags
         let out_tags: Vec<&u8> = out[2..].iter().step_by(2).collect();
-        assert_eq!(out_tags, vec![&0b001_0_1_000; 140]);
+        assert_eq!(out_tags, vec![&(TYPE_INT | INT_POSITIVE); 140]);
 
         let out_vals: Vec<&u8> = out[3..].iter().step_by(2).collect();
         assert_eq!(out_vals, vec![&0; 140]);
@@ -261,7 +261,7 @@ mod tests {
         let out = encode_full(&large_map);
 
         // tag
-        assert_eq!(out[0], 0b100_1_0000);
+        assert_eq!(out[0], TYPE_MAP | BIG_BIT);
         // length
         assert_eq!(out[1], 140 - BIG_BIT);
 
@@ -269,13 +269,13 @@ mod tests {
         out[2..]
             .iter()
             .step_by(4)
-            .for_each(|x| assert_eq!(*x, 0b010_0_0001));
+            .for_each(|x| assert_eq!(*x, TYPE_BYT | 1));
 
         // val tags
         out[4..]
             .iter()
             .step_by(4)
-            .for_each(|x| assert_eq!(*x, 0b010_0_0001));
+            .for_each(|x| assert_eq!(*x, TYPE_BYT | 1));
 
         // keys
         out[3..]
