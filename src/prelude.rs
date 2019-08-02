@@ -6,7 +6,6 @@ pub use crate::{
         decode, decode_full, encode, encode_full,
         ser::{self, Ser, Serializer, SerializerBytes},
     },
-    float::Float,
     inum::Inum,
 };
 pub use bytes::{buf::FromBuf, Bytes, IntoBuf};

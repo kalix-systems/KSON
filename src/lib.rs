@@ -112,7 +112,6 @@
 #![allow(clippy::expect_fun_call)]
 
 pub mod encoding;
-pub mod float;
 pub mod inum;
 pub mod prelude;
 mod util;

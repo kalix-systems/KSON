@@ -1,8 +1,5 @@
 use super::*;
-use crate::{
-    float::Float::{self, *},
-    prelude::*,
-};
+use crate::prelude::*;
 use failure::*;
 use half::f16;
 use num_bigint::{BigInt, Sign};
@@ -156,9 +153,6 @@ pub trait Deserializer: DeSeq + DeMap {
 
     /// Read an [`f64`].
     fn read_f64(&mut self) -> Result<f64, Error>;
-
-    /// Read a [`Float`].
-    fn read_float(&mut self) -> Result<Float, Error>;
 
     /// Read a [`Bytes`].
     fn read_bytes(&mut self) -> Result<Bytes, Error>;
@@ -419,16 +413,6 @@ impl<D: DeserializerBytes> Deserializer for D {
             _ => bail!("bad tag when reading double-precision float"),
         }
     }
-
-    #[inline(always)]
-    fn read_float(&mut self) -> Result<Float, Error> {
-        match self.read_tag()? {
-            KFloat(HALF) => self.read_u16().map(Half),
-            KFloat(SINGLE) => self.read_u32().map(Single),
-            KFloat(DOUBLE) => self.read_u64().map(Double),
-            _ => bail!("bad tag when reading float"),
-        }
-    }
 }
 
 impl<D: DeserializerBytes> DeSeq for D {
@@ -553,7 +537,6 @@ easy_de!(u128, read_inum);
 easy_de!(i128, read_inum);
 
 // Floats
-trivial_de!(Float, read_float);
 trivial_de!(f16, read_f16);
 trivial_de!(f32, read_f32);
 trivial_de!(f64, read_f64);
