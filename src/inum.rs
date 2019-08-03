@@ -13,6 +13,7 @@ use std::{
 
 /// [`Inum`]s are either [`i64`]s or [`BigInt`]s (i.e., big integers).
 #[derive(Eq, PartialEq, Ord, Clone, Hash, Debug)]
+#[cfg_attr(test, Arbitrary)]
 pub enum Inum {
     /// Small integer.
     ///
@@ -234,25 +235,35 @@ impl TryFrom<Inum> for usize {
     type Error = Inum;
 
     #[cfg(target_pointer_width = "32")]
-    fn try_from(n: Inum) -> Result<Self, Inum> { Ok(u32::try_from(n)? as usize) }
+    fn try_from(n: Inum) -> Result<Self, Inum> {
+        Ok(u32::try_from(n)? as usize)
+    }
 
     #[cfg(target_pointer_width = "64")]
-    fn try_from(n: Inum) -> Result<Self, Inum> { Ok(u64::try_from(n)? as usize) }
+    fn try_from(n: Inum) -> Result<Self, Inum> {
+        Ok(u64::try_from(n)? as usize)
+    }
 }
 
 impl TryFrom<Inum> for isize {
     type Error = Inum;
 
     #[cfg(target_pointer_width = "32")]
-    fn try_from(n: Inum) -> Result<Self, Inum> { Ok(u32::try_from(n)? as isize) }
+    fn try_from(n: Inum) -> Result<Self, Inum> {
+        Ok(u32::try_from(n)? as isize)
+    }
 
     #[cfg(target_pointer_width = "64")]
-    fn try_from(n: Inum) -> Result<Self, Inum> { Ok(u64::try_from(n)? as isize) }
+    fn try_from(n: Inum) -> Result<Self, Inum> {
+        Ok(u64::try_from(n)? as isize)
+    }
 }
 
 // num_traits
 impl Zero for Inum {
-    fn zero() -> Self { I64(0) }
+    fn zero() -> Self {
+        I64(0)
+    }
 
     fn is_zero(&self) -> bool {
         match self {
@@ -266,7 +277,9 @@ impl Zero for Inum {
 }
 
 impl One for Inum {
-    fn one() -> Self { I64(1) }
+    fn one() -> Self {
+        I64(1)
+    }
 
     fn is_one(&self) -> bool {
         match self {
@@ -286,12 +299,10 @@ macro_rules! checked_impl {
 
             fn $op_suff(self, other: $arg) -> Inum {
                 match (self, other) {
-                    (I64(i), I64(j)) => {
-                        match i.$op_checked(j) {
-                            Some(k) => I64(k),
-                            None => Int(BigInt::from(i).$op_suff(BigInt::from(j))),
-                        }
-                    }
+                    (I64(i), I64(j)) => match i.$op_checked(j) {
+                        Some(k) => I64(k),
+                        None => Int(BigInt::from(i).$op_suff(BigInt::from(j))),
+                    },
                     (I64(i), Int(j)) => Inum::from(BigInt::from(i).$op_suff(j)),
                     (Int(i), I64(j)) => Inum::from(i.$op_suff(BigInt::from(j))),
                     (Int(i), Int(j)) => Inum::from(i.$op_suff(j)),
@@ -305,12 +316,10 @@ macro_rules! checked_impl {
 
             fn $op_suff(self) -> Inum {
                 match self {
-                    I64(i) => {
-                        match i.$op_checked() {
-                            Some(j) => I64(j),
-                            None => Int(BigInt::from(i).$op_suff()),
-                        }
-                    }
+                    I64(i) => match i.$op_checked() {
+                        Some(j) => I64(j),
+                        None => Int(BigInt::from(i).$op_suff()),
+                    },
                     Int(i) => Inum::from(i.$op_suff()),
                 }
             }
@@ -350,10 +359,9 @@ impl AddAssign<i64> for Inum {
     fn add_assign(&mut self, other: i64) {
         let j = {
             match self {
-                I64(i) => {
-                    Ok(i.checked_add(other)
-                        .map_or_else(|| Int(BigInt::from(*i) + other), I64))
-                }
+                I64(i) => Ok(i
+                    .checked_add(other)
+                    .map_or_else(|| Int(BigInt::from(*i) + other), I64)),
                 Int(i) => {
                     *i += other;
                     Err(())
@@ -371,10 +379,9 @@ impl MulAssign<i64> for Inum {
     fn mul_assign(&mut self, other: i64) {
         let j = {
             match self {
-                I64(i) => {
-                    Ok(i.checked_mul(other)
-                        .map_or_else(|| Int(BigInt::from(*i) * other), I64))
-                }
+                I64(i) => Ok(i
+                    .checked_mul(other)
+                    .map_or_else(|| Int(BigInt::from(*i) * other), I64)),
                 Int(i) => {
                     *i *= other;
                     Err(())

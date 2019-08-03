@@ -1,3 +1,4 @@
+//TODO: make this use ArrayVec instead
 pub(crate) use smallvec::{smallvec, SmallVec};
 
 /// Converts a [`u64`] to the smallest possible vector of digits in little-endian order.
@@ -40,18 +41,26 @@ pub(crate) fn u16_to_digits(num: u16) -> SmallVec<[u8; 2]> {
 }
 
 #[cold]
-fn coldvec8() -> SmallVec<[u8; 8]> { smallvec![0] }
+fn coldvec8() -> SmallVec<[u8; 8]> {
+    smallvec![0]
+}
 #[cold]
-fn coldvec4() -> SmallVec<[u8; 4]> { smallvec![0] }
+fn coldvec4() -> SmallVec<[u8; 4]> {
+    smallvec![0]
+}
 #[cold]
-fn coldvec2() -> SmallVec<[u8; 2]> { smallvec![0] }
+fn coldvec2() -> SmallVec<[u8; 2]> {
+    smallvec![0]
+}
 
 #[macro_export]
 /// Helper macro for implementing `From`.
 macro_rules! from_fn {
     ($to:ty, $from:ty, $fn:expr) => {
         impl From<$from> for $to {
-            fn from(f: $from) -> $to { $fn(f) }
+            fn from(f: $from) -> $to {
+                $fn(f)
+            }
         }
     };
 }
@@ -61,7 +70,9 @@ macro_rules! from_fn {
 macro_rules! from_as {
     ($to:tt, $from:ty, $as:ty) => {
         impl From<$from> for $to {
-            fn from(f: $from) -> $to { $to::from(f as $as) }
+            fn from(f: $from) -> $to {
+                $to::from(f as $as)
+            }
         }
     };
 }

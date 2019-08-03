@@ -3,20 +3,24 @@
 //! Encode and decode functions for KSON.
 
 #![allow(clippy::inconsistent_digit_grouping)]
-use crate::{
-    inum::Inum::{self, *},
-    util::*,
-};
+use crate::util::*;
 use bytes::{Buf, Bytes, IntoBuf};
 use failure::Error;
 
-pub mod ser;
-pub use ser::*;
+// pub mod ser;
+// pub use ser::*;
 pub mod de;
 pub use de::*;
 mod constants;
 use constants::*;
 
+#[derive(PartialEq, Copy, Clone, Debug)]
+#[repr(u8)]
+pub enum IntSize {
+    Big = BIG_BIT,
+    Tiny = INT_TINY,
+    Small = 0,
+}
 #[derive(PartialEq, Copy, Clone, Debug)]
 #[repr(u8)]
 pub enum Size {
@@ -32,17 +36,23 @@ pub enum KSign {
 }
 
 // TODO: replace len vecs w/ heapless vec of size at most 8
-pub fn encode<T: Ser>(t: T, out: &mut Vec<u8>) { t.ser(out) }
+// pub fn encode<T: Ser>(t: T, out: &mut Vec<u8>) {
+//     t.ser(out)
+// }
+//
+// pub fn encode_full<T: Ser>(t: T) -> Vec<u8> {
+//     let mut v = Vec::new();
+//     t.ser(&mut v);
+//     v
+// }
 
-pub fn decode<D: Deserializer, T: De>(data: &mut D) -> Result<T, Error> { T::de(data) }
+// pub fn decode<D: Deserializer, T: De>(data: &mut D) -> Result<T, Error> {
+//     T::de(data)
+// }
 
-pub fn encode_full<T: Ser>(t: T) -> Vec<u8> {
-    let mut v = Vec::new();
-    t.ser(&mut v);
-    v
-}
-
-pub fn decode_full<B: IntoBuf, T: De>(bs: B) -> Result<T, Error> { decode(&mut bs.into_buf()) }
+// pub fn decode_full<B: IntoBuf, T: De>(bs: B) -> Result<T, Error> {
+//     decode(&mut bs.into_buf())
+// }
 
 #[cfg(test)]
 mod tests {

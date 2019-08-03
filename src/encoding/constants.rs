@@ -1,3 +1,5 @@
+use byteorder::*;
+
 /// Tag bits mask, 0xe0
 pub(super) const MASK_TYPE: u8 = 0b1110_0000;
 /// Tag metadata mask, 0x1f
@@ -15,7 +17,7 @@ pub(super) const TYPE_MAP: u8 = 0b1000_0000;
 /// Large indicator bit, 0x10
 pub(super) const BIG_BIT: u8 = 0b0001_0000;
 /// Integer sign bit, 0x0f
-pub(super) const INT_POSITIVE: u8 = 0b0000_1000;
+pub(super) const INT_TINY: u8 = 0b0000_1000;
 
 /// Float type bits
 pub(super) const TYPE_FLOAT: u8 = 0b101_00_000;
@@ -38,3 +40,5 @@ pub(super) const MASK_INT_LEN_BITS: u8 = 0b0000_0111;
 
 pub(super) const BIGINT_MIN_LEN: u64 = MASK_INT_LEN_BITS as u64 + 2;
 pub(super) const BIGCOL_MIN_LEN: u64 = MASK_LEN_BITS as u64 + 1;
+
+pub(super) type Endian = LittleEndian;

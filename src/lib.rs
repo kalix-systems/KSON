@@ -91,28 +91,26 @@
 //! | ---  | ---                                 | ---              |
 //! | Type | Half (00), Single (01), Double (10) | Currently Unused |
 
-// #![allow(warnings)]
-#![warn(
-//    missing_docs,
-    deprecated_in_future,
-    unsafe_code,
-    unused_labels,
-    keyword_idents,
-    missing_doc_code_examples,
-    missing_copy_implementations,
-    missing_debug_implementations,
-    macro_use_extern_crate,
-    unreachable_pub,
-    trivial_casts,
-    trivial_numeric_casts,
-    unused_extern_crates,
-    unused_import_braces
-)]
+#![allow(warnings)]
+// #![warn(
+// //    missing_docs,
+//     deprecated_in_future,
+//     unsafe_code,
+//     unused_labels,
+//     keyword_idents,
+//     missing_doc_code_examples,
+//     missing_copy_implementations,
+//     missing_debug_implementations,
+//     macro_use_extern_crate,
+//     unreachable_pub,
+//     trivial_casts,
+//     trivial_numeric_casts,
+//     unused_extern_crates,
+//     unused_import_braces
+// )]
 #![allow(clippy::cast_lossless)]
 #![allow(clippy::expect_fun_call)]
 
 pub mod encoding;
-pub mod float;
-pub mod inum;
 pub mod prelude;
 mod util;

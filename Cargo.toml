@@ -14,6 +14,7 @@ half = "1.3"
 num-traits = "0.2"
 num-bigint = "0.2"
 bytes = "0.4"
+byteorder = "1"
 failure = "0.1"
 smallvec = {version = "0.6", features = ["union"]}
 kson_derive = {path = "./kson_derive"}
