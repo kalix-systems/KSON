@@ -20,7 +20,7 @@ womp = {git = "https://github.com/kalix-systems/womp.git"}
 kson_macro = {path = "./kson_macro"}
 kson_derive = {path = "./kson_derive"}
 
-pyo3 = {version =  "0.7.0-alpha.1", optional = true}
+pyo3 = {version =  "0.29.0", optional = true}
 rlua = {version = "0.16", optional = true}
 
 [dev-dependencies]
